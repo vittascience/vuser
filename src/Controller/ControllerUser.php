@@ -5,11 +5,12 @@ namespace User\Controller;
 use User\Entity\User;
 use User\Entity\Regular;
 use User\Entity\ClassroomUser;
+use User\Entity\Teacher;
 use Classroom\Entity\Classroom;
 use Classroom\Entity\ClassroomLinkUser;
 use Classroom\Entity\ActivityLinkUser;
 use Classroom\Entity\ActivityLinkClassroom;
-use User\Entity\Teacher;
+use Utils\ConnectionManager;
 use Utils\Mailer;
 use Exception;
 
@@ -237,6 +238,23 @@ class ControllerUser extends Controller
                 $_SESSION["id"] = $user->getId();
                 $_SESSION["pin"] = $password;
                 return $user;
+            },
+            'login' => function ($data) {
+
+                if (ConnectionManager::getSharedInstance()->checkConnected()) {
+                    return ["success" => true];
+                }
+                if (!empty($data["mail"]) && !empty($data["password"])) {
+                    $credentials = ConnectionManager::getSharedInstance()->checkLogin($data["mail"], $data["password"]);
+                    if ($credentials !== false) {
+                        $_SESSION["id"] = $credentials[0];
+                        $_SESSION["token"] = $credentials[1];
+                        return ["success" => true];
+                    } else {
+                        return ["success" => false];
+                    }
+                    return ["success" => false];
+                }
             }
         );
     }
