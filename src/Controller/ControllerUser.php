@@ -255,6 +255,29 @@ class ControllerUser extends Controller
                     }
                     return ["success" => false];
                 }
+            },
+            'disconnect' => function ($data) {
+
+                try {
+                    $manager = ConnectionManager::getSharedInstance();
+                    $user = $manager->checkConnected();
+                    if (!$user) {
+                        return false;
+                    } else {
+                        $res = $manager->deleteToken($_SESSION["id"], $_SESSION["token"]);
+                        if ($res) {
+                            if (isset($data["url"])) {
+                                return $data["url"];
+                            } else {
+                                return "/index.php";
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    return false;
+                }
             }
         );
     }
