@@ -266,7 +266,7 @@ class ControllerUser extends Controller
                     } else {
                         $res = $manager->deleteToken($_SESSION["id"], $_SESSION["token"]);
                         if ($res) {
-                            if (isset($data["url"])) {
+                            if (isset($data["url"]) && $data["url"] != '') {
                                 return $data["url"];
                             } else {
                                 return "/index.php";
