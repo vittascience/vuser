@@ -5,14 +5,20 @@ namespace User\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use User\Entity\User;
-use User\Entity\Regular;
 
 /**
  * @ORM\Entity(repositoryClass="User\Repository\UserRepository")
  * @ORM\Table(name="user_teachers")
  */
-class Teacher extends User implements \JsonSerializable, \Utils\JsonDeserializer
+class Teacher
 {
+    /**
+     * @ORM\Id
+     * @ORM\ManyToOne(targetEntity="User\Entity\User")
+     * @ORM\JoinColumn(name="id", referencedColumnName="id", onDelete="CASCADE")
+     * @var User
+     */
+    private $user;
     /**
      * @ORM\Column(name="subject", type="integer", length=3, nullable=false)
      * the correspondance table is in /resources
@@ -31,11 +37,27 @@ class Teacher extends User implements \JsonSerializable, \Utils\JsonDeserializer
      */
     private $grade;
 
-    public function __construct($subject = 1, $school = "Collège", $grade = 1)
+    public function __construct(User $user, $subject = 1, $school = "Collège", $grade = 1)
     {
+        $this->setUser($user);
         $this->setSubject($subject);
         $this->setSchool($school);
         $this->setGrade($grade);
+    }
+
+    /**
+     * @return User
+     */
+    public function getUser()
+    {
+        return $this->user;
+    }
+    /**
+     * @param User $id
+     */
+    public function setUser($user)
+    {
+        $this->user = $user;
     }
     /**
      * @return integer
@@ -101,7 +123,7 @@ class Teacher extends User implements \JsonSerializable, \Utils\JsonDeserializer
 
     public static function jsonDeserialize($jsonDecoded)
     {
-        $classInstance = new self();
+        $classInstance = new self(new User());
         foreach ($jsonDecoded as $attributeName => $attributeValue) {
             $classInstance->{$attributeName} = $attributeValue;
         }

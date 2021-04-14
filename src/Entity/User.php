@@ -4,6 +4,7 @@ namespace User\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
+use Utils\ImageManager;
 
 /**
  * @ORM\Entity(repositoryClass="User\Repository\UserRepository")
@@ -227,6 +228,37 @@ class User
             throw new EntityDataIntegrityException("picture needs to be string");
         }
     }
+
+    public function processPicture($picture)
+    {
+        $extension = explode("/", $picture["type"])[1];
+        $fileId = md5(uniqid());
+        $fileName = $fileId . "." . $extension;
+        $finalFileName = $fileId . ".jpeg";
+        $finalThumbnailName = $fileId . "_thumbnail.jpeg";
+
+        $imgManager = ImageManager::getSharedInstance();
+        $finalPath = __DIR__ . "/../public/content/user_data/user_img/" . $finalFileName;
+        $finalThumbnailPath = __DIR__ . "/../public/content/user_data/user_img/" . $finalThumbnailName;
+
+        if (!$imgManager->resizeToDimension(
+            100,
+            $picture["tmp_name"],
+            $extension,
+            $finalPath
+        )) {
+            return false;
+        }
+        if (!$imgManager->makeThumbnail($finalPath, $finalThumbnailPath, 400)) {
+            return false;
+        }
+
+        if (!unlink($picture["tmp_name"]))
+            return false;
+
+        return $finalFileName;
+    }
+
     public static function jsonDeserialize($json)
     {
         $classInstance = new User();

@@ -279,6 +279,175 @@ class ControllerUser extends Controller
                     return false;
                 }
             }
+            'get_schools' => function () {
+
+                $dbGrades = [
+                    1 => "Ecole",
+                    2 => "Collège",
+                    3 => "Lycée",
+                ];
+
+                if (!empty($data["phrase"]) && !empty($data["grade"])) {
+                    $words = explode(" ", $data["phrase"], 10);
+                    $array = [];
+                    foreach ($words as $word) {
+                        $sql = "SELECT * FROM data_schools WHERE (school_name LIKE ? OR school_address_3 LIKE ?)";
+                        $params = ["%" . $word . "%", "%" . $word . "%"];
+                        if (array_key_exists($data["grade"], $dbGrades)) {
+                            $grade = $dbGrades[$data["grade"]];
+                            $sql .= " AND (school_type LIKE ?) ";
+                            $params[] = "%" . $grade . "%";
+                        } else {
+                            return [];
+                        }
+                        $sql .= " LIMIT 100";
+                        $schools = DatabaseManager::getSharedInstance()
+                            ->getAll($sql, $params);
+                        foreach ($schools as $school) {
+                            $array[] = $school["school_name"] . " - " . $school["school_address_3"];
+                        }
+                    }
+
+                    $array = array_unique($array);
+
+                    $tmpArray = [];
+                    foreach ($array as $value)
+                        $tmpArray[] = $value;
+                    $finalArray = [];
+                    $order = [];
+                    foreach ($tmpArray as $result) {
+                        $matches = 0;
+                        foreach ($words as $word) {
+                            if (!empty($word)) {
+                                if (preg_match("/" . strtolower($word) . "/", strtolower($result))) {
+                                    $matches++;
+                                }
+                            }
+                        }
+                        $order[] = $matches;
+                    }
+
+                    arsort($order, SORT_NUMERIC);
+
+                    foreach ($order as $key => $index) {
+                        $finalArray[] = ["name" => $tmpArray[$key]];
+                    }
+
+                    return $finalArray;
+                }
+            },
+            'signup' => function ($data) {
+
+                function setLanguage($lng)
+                {
+                    setcookie("lng", $lng, time() + 2678400, '/'); //2678400 = 31 days
+                    return $lng;
+                }
+
+                $lang = isset($_COOKIE['lng']) ? $_COOKIE['lng'] : setLanguage('en');
+                $allowedLang = ['en', 'fr'];
+                if (!in_array($lang, $allowedLang))
+                    $lang = setLanguage('en');
+                if (
+                    !empty($data["surname"])
+                    && !empty($data["firstname"])
+                    && !empty($data["email"])
+                    && !empty($data["password"])
+                    && !empty($data["bio"])
+                    && isset($data["newsletter"])
+                    && isset($data["private"])
+                    && isset($data["contact"])
+                    && isset($data["mailMessages"])
+                ) {
+                    $error = false;
+                    $errorMessages = [];
+
+                    $surname = trim(htmlspecialchars($data["surname"]));
+                    $firstname = trim(htmlspecialchars($data["firstname"]));
+                    $email = trim(htmlspecialchars(strtolower($data["email"])));
+                    $password = $data["password"];
+                    $bio = trim(htmlspecialchars($data["bio"]));
+                    $newsletter = intval($data["newsletter"]);
+                    $private = intval($data["private"]);
+                    $mailMessages = intval($data["mailMessages"]);
+                    $contact = intval($data["contact"]);
+
+
+                    $hasPhone = false;
+                    $hasPicture = false;
+                    $isTeacher = false;
+                    $user = new User();
+                    $user->setFirstName($firstname);
+                    $user->setSurname($surname);
+                    $user->setPseudo($surname . " " . $firstname);
+                    $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
+                    $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
+                    $user->setId($lastQuestion->getId() + 1);
+                    $this->entityManager->persist($user);
+
+                    $regular = new Regular($user, $email);
+                    $regular->setBio($bio);
+                    $regular->setNewsletter($newsletter);
+                    $regular->setPrivateFlag($private);
+                    $regular->setMailMessages($mailMessages);
+                    $regular->setContactFlag($contact);
+                    $this->entityManager->persist($regular);
+
+                    if (
+                        !empty($data["school"])
+                        && isset($data["subject"])
+                        && isset($data["grade"])
+                    ) {
+                        $school = trim(htmlspecialchars($data["school"]));
+                        $subject = intval(htmlspecialchars($data["subject"]));
+                        $grade = intval(htmlspecialchars($data["grade"]));
+
+                        $teacher = new Teacher($user, $school,$subject,$grade);
+                        $this->entityManager->persist($teacher);
+                    }
+
+                    if (!empty($_FILES["picture"])) {
+                        $hasPicture = true;
+                        if (!PicturesUtils::checkPicture($_FILES["picture"], 0.1, 10, 10)) {
+                            $error = true;
+                            $errorMessages[] = 'La photo de profil est invalide.';
+                        }
+                    }
+
+                   /*  if ($error) {
+                        errorFunc($errorMessages);
+                    } */
+
+                    if ($hasPicture) {
+                        $finalFileName = $user->processPicture($_FILES["picture"]);
+                        if (!$finalFileName)
+                            errorFunc(['pictureFormat']);
+                    }
+                    try {
+                        $confirmToken = bin2hex(random_bytes(32));
+                    } catch (Exception $e) {
+                        errorFunc(['passwordHash']);
+                    }
+
+                    $mailBody =
+                        "<h4 style=\"font-family:'Open Sans'; margin-bottom:0; color:#27b88e; font-size:28px;\">Bonjour " . $firstname . "</h4>" .
+                        "<a style=\" font-family:'Open Sans'; \">Veuillez cliquer sur ce lien pour confirmer votre inscription à Vittascience: <a href='" . $_ENV['VS_HOST'] . "/services/get/confirmSignup.php?token=" . $confirmToken . "&email=" . $email . "'>Confirmer mon mail</a></p>";
+
+                    if (!Mailer::sendMail($email, "Confirmez votre inscription chez Vittascience", $mailBody, strip_tags($mailBody))) {
+                        errorFunc(['mailSend']);
+                    }
+                    $this->entityManager->flush();
+                    return ["success"=>true];
+                } else {
+                    return ["success"=>false];
+                }
+
+                function errorFunc($errorMessages)
+                {
+                    return ["success"=>false,"errors"=>$errorMessages] ;
+                }
+
+            }
         );
     }
 }
