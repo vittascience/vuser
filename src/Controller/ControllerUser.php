@@ -11,6 +11,7 @@ use Classroom\Entity\ClassroomLinkUser;
 use Classroom\Entity\ActivityLinkUser;
 use Classroom\Entity\ActivityLinkClassroom;
 use Utils\ConnectionManager;
+use Database\DataBaseManager;
 use Utils\Mailer;
 use Exception;
 
@@ -278,7 +279,7 @@ class ControllerUser extends Controller
                 } catch (\Exception $e) {
                     return false;
                 }
-            }
+            },
             'get_schools' => function () {
 
                 $dbGrades = [
@@ -286,15 +287,14 @@ class ControllerUser extends Controller
                     2 => "Collège",
                     3 => "Lycée",
                 ];
-
-                if (!empty($data["phrase"]) && !empty($data["grade"])) {
-                    $words = explode(" ", $data["phrase"], 10);
+                if (!empty($_GET["phrase"]) && !empty($_GET["grade"])) {
+                    $words = explode(" ", $_GET["phrase"], 10);
                     $array = [];
                     foreach ($words as $word) {
                         $sql = "SELECT * FROM data_schools WHERE (school_name LIKE ? OR school_address_3 LIKE ?)";
                         $params = ["%" . $word . "%", "%" . $word . "%"];
-                        if (array_key_exists($data["grade"], $dbGrades)) {
-                            $grade = $dbGrades[$data["grade"]];
+                        if (array_key_exists($_GET["grade"], $dbGrades)) {
+                            $grade = $dbGrades[$_GET["grade"]];
                             $sql .= " AND (school_type LIKE ?) ";
                             $params[] = "%" . $grade . "%";
                         } else {
@@ -303,6 +303,7 @@ class ControllerUser extends Controller
                         $sql .= " LIMIT 100";
                         $schools = DatabaseManager::getSharedInstance()
                             ->getAll($sql, $params);
+
                         foreach ($schools as $school) {
                             $array[] = $school["school_name"] . " - " . $school["school_address_3"];
                         }
@@ -399,10 +400,11 @@ class ControllerUser extends Controller
                         && isset($data["grade"])
                     ) {
                         $school = trim(htmlspecialchars($data["school"]));
+
                         $subject = intval(htmlspecialchars($data["subject"]));
                         $grade = intval(htmlspecialchars($data["grade"]));
 
-                        $teacher = new Teacher($user, $school,$subject,$grade);
+                        $teacher = new Teacher($user,  $subject, $school, $grade);
                         $this->entityManager->persist($teacher);
                     }
 
@@ -414,7 +416,7 @@ class ControllerUser extends Controller
                         }
                     }
 
-                   /*  if ($error) {
+                    /*  if ($error) {
                         errorFunc($errorMessages);
                     } */
 
@@ -433,20 +435,19 @@ class ControllerUser extends Controller
                         "<h4 style=\"font-family:'Open Sans'; margin-bottom:0; color:#27b88e; font-size:28px;\">Bonjour " . $firstname . "</h4>" .
                         "<a style=\" font-family:'Open Sans'; \">Veuillez cliquer sur ce lien pour confirmer votre inscription à Vittascience: <a href='" . $_ENV['VS_HOST'] . "/services/get/confirmSignup.php?token=" . $confirmToken . "&email=" . $email . "'>Confirmer mon mail</a></p>";
 
-                    if (!Mailer::sendMail($email, "Confirmez votre inscription chez Vittascience", $mailBody, strip_tags($mailBody))) {
+                    /* if (!Mailer::sendMail($email, "Confirmez votre inscription chez Vittascience", $mailBody, strip_tags($mailBody))) {
                         errorFunc(['mailSend']);
-                    }
+                    } */
                     $this->entityManager->flush();
-                    return ["success"=>true];
+                    return ["success" => true];
                 } else {
-                    return ["success"=>false];
+                    return ["success" => false];
                 }
 
                 function errorFunc($errorMessages)
                 {
-                    return ["success"=>false,"errors"=>$errorMessages] ;
+                    return ["success" => false, "errors" => $errorMessages];
                 }
-
             }
         );
     }

@@ -192,11 +192,8 @@ class Regular
      */
     public function setActive($active)
     {
-        if (is_bool($active)) {
-            $this->active = $active;
-        } else {
-            throw new EntityDataIntegrityException("active needs to be boolean");
-        }
+
+        $this->active = $active;
     }
 
     /**
@@ -252,11 +249,8 @@ class Regular
      */
     public function setContactFlag($contactFlag)
     {
-        if (is_bool($contactFlag)) {
-            $this->contactFlag = $contactFlag;
-        } else {
-            throw new EntityDataIntegrityException("contactFlag needs to be boolean");
-        }
+
+        $this->contactFlag = $contactFlag;
     }
 
     /**
@@ -272,11 +266,8 @@ class Regular
      */
     public function setNewsletter($newsletter)
     {
-        if (is_bool($newsletter)) {
-            $this->newsletter = $newsletter;
-        } else {
-            throw new EntityDataIntegrityException("newsletter needs to be boolean");
-        }
+
+        $this->newsletter = $newsletter;
     }
 
     /**
@@ -293,11 +284,8 @@ class Regular
     public function setMailMessages($mailMessages)
     {
 
-        if (is_bool($mailMessages)) {
-            $this->mailMessages = $mailMessages;
-        } else {
-            throw new EntityDataIntegrityException("mailMessages needs to be boolean");
-        }
+
+        $this->mailMessages = $mailMessages;
     }
 
     /**
@@ -352,11 +340,7 @@ class Regular
      */
     public function setPrivateFlag($privateFlag)
     {
-        if (is_bool($privateFlag)) {
-            $this->privateFlag = $privateFlag;
-        } else {
-            throw new EntityDataIntegrityException("privateFlag needs to be boolean");
-        }
+        $this->privateFlag = $privateFlag;
     }
     public function jsonSerialize()
     {
