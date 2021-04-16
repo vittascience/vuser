@@ -346,11 +346,13 @@ class Regular
     {
         if ($this->isPrivateFlag() == false) {
             $array = [
-                "bio" => $this->getBio()
+                "bio" => $this->getBio(),
+                "email" => $this->getEmail()
             ];
         } else {
             $array = [
-                "bio" => $this->getBio()
+                "bio" => $this->getBio(),
+                "email" => $this->getEmail()
             ];
         }
         return $array;
