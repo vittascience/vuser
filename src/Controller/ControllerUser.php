@@ -39,6 +39,29 @@ class ControllerUser extends Controller
                 $pseudo = $user->getPseudo();
                 return ['mdp' => $password, 'pseudo' => $pseudo];
             },
+            'disconnect' => function () {
+
+                try {
+                    $manager = ConnectionManager::getSharedInstance();
+                    $user = $manager->checkConnected();
+                    if (!$user) {
+                        return false;
+                    } else {
+                        $res = $manager->deleteToken($_SESSION["id"], $_SESSION["token"]);
+                        if ($res) {
+                            if (isset($_GET["url"]) && $_GET["url"] != '') {
+                                header('location:' . $this->URL . '/' . $_GET["url"]);
+                            } else {
+                                header('location:' . $this->URL . '/index.php');
+                            }
+                        } else {
+                            header('location:' . $this->URL . '/index.php');
+                        }
+                    }
+                } catch (\Exception $e) {
+                    return false;
+                }
+            },
             'change_pseudo_classroom_user' => function ($data) {
                 $user = $this->entityManager->getRepository('User\Entity\User')
                     ->find($data['id']);
