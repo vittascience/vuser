@@ -24,7 +24,7 @@ class RegularTest extends TestCase
         $user->setEmail(null); // wrong email
     } */
 
-    public function testBioIsSet()
+/*     public function testBioIsSet()
     {
         $user = new Regular(new User(), TestConstants::TEST_MAIL);
 
@@ -37,7 +37,7 @@ class RegularTest extends TestCase
         $this->assertEquals($user->getBio(), $acceptedFirstName);
         $user->setBio(null); // null
         $this->assertEquals($user->getBio(), null);
-        /* $this->expectException(EntityDataIntegrityException::class); */ // more than 1000 chars
+        $this->expectException(EntityDataIntegrityException::class); // more than 1000 chars
         $user->setBio($nonAcceptedFirstName);
     }
 
@@ -48,7 +48,7 @@ class RegularTest extends TestCase
         $this->assertEquals($user->getTelephone(), '0797989566');
         $user->setTelephone(null); // null
         $this->assertEquals($user->getTelephone(), null);
-        /* $this->expectException(EntityDataIntegrityException::class); */
+        $this->expectException(EntityDataIntegrityException::class);
         $user->setTelephone(45220999); // integer expected exception
     }
 
@@ -60,7 +60,7 @@ class RegularTest extends TestCase
         $this->assertEquals($user->getConfirmToken(), TestConstants::TEST_STRING);
         $user->setConfirmToken(null); //can be null
         $this->assertEquals($user->getConfirmToken(), null);
-        /* $this->expectException(EntityDataIntegrityException::class); */
+        $this->expectException(EntityDataIntegrityException::class);
         $user->setConfirmToken(TestConstants::TEST_INTEGER); // should not be an integer
         $user->setConfirmToken(true); // should not be a boolean
     }
@@ -70,7 +70,7 @@ class RegularTest extends TestCase
         $user = new Regular(new User(), TestConstants::TEST_MAIL);
         $user->setPrivateFlag(true); // sould be bool
         $this->assertTrue($user->isPrivateFlag());
-        /* $this->expectException(EntityDataIntegrityException::class); */
+        $this->expectException(EntityDataIntegrityException::class);
         $user->setPrivateFlag(TestConstants::TEST_INTEGER); // should not be an integer
         $user->setPrivateFlag(TestConstants::TEST_STRING); // should ne be a string
         $user->setPrivateFlag(null); // should not be null
@@ -82,7 +82,7 @@ class RegularTest extends TestCase
         $user = new Regular(new User(), TestConstants::TEST_MAIL);
         $user->setContactFlag(true); // sould be bool
         $this->assertTrue($user->isContactFlag());
-        /* $this->expectException(EntityDataIntegrityException::class); */
+        $this->expectException(EntityDataIntegrityException::class);
         $user->setContactFlag(TestConstants::TEST_INTEGER); // should not be an integer
         $user->setContactFlag(TestConstants::TEST_STRING); // should ne be a string
         $user->setContactFlag(null); // should not be null
@@ -93,7 +93,7 @@ class RegularTest extends TestCase
         $user = new Regular(new User(), TestConstants::TEST_MAIL);
         $user->setNewsletter(true); // sould be bool
         $this->assertTrue($user->isNewsletter());
-        /* $this->expectException(EntityDataIntegrityException::class); */
+        $this->expectException(EntityDataIntegrityException::class);
         $user->setNewsletter(TestConstants::TEST_INTEGER); // should not be an integer
         $user->setNewsletter(TestConstants::TEST_STRING); // should ne be a string
         $user->setNewsletter(null); // should not be null
@@ -104,7 +104,7 @@ class RegularTest extends TestCase
         $user = new Regular(new User(), TestConstants::TEST_MAIL);
         $user->setMailMessages(true); // sould be bool
         $this->assertTrue($user->isMailMessages());
-        /* $this->expectException(EntityDataIntegrityException::class); */
+        $this->expectException(EntityDataIntegrityException::class);
         $user->setMailMessages(TestConstants::TEST_INTEGER); // should not be an integer
         $user->setMailMessages(TestConstants::TEST_STRING); // should ne be a string
         $user->setMailMessages(null); // should not be null
@@ -115,7 +115,7 @@ class RegularTest extends TestCase
         $user = new Regular(new User(), TestConstants::TEST_MAIL);
         $user->setActive(true); // sould be bool
         $this->assertTrue($user->isActive());
-        /* $this->expectException(EntityDataIntegrityException::class); */
+        $this->expectException(EntityDataIntegrityException::class);
         $user->setActive(TestConstants::TEST_INTEGER); // should not be an integer
         $user->setActive(TestConstants::TEST_STRING); // should ne be a string
         $user->setActive(null); // should not be null
@@ -128,7 +128,7 @@ class RegularTest extends TestCase
         $this->assertEquals($user->getRecoveryToken(), TestConstants::TEST_STRING);
         $user->setRecoveryToken(null); // null
         $this->assertEquals($user->getRecoveryToken(), null);
-        /* $this->expectException(EntityDataIntegrityException::class); */
+        $this->expectException(EntityDataIntegrityException::class);
         $user->setRecoveryToken(TestConstants::TEST_INTEGER); // integer
         $user->setRecoveryToken(true); // boolean
     }
@@ -140,8 +140,8 @@ class RegularTest extends TestCase
         $this->assertEquals($user->getNewMail(), TestConstants::TEST_STRING);
         $user->setNewMail(null); // null
         $this->assertEquals($user->getNewMail(), null);
-        /* $this->expectException(EntityDataIntegrityException::class); */
+        $this->expectException(EntityDataIntegrityException::class);
         $user->setNewMail(TestConstants::TEST_INTEGER); // integer
         $user->setNewMail(true); // boolean
-    }
+    } */
 }
