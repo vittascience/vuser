@@ -10,6 +10,10 @@ use Utils\Exceptions\EntityDataIntegrityException;
 
 class RegularTest extends TestCase
 {
+    public function testRandomPlaceholder()
+    {
+        return true;
+    }
     /* public function testEmailIsSet()
     {
         $user = new Regular(new User(), TestConstants::TEST_MAIL);
