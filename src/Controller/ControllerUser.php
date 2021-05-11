@@ -8,6 +8,10 @@ use User\Entity\ClassroomUser;
 use User\Entity\Teacher;
 use Classroom\Entity\Classroom;
 use Classroom\Entity\ClassroomLinkUser;
+/**
+ * @ THOMAS MODIF 1 line just below
+ */
+use DAO\RegularDAO;
 use Classroom\Entity\ActivityLinkUser;
 use Classroom\Entity\ActivityLinkClassroom;
 use Utils\ConnectionManager;
@@ -217,6 +221,42 @@ class ControllerUser extends Controller
                 }
             },
             'linkSystem' => function ($data) {
+                /**
+                 * Limiting learner number @THOMAS MODIF
+                 */
+
+                $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
+                ->findOneBy(array("link" => $data['classroomLink']));
+
+                $classroomTeacher = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
+                ->findBy(array("classroom" => $classroom->getId()));
+
+                $currentUserId = $classroomTeacher[0]->getUser()->getId();
+                
+
+                $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
+                $classrooms = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
+                    ->findBy(array("user" => $currentUserId));
+                $nbApprenants = 0;
+                foreach ($classrooms as $c) {
+                    $students = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
+                        ->getAllStudentsInClassroom($c->getClassroom()->getId(), 0);
+                    $nbApprenants += count($students);
+                }
+
+                $learnerNumberCheck = ["idUser"=>$currentUserId, "isPremium"=>$isPremium, "learnerNumber"=>$nbApprenants];
+
+                if(!$learnerNumberCheck["isPremium"]){
+                    $addedLearnerNumber = 1;
+                    $totalLearnerCount = $learnerNumberCheck["learnerNumber"] + $addedLearnerNumber;
+                    if($totalLearnerCount>50){
+                        return ["isUsersAdded"=>false, "currentLearnerCount"=>$learnerNumberCheck["learnerNumber"], "addedLearnerNumber"=>$addedLearnerNumber];
+                    }
+                }
+                /**
+                 * End of learner number limiting
+                 */
+
                 $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $data['pseudo']));
                 foreach ($pseudoUsed as $p) {
                     $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p));
@@ -261,7 +301,7 @@ class ControllerUser extends Controller
                 $user->pin = $password;
                 $_SESSION["id"] = $user->getId();
                 $_SESSION["pin"] = $password;
-                return $user;
+                return ["isUsersAdded"=>true, "user"=>$user];
             },
             'login' => function ($data) {
 
