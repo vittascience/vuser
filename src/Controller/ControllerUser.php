@@ -234,7 +234,7 @@ class ControllerUser extends Controller
 
                 $currentUserId = $classroomTeacher[0]->getUser()->getId();
                 
-                // get the statuses for the current clssroom owner
+                // get the statuses for the current classroom owner
                 $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
                 $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
 
@@ -258,10 +258,13 @@ class ControllerUser extends Controller
                     "learnerNumber"=>$nbApprenants
                 ];
 
-                 // set the $isAllowed flag to true if the current user is admin or premium
+                 // set the $isAllowed () flag to true  if the current user is admin or premium
                  $isAllowed = $learnerNumberCheck["isAdmin"] || $learnerNumberCheck["isPremium"];
 
+                // the current classroom owner is not allowed to have an unlimited number of students
                 if(!$isAllowed){
+                    
+                    // computer the total number of students registered +1 and return an error if > 50
                     $addedLearnerNumber = 1;
                     $totalLearnerCount = $learnerNumberCheck["learnerNumber"] + $addedLearnerNumber;
                     if($totalLearnerCount > 50){
