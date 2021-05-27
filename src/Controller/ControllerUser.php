@@ -223,8 +223,9 @@ class ControllerUser extends Controller
             'linkSystem' => function ($data) {
                 /**
                  * Limiting learner number @THOMAS MODIF
+                 * Added Admin check to allow them an unlimited number of new student @NASER MODIF
                  */
-
+               
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
                 ->findOneBy(array("link" => $data['classroomLink']));
 
@@ -233,23 +234,37 @@ class ControllerUser extends Controller
 
                 $currentUserId = $classroomTeacher[0]->getUser()->getId();
                 
-
+                // get the statuses for the current clssroom owner
                 $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
+                $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
+
                 $classrooms = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
                     ->findBy(array("user" => $currentUserId));
+
+                // initiate the $nbApprenants counter and loop through each classrooms
                 $nbApprenants = 0;
                 foreach ($classrooms as $c) {
                     $students = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
                         ->getAllStudentsInClassroom($c->getClassroom()->getId(), 0);
+                    
+                    // add the current classroom users number and increase the total
                     $nbApprenants += count($students);
                 }
 
-                $learnerNumberCheck = ["idUser"=>$currentUserId, "isPremium"=>$isPremium, "learnerNumber"=>$nbApprenants];
+                $learnerNumberCheck = [
+                    "idUser"=>$currentUserId, 
+                    "isPremium"=>$isPremium, 
+                    "isAdmin"=> $isAdmin,
+                    "learnerNumber"=>$nbApprenants
+                ];
 
-                if(!$learnerNumberCheck["isPremium"]){
+                 // set the $isAllowed flag to true if the current user is admin or premium
+                 $isAllowed = $learnerNumberCheck["isAdmin"] || $learnerNumberCheck["isPremium"];
+
+                if(!$isAllowed){
                     $addedLearnerNumber = 1;
                     $totalLearnerCount = $learnerNumberCheck["learnerNumber"] + $addedLearnerNumber;
-                    if($totalLearnerCount>50){
+                    if($totalLearnerCount > 50){
                         return ["isUsersAdded"=>false, "currentLearnerCount"=>$learnerNumberCheck["learnerNumber"], "addedLearnerNumber"=>$addedLearnerNumber];
                     }
                 }
