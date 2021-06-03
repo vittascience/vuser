@@ -282,6 +282,9 @@ class ControllerUser extends Controller
                         return false;
                     }
                 }
+
+
+                // related to users table in db
                 $user = new User();
                 $user->setFirstName("élève");
                 $user->setSurname("modèl");
@@ -290,14 +293,17 @@ class ControllerUser extends Controller
                 $user->setPassword($password);
                 $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
                 $user->setId($lastQuestion->getId() + 1);
+                // persist in doctrine memory and save it with the flush()
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
 
+                // related to a new entry in user_classroom_users table in db
                 $classroomUser = new ClassroomUser($user);
                 $classroomUser->setGarId(null);
                 $classroomUser->setSchoolId(null);
                 $classroomUser->setIsTeacher(false);
                 $classroomUser->setMailTeacher(NULL);
+                // persist in doctrine memory and save it in db later
                 $this->entityManager->persist($classroomUser);
 
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
@@ -308,9 +314,19 @@ class ControllerUser extends Controller
 
                 $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
                     ->findBy(array("classroom" => $classroom));
-                //attribute activities linked with the classroom to the learner
+
+                //add all activities linked with the classroom to the learner
                 foreach ($activitiesLinkClassroom as $a) {
-                    $activityLinkUser = new ActivityLinkUser($a->getActivity(), $user, $a->getDateBegin(),  $a->getDateEnd(), $a->getEvaluation(), $a->getAutocorrection(), $a->getIntroduction());
+                    $activityLinkUser = new ActivityLinkUser(
+                        $a->getActivity(), 
+                        $user, 
+                        $a->getDateBegin(),  
+                        $a->getDateEnd(), 
+                        $a->getEvaluation(), 
+                        $a->getAutocorrection(), 
+                        $a->getIntroduction(),
+                        $a->getReference()
+                    );
                     $this->entityManager->persist($activityLinkUser);
                 }
 
