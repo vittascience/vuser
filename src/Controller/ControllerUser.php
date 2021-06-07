@@ -275,6 +275,15 @@ class ControllerUser extends Controller
                  * End of learner number limiting
                  */
 
+                // check if the submitted pseudo is vittademo
+                if( strtolower($data['pseudo']) == "vittademo"){
+                    return [
+                        "isUsersAdded"=>false, 
+                        "errorType"=> "reservedNickname",
+                        "currentNickname"=> "vittademo"
+                    ];
+                }
+                
                 $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $data['pseudo']));
                 foreach ($pseudoUsed as $p) {
                     $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p));
