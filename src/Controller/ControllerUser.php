@@ -225,9 +225,19 @@ class ControllerUser extends Controller
                  * Limiting learner number @THOMAS MODIF
                  * Added Admin check to allow them an unlimited number of new student @NASER MODIF
                  */
-               
+                
+                 // retrieve the classroom by its link
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
                 ->findOneBy(array("link" => $data['classroomLink']));
+
+                // if the current classroom is Blocked by the teacher 
+                if($classroom->getIsBlocked() === true ){
+                    // disallow students to join
+                    return [
+                        "isUsersAdded"=>false, 
+                        "errorType"=> "classroomBlocked"
+                    ];
+                }
 
                 $classroomTeacher = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
                 ->findBy(array("classroom" => $classroom->getId()));
