@@ -448,6 +448,99 @@ class ControllerUser extends Controller
                     "id" => $user->getId()
                 );    
             },
+            'update_user_infos' => function(){
+
+                // return error if the request is not a POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+
+                // bind incoming id
+                $id = intval($_POST['id']);
+
+                // retrieve user by its id
+                $userToUpdate = $this->entityManager
+                                    ->getRepository(User::class)
+                                    ->find($id);
+
+                $regularUserToUpdate = $this->entityManager
+                                        ->getRepository(Regular::class)
+                                        ->find($id);
+
+                // no userFound
+                if(!$userToUpdate) {
+                    return array(
+                        'isUserUpdated'=>false,
+                        "errorType" => "unknownUser"
+                    );    
+                } 
+
+                // store old email for future check
+                $tmpOldEmail = $regularUserToUpdate->getEmail();
+
+                // user found in db, prepare data
+                $firstname = isset($_POST['firstname']) 
+                                ? strip_tags(htmlspecialchars($_POST['firstname'])) 
+                                : $userToUpdate->getFirstname();
+
+                $surname = isset($_POST['surname']) 
+                                ? strip_tags(htmlspecialchars($_POST['surname'])) 
+                                : $userToUpdate->getSurname();
+
+                $pseudo = isset($_POST['pseudo']) 
+                                ? strip_tags(htmlspecialchars($_POST['pseudo'])) 
+                                : $userToUpdate->getPseudo();
+
+                $email = isset($_POST['email'])
+                                ? $_POST['email']
+                                : $regularUserToUpdate->getEmail();
+
+                $password = isset($_POST['password']) ? $_POST['password'] : null;
+
+                
+
+                // create empty $errors array and fill it with errors if any
+                $errors = [];
+                if(!filter_var($email,FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
+                if(!empty($password)){
+                    // At least 8 characters including 1 Uppercase, 1 lowercase, 1 digit, and 1 special character
+                    $regex = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/";
+                    if(!preg_match($regex,$password,$matches)){
+                        $errors['passwordInvalid'] = true;
+                    }
+                } 
+                if($email !== $tmpOldEmail){
+                   
+                     // check if the email is already listed in db
+                    $emailAlreadyExists = $this->entityManager
+                                            ->getRepository('User\Entity\Regular')
+                                            ->findOneBy(array('email'=> $email));
+                    if($emailAlreadyExists) $errors['emailExists']=true;
+                }
+                if(!empty($errors)){
+                    return array(
+                        'isUserUpdated'=>false,
+                        "errors" => $errors
+                    );    
+                }
+
+                // no errors, update the fields value only when they are not empty
+                if(!empty($firstname)) $userToUpdate->setFirstname($firstname);
+                if(!empty($surname)) $userToUpdate->setSurname($surname);
+                if(!empty($pseudo)) $userToUpdate->setPseudo($pseudo);
+                $userToUpdate->setUpdateDate(new \DateTime());
+                if(!empty($password)){
+                    $passwordHash = password_hash($password,PASSWORD_BCRYPT);
+                    $userToUpdate->setPassword($passwordHash);
+                }
+                $regularUserToUpdate->setEmail($email);
+
+                // save data in both tables users and user_regulars
+                $this->entityManager->flush();
+                
+                return array(
+                    'isUserUpdated'=>true,
+                    "user" => $regularUserToUpdate
+                );    
+            },
             'disconnect' => function ($data) {
 
                 try {
