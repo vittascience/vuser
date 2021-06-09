@@ -373,6 +373,81 @@ class ControllerUser extends Controller
                     return ["success" => false];
                 }
             },
+            'register' => function(){
+
+                // return error if the request is not a POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+
+                // bind incoming data to the value provided or null
+                $firstname = isset($_POST['firstname']) ? strip_tags(htmlspecialchars($_POST['firstname'])) : null;
+                $surname = isset($_POST['surname']) ? strip_tags(htmlspecialchars($_POST['surname'])) : null;
+                $pseudo = isset($_POST['pseudo']) ? strip_tags(htmlspecialchars($_POST['pseudo'])) : null;
+                $email = $_POST['email'] ?? null;
+                $password = $_POST['password'] ?? null;
+                $password_confirm = $_POST['password_confirm'] ?? null;
+
+                // At least 8 characters including 1 Uppercase, 1lowercase, 1 digit, and 1 special character
+                $regex = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/";
+
+                // create empty $errors and fill it with errors if any
+                $errors = [];
+                if(empty($firstname)) $errors['firstnameMissing'] = true;
+                if(empty($surname)) $errors['surnameMissing'] = true;
+                if(empty($pseudo)) $errors['pseudoMissing'] = true;
+                if(empty($email)) $errors['emailMissing'] = true;
+                elseif(!filter_var($email,FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
+                if(empty($password)) $errors['passwordMissing'] = true;
+                if(empty($password_confirm)) $errors['passwordConfirmMissing'] = true;
+                elseif($password !== $password_confirm) $errors['passwordsMismatch'] = true;
+                elseif(!preg_match($regex,$password,$matches)){
+                    $errors['passwordInvalid'] = true;
+                }
+                
+                // check if the email is already listed in db
+                $emailAlreadyExists = $this->entityManager
+                                        ->getRepository('User\Entity\Regular')
+                                        ->findOneBy(array('email'=> $email));
+                
+                // the email already exists in db,set emailExists error 
+                if($emailAlreadyExists) $errors['emailExists'] = true;
+                
+                // some errors were found, return them to the user
+                if(!empty($errors)){
+                    return array(
+                        'isUserAdded'=>false,
+                        "errors" => $errors
+                    );                    
+                }
+                
+                // no errors found, we can process the data
+                // hash the password
+                $passwordHash = password_hash($password,PASSWORD_BCRYPT);
+
+                // create user and persists it in memory
+                $user = new User;
+                $user->setFirstname($firstname);
+                $user->setSurname($surname);
+                $user->setPseudo($pseudo);
+                $user->setPassword($passwordHash);
+                $user->setInsertDate( new \DateTime());
+                $this->entityManager->persist($user);
+                $this->entityManager->flush();
+               
+                // retrieve the lastInsertId to use for the next query 
+                // this value is only available after a flush()
+                $user->setId( $user->getId());
+                
+                // create record in user_regulars table and persists it in memory
+                $regularUser = new Regular($user,$email);
+                $regularUser->setActive(true);
+                $this->entityManager->persist($regularUser);
+                $this->entityManager->flush();
+                
+                return array(
+                    'isUserAdded'=>true,
+                    "id" => $user->getId()
+                );    
+            },
             'disconnect' => function ($data) {
 
                 try {
