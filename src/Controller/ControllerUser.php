@@ -78,6 +78,48 @@ class ControllerUser extends Controller
                     ); 
                 } 
             },
+            'reset_student_password' => function(){
+
+                // accept only POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+                
+                // bind incoming id
+                $id = isset($_POST['id']) ? intval($_POST['id']) : null;
+
+                // get the current user from user_regulars table
+                $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
+                if($userIsRegular){
+                    // a record was found,return an error as only students are allowed here 
+                    return ["errorType"=>"RegularUserNotAllowed"];
+                } 
+
+                // get the student data from users table
+                $student = $this->entityManager->getRepository(User::class)->find($id);
+                if(!$student){
+                    // no record found,return an error as only existing students are allowed here 
+                    return ["errorType"=>"UserNotExists"];
+                } 
+                else 
+                {
+                    // the student was found
+                    // set its current password as $oldPassword to check against the $newPassword  
+                    $oldPassword = $student->getPassword();
+
+                    // generate a new password
+                    $newPassword = $this->generateUpdatedPassword($student->getPseudo(),$oldPassword);
+
+                    // update student password and save it in db
+                    $student->setPassword($newPassword);
+                    $this->entityManager->flush();
+
+                    return array(
+                        "id"=> $student->getId(),
+                        "oldPassword" => $oldPassword,
+                        "newPassword" => $student->getPassword()
+                    ); 
+                } 
+                
+            },
             'disconnect' => function () {
 
                 try {
@@ -769,6 +811,31 @@ class ControllerUser extends Controller
                 }
             }
         );
+    }
+    /**
+     * generateUpdatedPassword
+     * 
+     * @param  string $pseudo
+     * @param  string $oldPassword
+     * @return string generate a new password different for the old one
+     *  and make sure there are no matching record in db
+     */
+    private function generateUpdatedPassword($pseudo,$oldPassword){
+        
+        // generate the new password and check if a record exists in db with these credentials
+        do{
+            $newPassword = passwordGenerator(); 
+            $duplicateUserCredentialsFound = $this->entityManager
+                                                ->getRepository(User::class)
+                                                ->findOneBy(array(
+                                                    'pseudo'=>$pseudo,
+                                                    'password'=> $newPassword
+                                                ));
+        }
+        // continue as long as the passwords match and a record exists in db
+        while(($oldPassword === $newPassword) && $duplicateUserCredentialsFound !== null) ;
+       
+        return $newPassword;
     }
 }
 function passwordGenerator()
