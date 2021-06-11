@@ -43,6 +43,41 @@ class ControllerUser extends Controller
                 $pseudo = $user->getPseudo();
                 return ['mdp' => $password, 'pseudo' => $pseudo];
             },
+            'get_student_password' => function(){
+
+                // accept only POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+                
+                // bind incoming id
+                $id = isset($_POST['id']) ?  intval($_POST['id']) : null;
+
+                // get the current user from user_regulars table
+                $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
+                if($userIsRegular){
+                    // return an error if a record was found as only students are allowed here 
+                    return ["errorType"=>"RegularUserNotAllowed"];
+                } 
+
+                // get the student data from users table
+                $student = $this->entityManager->getRepository(User::class)->find($id);
+                if(!$student){
+                    // return an error if no record found as only existing students are allowed here
+                    return ["errorType"=>"UserNotExists"];
+                }
+                else 
+                {
+                    // the user exists in db
+                    if(strlen($student->getPassword()) > 4){
+                        // return an error if its password is greater than 4 characters long
+                        return ["errorType"=>"PasswordLengthInvalid"];
+                    } 
+
+                    return array(
+                        "id"=> $student->getId(),
+                        "password" => $student->getPassword()
+                    ); 
+                } 
+            },
             'disconnect' => function () {
 
                 try {
