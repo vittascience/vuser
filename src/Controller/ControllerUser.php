@@ -2,6 +2,9 @@
 
 namespace User\Controller;
 
+require __DIR__."/../../../../../bootstrap.php";
+require __DIR__.'/../../../../autoload.php';
+
 use User\Entity\User;
 use User\Entity\Regular;
 use User\Entity\ClassroomUser;
@@ -17,16 +20,21 @@ use Classroom\Entity\ActivityLinkClassroom;
 use Utils\ConnectionManager;
 use Database\DataBaseManager;
 use Utils\Mailer;
+use Dotenv\Dotenv;
+use Aiken\i18next\i18next;
 use Exception;
 
 
 
 class ControllerUser extends Controller
 {
-    public $URL = "https://fr.vittascience.com";
-    public function __construct($entityManager, $user, $url = "https://fr.vittascience.com")
+    public $URL = "";
+    public function __construct($entityManager, $user, $url =null)
     {
-        $this->URL = $url;
+        // Load env variables 
+        $dotenv = Dotenv::createImmutable(__DIR__."/../../../../../");
+        $dotenv->load();
+        $this->URL = isset($url) ? $url : $_ENV['VS_HOST'];
         parent::__construct($entityManager, $user);
         $this->actions = array(
             'get_all' => function () {
@@ -526,7 +534,7 @@ class ControllerUser extends Controller
                 );    
             },
             'update_user_infos' => function(){
-
+              
                 // return error if the request is not a POST request
                 if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
 
@@ -550,32 +558,33 @@ class ControllerUser extends Controller
                     );    
                 } 
 
-                // store old email for future check
+                // store old email for future check and set trigger for sending email or not
                 $tmpOldEmail = $regularUserToUpdate->getEmail();
+                $emailUpdatedRequested = false;
 
                 // user found in db, prepare data
                 $firstname = isset($_POST['firstname']) 
-                                ? strip_tags(htmlspecialchars($_POST['firstname'])) 
+                                ? htmlspecialchars(strip_tags(trim($_POST['firstname'])))
                                 : $userToUpdate->getFirstname();
 
                 $surname = isset($_POST['surname']) 
-                                ? strip_tags(htmlspecialchars($_POST['surname'])) 
+                                ? htmlspecialchars(strip_tags(trim($_POST['surname']))) 
                                 : $userToUpdate->getSurname();
 
                 $pseudo = isset($_POST['pseudo']) 
-                                ? strip_tags(htmlspecialchars($_POST['pseudo'])) 
+                                ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) 
                                 : $userToUpdate->getPseudo();
 
                 $email = isset($_POST['email'])
-                                ? $_POST['email']
+                                ? strip_tags(trim($_POST['email']))
                                 : $regularUserToUpdate->getEmail();
 
-                $password = isset($_POST['password']) ? $_POST['password'] : null;
+                $password = isset($_POST['password']) ? strip_tags(trim($_POST['password'])) : null;
 
                 
-
-                // create empty $errors array and fill it with errors if any
+                // create empty $errors array and fill it with errors if any and $emailSend if necessary
                 $errors = [];
+                $emailSent = null;
                 if(!filter_var($email,FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
                 if(!empty($password)){
                     // At least 8 characters including 1 Uppercase, 1 lowercase, 1 digit, and 1 special character
@@ -591,7 +600,18 @@ class ControllerUser extends Controller
                                             ->getRepository('User\Entity\Regular')
                                             ->findOneBy(array('email'=> $email));
                     if($emailAlreadyExists) $errors['emailExists']=true;
+                    else {
+                        // set new_mail, confirm_token fields to be filled in user_regulars
+                        $regularUserToUpdate->setNewMail($email);
+                        $confirmationToken = time()."-".bin2hex($email);
+                        $regularUserToUpdate->setConfirmToken($confirmationToken);
+
+                        // set the flag to true for sending email later 
+                        $emailUpdatedRequested = true;
+                    }
                 }
+                
+                // some errors have been found, return them to the user
                 if(!empty($errors)){
                     return array(
                         'isUserUpdated'=>false,
@@ -599,23 +619,69 @@ class ControllerUser extends Controller
                     );    
                 }
 
-                // no errors, update the fields value only when they are not empty
+                // no errors, update the fields value 
                 if(!empty($firstname)) $userToUpdate->setFirstname($firstname);
                 if(!empty($surname)) $userToUpdate->setSurname($surname);
                 if(!empty($pseudo)) $userToUpdate->setPseudo($pseudo);
                 $userToUpdate->setUpdateDate(new \DateTime());
-                if(!empty($password)){
+                if(!empty($password))
+                {
+                    // the user requested a password change, so we hash the password
                     $passwordHash = password_hash($password,PASSWORD_BCRYPT);
                     $userToUpdate->setPassword($passwordHash);
                 }
-                $regularUserToUpdate->setEmail($email);
-
+                
                 // save data in both tables users and user_regulars
                 $this->entityManager->flush();
                 
+                // the user requested its email to changed
+                if($emailUpdatedRequested == true)
+                {
+                    /////////////////////////////////////
+                    // PREPARE EMAIL TO BE SENT
+                    // received lang param
+                    $userLang = isset($_POST['lang']) 
+                                ? htmlspecialchars(strip_tags(trim($_POST['lang'])))  
+                                : 'fr';
+
+                    // set the email confirmation link and the email template to be used
+                    $emailConfirmationLink = "{$this->URL}/classroom/confirm_email_update.php?token=$confirmationToken";
+                    $emailTtemplateBody = $userLang."_confirm_email_update";
+
+                    // init i18next instance
+                    i18next::init($userLang,__DIR__."/../../../../../classroom/assets/lang/__lng__/ns.json");
+                    $emailSubject = i18next::getTranslation('classroom.updateUserInfos.emailUpdateConfirmation.emailSubject');
+                    $bodyTitle = i18next::getTranslation('classroom.updateUserInfos.emailUpdateConfirmation.bodyTitle');
+                    $textBeforeLink = i18next::getTranslation('classroom.updateUserInfos.emailUpdateConfirmation.textBeforeLink');
+
+                    $body = "
+                        <a href='$emailConfirmationLink' 
+                            style='text-decoration: none;
+                            padding: 10px;
+                            background: #27b88e;
+                            color: white;
+                            margin: 1rem auto;
+                            width: 50%;
+                            display: block;'
+                        >
+                            $bodyTitle
+                        </a>
+                        <br>
+                        <br>
+                        <p>$textBeforeLink $emailConfirmationLink
+                    ";
+                    
+                    // send the email
+                    $emailSent = Mailer::sendMail($email, $emailSubject, $body, strip_tags($body),$emailTtemplateBody); 
+
+                    /////////////////////////////////////
+                }
                 return array(
                     'isUserUpdated'=>true,
-                    "user" => $regularUserToUpdate
+                    "user" => array(
+                        "id"=> $userToUpdate->getId(),
+                        "emailSent" =>  $emailSent
+                    )
                 );    
             },
             'disconnect' => function ($data) {
