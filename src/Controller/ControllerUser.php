@@ -537,8 +537,8 @@ class ControllerUser extends Controller
                 /////////////////////////////////////
                 // PREPARE EMAIL TO BE SENT
                 // received lang param
-                $userLang = isset($_POST['lang']) 
-                                ? htmlspecialchars(strip_tags(trim($_POST['lang'])))  
+                $userLang = isset($_COOKIE['lng']) 
+                                ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))  
                                 : 'fr';
 
                 // create the confirmation account link and set the email template to be used      
@@ -676,8 +676,8 @@ class ControllerUser extends Controller
                     /////////////////////////////////////
                     // PREPARE EMAIL TO BE SENT
                     // received lang param
-                    $userLang = isset($_POST['lang']) 
-                                ? htmlspecialchars(strip_tags(trim($_POST['lang'])))  
+                    $userLang = isset($_COOKIE['lng']) 
+                                ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))  
                                 : 'fr';
 
                     // set the email confirmation link and the email template to be used
