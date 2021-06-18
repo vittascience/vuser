@@ -464,12 +464,13 @@ class ControllerUser extends Controller
                 if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
 
                 // bind incoming data to the value provided or null
-                $firstname = isset($_POST['firstname']) ? strip_tags(htmlspecialchars($_POST['firstname'])) : null;
-                $surname = isset($_POST['surname']) ? strip_tags(htmlspecialchars($_POST['surname'])) : null;
-                $pseudo = isset($_POST['pseudo']) ? strip_tags(htmlspecialchars($_POST['pseudo'])) : null;
-                $email = $_POST['email'] ?? null;
-                $password = $_POST['password'] ?? null;
-                $password_confirm = $_POST['password_confirm'] ?? null;
+                $firstname = isset($_POST['firstname']) ? htmlspecialchars(strip_tags(trim($_POST['firstname']))) : null;
+                $surname = isset($_POST['surname']) ? htmlspecialchars(strip_tags(trim($_POST['surname']))) : null;
+                $pseudo = isset($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : null;
+                $email = isset($_POST['email'])  ? htmlspecialchars(strip_tags(trim($_POST['email']))) : null;
+                $password = isset($_POST['password'])  ? htmlspecialchars(strip_tags(trim($_POST['password']))) : null;
+                $password_confirm = isset($_POST['password_confirm'])  ? htmlspecialchars(strip_tags(trim($_POST['password_confirm']))) : null;
+                
 
                 // At least 8 characters including 1 Uppercase, 1lowercase, 1 digit, and 1 special character
                 $regex = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/";
@@ -505,9 +506,9 @@ class ControllerUser extends Controller
                 }
                 
                 // no errors found, we can process the data
-                // hash the password
+                // hash the password and set $emailSent default value
                 $passwordHash = password_hash($password,PASSWORD_BCRYPT);
-
+                $emailSent = null;
                 // create user and persists it in memory
                 $user = new User;
                 $user->setFirstname($firstname);
@@ -515,6 +516,7 @@ class ControllerUser extends Controller
                 $user->setPseudo($pseudo);
                 $user->setPassword($passwordHash);
                 $user->setInsertDate( new \DateTime());
+                $user->setUpdateDate(new \DateTime());
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
                
@@ -524,14 +526,48 @@ class ControllerUser extends Controller
                 
                 // create record in user_regulars table and persists it in memory
                 $regularUser = new Regular($user,$email);
-                $regularUser->setActive(true);
-                $this->entityManager->persist($regularUser);
-                $this->entityManager->flush();
+                $regularUser->setActive(false);
                 
+                // create the confirm token and set user confirm token
+                $confirmationToken = time()."-".bin2hex($email);
+                $regularUser->setConfirmToken($confirmationToken);
+                $this->entityManager->persist($regularUser);
+                $this->entityManager->flush();  
+
+                /////////////////////////////////////
+                // PREPARE EMAIL TO BE SENT
+                // received lang param
+                $userLang = isset($_POST['lang']) 
+                                ? htmlspecialchars(strip_tags(trim($_POST['lang'])))  
+                                : 'fr';
+
+                // create the confirmation account link and set the email template to be used      
+                $accountConfirmationLink = "{$this->URL}/classroom/confirm_account.php?token=$confirmationToken";
+                $emailTtemplateBody = $userLang."_confirm_account";
+
+                // init i18next instance
+                i18next::init($userLang,__DIR__."/../../../../../classroom/assets/lang/__lng__/ns.json");
+                $emailSubject = i18next::getTranslation('classroom.register.accountConfirmationEmail.emailSubject');
+                $bodyTitle = i18next::getTranslation('classroom.register.accountConfirmationEmail.bodyTitle');
+                $textBeforeLink = i18next::getTranslation('classroom.register.accountConfirmationEmail.textBeforeLink');
+                $body = "
+                    <a href='$accountConfirmationLink' style='text-decoration: none;padding: 10px;background: #27b88e;color: white;margin: 1rem auto;width: 50%;display: block;'>
+                        $bodyTitle
+                    </a>
+                    <br>
+                    <br>
+                    <p>$textBeforeLink $accountConfirmationLink
+                ";
+                
+                // send email
+                $emailSent = Mailer::sendMail($email,  $emailSubject, $body, strip_tags($body),$emailTtemplateBody); 
+                /////////////////////////////////////
+
                 return array(
                     'isUserAdded'=>true,
-                    "id" => $user->getId()
-                );    
+                    "id" => $user->getId(),
+                    "emailSent" => $emailSent
+                );   
             },
             'update_user_infos' => function(){
               
