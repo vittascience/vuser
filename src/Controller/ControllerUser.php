@@ -560,7 +560,7 @@ class ControllerUser extends Controller
                 ";
                 
                 // send email
-                $emailSent = Mailer::sendMail($email,  $emailSubject, $body, strip_tags($body),$emailTtemplateBody); 
+                $emailSent = Mailer::sendMail($email,  $emailSubject, $body, strip_tags($body),$emailTtemplateBody,'support@vittascience.com','Support'); 
                 /////////////////////////////////////
 
                 return array(
@@ -708,7 +708,7 @@ class ControllerUser extends Controller
                     ";
                     
                     // send the email
-                    $emailSent = Mailer::sendMail($email, $emailSubject, $body, strip_tags($body),$emailTtemplateBody); 
+                    $emailSent = Mailer::sendMail($email, $emailSubject, $body, strip_tags($body),$emailTtemplateBody,'support@vittascience.com','Support'); 
 
                     /////////////////////////////////////
                 }
