@@ -441,6 +441,83 @@ class ControllerUser extends Controller
                 $_SESSION["pin"] = $password;
                 return ["isUsersAdded"=>true, "user"=>$user];
             },
+            'help_request_from_teacher'=> function(){
+
+                // allow only POST METHOD
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error'=> 'Method not Allowed');
+                
+                // bind incoming data
+                $subject = isset($_POST['subject']) ? htmlspecialchars(strip_tags(trim($_POST['subject']))) : null;
+                $message = isset($_POST['message']) ? htmlspecialchars(strip_tags(trim($_POST['message']))) : null;
+                $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+
+                // initialize empty $errors array and $emailSent flag
+                $errors = [];
+                $emailSent = false;
+
+                // check for errors if any
+                if(empty($subject)) $errors['subjectMissing'] = true;
+                if(empty($message)) $errors['messageMissing'] = true;
+                if($id == 0) $errors['invalidUserId'] = true;
+                
+                // some errors found, return them to the user
+                if(!empty($errors)){
+                    return array(
+                        'emailSent' => $emailSent,
+                        'errors'=> $errors
+                    );
+                }
+
+                // no errors, we can process the data
+                // retrieve the user from db
+                $regularUserFound = $this->entityManager->getRepository(Regular::class)->find($id);
+                if(!$regularUserFound){
+                    // no regularUser found, return an error
+                    return array(
+                        'emailSent' => $emailSent,
+                        'errorType' => 'unknownUser'
+                    );    
+                }
+
+                // the user was found
+                if($regularUserFound){
+
+                    $user =  $this->entityManager->getRepository(User::class)->find($id);
+                   
+                    $emailReceiver = $_ENV['VS_REPLY_TO_MAIL'];
+                    $replyToMail = $regularUserFound->getEmail();
+                    $replyToName = $user->getFirstname().' '.$user->getSurname();
+                    
+                    /////////////////////////////////////
+                    // PREPARE EMAIL TO BE SENT
+                    // received lang param
+                    $userLang = isset($_COOKIE['lng']) 
+                    ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))  
+                    : 'fr';
+
+                    
+                    $emailTtemplateBody = $userLang."_help_request";
+
+                    $body = "
+                        <br>
+                        <p>$message</p>
+                        <br>
+                    ";
+
+                    // send email
+                    $emailSent = Mailer::sendMail($emailReceiver,  $subject, $body, strip_tags($body),$emailTtemplateBody,$replyToMail,$replyToName); 
+                    /////////////////////////////////////
+
+                    return array(
+                        "emailSent" => $emailSent
+                    );   
+                }
+                return array(
+                    'id ' => $id,
+                    'subject'=> $subject,
+                    'message'=> $message
+                );
+            },
             'help_request_from_student'=> function(){
 
                 // allow only POST METHOD
