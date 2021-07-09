@@ -385,6 +385,78 @@ class ControllerUser extends Controller
                     );  
                 }
              },
+             'save_gar_teacher_classrooms'=> function(){
+               
+                // bind incoming data
+                $uai = htmlspecialchars(strip_tags(trim($_POST['uai'])));
+                $teacherId = htmlspecialchars(strip_tags(trim($_POST['teacherId'])));
+
+                
+                $classroomsToBeCreated = [];
+                foreach($_POST['classrooms'] as $classroomToBeSanitized){
+                    array_push(
+                        $classroomsToBeCreated,
+                        htmlspecialchars(strip_tags(trim($classroomToBeSanitized)))
+                    );
+                }
+                
+                // retrieve the current teacher classrooms from db 
+                $teacherClassroomsAlreadyCreated = $this->entityManager
+                                            ->getRepository(ClassroomLinkUser::class)
+                                            ->getTeacherClassrooms($teacherId,$uai);
+                
+                
+                foreach($classroomsToBeCreated as $classroomToBeCreated)
+                {                   
+                    // the classroom is already created
+                    if(in_array($classroomToBeCreated,$teacherClassroomsAlreadyCreated)) continue;
+                    else
+                    {
+                        // retrieve the user
+                        $teacher = $this->entityManager
+                                        ->getRepository(User::class)
+                                        ->findOneBy(array('id'=>$teacherId));
+
+                        // create the classroom
+                        $classroom = new Classroom($classroomToBeCreated,$uai);
+                        $classroom->setGroupe($classroomToBeCreated);
+                        $this->entityManager->persist($classroom);
+                        $this->entityManager->flush();
+                        $classroom->getId();
+
+                        // add the teacher to the classroom with teacher rights
+                        $classroomLinkUser = new ClassroomLinkUser($teacher,$classroom,2);
+                        $this->entityManager->persist($classroomLinkUser);
+                        $this->entityManager->flush();
+
+                        // create default vittademo user
+                        $user = new User();
+                        $user->setFirstName("élève");
+                        $user->setSurname("modèl");
+                        $user->setPseudo('vittademo');
+                        $password = passwordGenerator();
+                        $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
+                        
+                        // persist vittademo user
+                        $this->entityManager->persist($user);
+                        $this->entityManager->flush();
+
+                        // get vittademo user id from last db query => lastInsertId
+                        $user->setId($user->getId());
+
+                        // add the vittademo user to the classroom with students rights=0
+                        $classroomLinkUser = new ClassroomLinkUser($user,$classroom,0);
+                        $this->entityManager->persist($classroomLinkUser);
+                        $this->entityManager->flush();
+                    }
+                    
+                }
+                return array(
+                        'teacherId' => $teacherId,
+                        'uai' => $uai
+                    );
+               
+             },
             'linkSystem' => function ($data) {
                 /**
                  * Limiting learner number @THOMAS MODIF
