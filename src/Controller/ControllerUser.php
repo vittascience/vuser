@@ -305,6 +305,86 @@ class ControllerUser extends Controller
                     var_dump($e);
                 }
             },
+            'save_gar_teacher'=> function(){
+                
+                $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) :'';
+                $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) :'';
+                $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) :'';
+                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
+                $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) :null;
+                
+                
+                // check if user is already registered
+                $garUserExists = $this->entityManager
+                                ->getRepository('User\Entity\ClassroomUser')
+                                ->findOneBy(array("garId" => $ido));
+
+                // the user exists, return its data
+                if($garUserExists){              
+                    // get its classrooms
+                    $garUserClassrooms = $this->entityManager
+                                                    ->getRepository(ClassroomLinkUser::class)
+                                                    ->findBy(array(
+                                                        'user'=>$garUserExists->getId()->getId()
+                                                    ));
+                    // extract the classrooms names
+                    $classroomNames = [];
+                    foreach($garUserClassrooms as $garUserClassroom){
+                        array_push($classroomNames,$garUserClassroom->getClassroom()->getName());
+                    }
+                     return array(
+                        'userId' => $garUserExists->getId()->getId(),
+                        'classrooms'=> $classroomNames
+                    );
+                } 
+                else 
+                {
+                    // create a hashed password
+                    //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
+                    $hashedPassword = password_hash('Test1234!',PASSWORD_BCRYPT);
+
+                    // create the user to be saved in users table
+                    $user = new User;
+                    $user->setFirstname($pre);
+                    $user->setSurname($nom);
+                    $user->setPseudo("$pre $nom");
+                    $user->setPassword($hashedPassword);
+
+                    // save the user 
+                    $this->entityManager->persist($user);
+                    $this->entityManager->flush();
+
+                    // retrieve the lastInsertId to use for the next query 
+                    // this value is only available after a flush()
+                    $user->setId( $user->getId());
+
+                    // create a regular user to be saved in user_regulars table and persist it
+                    $regularUser = new Regular($user,$pmel);
+                    $regularUser->setActive(true);
+                    $this->entityManager->persist($regularUser);
+
+                    // create a premiumUser to be stored in user_premium table and persist it
+                    $userPremium = new UserPremium($user);
+                    $this->entityManager->persist($userPremium);
+
+                    // create a classroomUser to be saved in user_classroom_users
+                    $classroomUser = new ClassroomUser($user);
+                    $classroomUser->setGarId($ido);
+                    $classroomUser->setSchoolId($uai);
+                    $classroomUser->setIsTeacher(true);
+                    $classroomUser->setMailTeacher($pmel);
+
+                    // persist the classroomUser for later flush
+                    $this->entityManager->persist($classroomUser);
+
+                    // save regularUser and classroomUser in db
+                    $this->entityManager->flush();
+
+                    return array(
+                        'userId' => $user->getId()
+                    );  
+                }
+             },
             'linkSystem' => function ($data) {
                 /**
                  * Limiting learner number @THOMAS MODIF
