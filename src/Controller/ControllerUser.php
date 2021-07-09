@@ -305,6 +305,79 @@ class ControllerUser extends Controller
                     var_dump($e);
                 }
             },
+            'save_gar_student'=> function(){
+                
+                $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) :'';
+                $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) :'';
+                $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) :'';
+                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
+                $div = isset($_POST['div']) ? htmlspecialchars(strip_tags(trim($_POST['div']))) :'';
+                
+
+                $classroomParts = explode('##',$div);
+                $userClassroom = $classroomParts[0];
+
+                // check if user is already registered
+                $garUserExists = $this->entityManager
+                                ->getRepository('User\Entity\ClassroomUser')
+                                ->findOneBy(array("garId" => $ido));
+                // the user exists, return its data
+                if($garUserExists){              
+                
+                    return array(
+                       'userId' => $garUserExists->getId()->getId()
+                   );
+               } 
+               else 
+               {
+                   // create a hashed password
+                   //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
+                   $hashedPassword = password_hash('Test1234!',PASSWORD_BCRYPT);
+
+                   // create the user to be saved in users table
+                   $user = new User;
+                   $user->setFirstname($pre);
+                   $user->setSurname($nom);
+                   $user->setPseudo("$pre $nom");
+                   $user->setPassword($hashedPassword);
+
+                   // save the user 
+                   $this->entityManager->persist($user);
+                   $this->entityManager->flush();
+
+                   // retrieve the lastInsertId to use for the next query 
+                   // this value is only available after a flush()
+                   $user->setId( $user->getId());
+
+                   // create a classroomUser to be saved in user_classroom_users
+                   $classroomUser = new ClassroomUser($user);
+                   $classroomUser->setGarId($ido);
+                   $classroomUser->setSchoolId($uai);
+                   $classroomUser->setIsTeacher(false);
+
+                   // persist the classroomUser for later flush
+                   $this->entityManager->persist($classroomUser);
+
+                   // retrieve the user classroom
+                   $classroom = $this->entityManager
+                                            ->getRepository(Classroom::class)
+                                            ->findOneBy(array(
+                                                'school'=> $uai,
+                                                'groupe'=> $userClassroom
+                                            ));
+                    
+                    // add the current student to its classroom
+                    $classroomLinkUser = new ClassroomLinkUser($user,$classroom,0);
+                    $this->entityManager->persist($classroomLinkUser);
+                    
+                    // save classrommUser and classroomLinkUser in db
+                    $this->entityManager->flush();
+
+                    return array(
+                        'userId' => $user->getId()
+                    );  
+               }
+            },
             'linkSystem' => function ($data) {
                 /**
                  * Limiting learner number @THOMAS MODIF
