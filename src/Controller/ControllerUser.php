@@ -651,9 +651,6 @@ class ControllerUser extends Controller
                 $password_confirm = isset($_POST['password_confirm'])  ? htmlspecialchars(strip_tags(trim($_POST['password_confirm']))) : null;
                 
 
-                // At least 8 characters including 1 Uppercase, 1lowercase, 1 digit, and 1 special character
-                $regex = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/";
-
                 // create empty $errors and fill it with errors if any
                 $errors = [];
                 if(empty($firstname)) $errors['firstnameMissing'] = true;
@@ -662,11 +659,9 @@ class ControllerUser extends Controller
                 if(empty($email)) $errors['emailMissing'] = true;
                 elseif(!filter_var($email,FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
                 if(empty($password)) $errors['passwordMissing'] = true;
+                elseif(strlen($password) < 7) $errors['invalidPassword'] = true;
                 if(empty($password_confirm)) $errors['passwordConfirmMissing'] = true;
                 elseif($password !== $password_confirm) $errors['passwordsMismatch'] = true;
-                elseif(!preg_match($regex,$password,$matches)){
-                    $errors['passwordInvalid'] = true;
-                }
                 
                 // check if the email is already listed in db
                 $emailAlreadyExists = $this->entityManager
