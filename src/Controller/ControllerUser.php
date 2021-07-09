@@ -356,8 +356,10 @@ class ControllerUser extends Controller
                  // set the $isAllowed () flag to true  if the current user is admin or premium
                  $isAllowed = $learnerNumberCheck["isAdmin"] || $learnerNumberCheck["isPremium"];
 
-                // the current classroom owner is not allowed to have an unlimited number of students
-                if(!$isAllowed){
+                // the current classroom owner is not allowed to have an unlimited number of students 
+                ///////////////////////////////////
+                // remove the limitations for CABRI
+                /* if(!$isAllowed){
                     
                     // computer the total number of students registered +1 and return an error if > 50
                     $addedLearnerNumber = 1;
@@ -365,7 +367,9 @@ class ControllerUser extends Controller
                     if($totalLearnerCount > 50){
                         return ["isUsersAdded"=>false, "currentLearnerCount"=>$learnerNumberCheck["learnerNumber"], "addedLearnerNumber"=>$addedLearnerNumber];
                     }
-                }
+                } */
+                // end remove the limitations for CABRI
+                /////////////////////////////////////////
                 /**
                  * End of learner number limiting
                  */
