@@ -387,29 +387,27 @@ class ControllerUser extends Controller
 
                    // retrieve the user classrooms, there can be either 1 or several classrooms(1classroom is a set of classroom+groupe)
                    $classrooms = $this->entityManager
-                                            ->getRepository(Classroom::class)
-                                            ->findBy(array(
-                                                'uai'=> $uai,
-                                                'name'=> $userClassroom
-                                            ));
-                    
-                    // initiate an empty array to fill with the student classrooms+groups
-                    $classroomsFound = [];
-                    foreach($classrooms as $classroom){
-                        
-                        array_push($classroomsFound,array(
-                            'id'=> $classroom->getId(),
-                            'name'=> $classroom->getName(),
-                            'school'=> $classroom->getSchool(),
-                            'link'=> $classroom->getLink(),
-                            'uai'=> $classroom->getUai(),
-                            'groupe'=> $classroom->getGroupe()
-                        ));
-                    }
-                    return array(
-                        'userId' => $user->getId(),
-                        'classrooms'=> $classroomsFound
-                    );  
+                   ->getRepository(ClassroomLinkUser::class)
+                   ->getStudentClassroomsAndRelatedTeacher($userClassroom,$uai);
+                   
+                  
+                   // initiate an empty array to fill with the student classrooms+groups
+                   $classroomsFound = [];
+                   foreach($classrooms as $classroom){
+
+                       array_push($classroomsFound,array(
+                       'name'=> $classroom['name'],
+                       'groupe'=> $classroom['groupe'],
+                       'link'=> $classroom['link'],
+                       'teacher' => $classroom['teacher'],
+                       'rights'=> $classroom['rights']
+                       ));
+                   }
+                  
+                   return array(
+                   'userId' => $garUserExists->getId()->getId(),
+                   'classrooms'=> $classroomsFound
+                   );  
                }
             },
             'add_gar_student_to_its_classroom'=> function(){
