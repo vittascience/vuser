@@ -412,6 +412,82 @@ class ControllerUser extends Controller
                     );  
                }
             },
+            'add_gar_student_to_its_classroom'=> function(){
+
+               
+                // accept only POST request
+                //if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+
+                // bind and sanitize incoming data
+                $classroomLink = htmlspecialchars(strip_tags(trim($_GET['link'])));
+                $userId = intval($_GET['user_id']);
+
+                // retrieve the classroom by its link
+                $classroom = $this->entityManager
+                                    ->getRepository('Classroom\Entity\Classroom')
+                                    ->findOneBy(array("link" =>  $classroomLink));
+
+                // if the classroom is blocked, return to the mediacenter
+                if($classroom->getIsBlocked() === true ){
+                    return header("Location:https://simulent.partenaire.test-gar.education.fr/mediacentre");
+                }
+
+                // retrieve the user by its user_id
+                $userFound = $this->entityManager
+                                    ->getRepository(User::class)
+                                    ->findOneBy(array('id'=>$userId));
+                
+                // no user found, return to mediacenter
+                if(!$userFound){
+                    return header("Location:https://simulent.partenaire.test-gar.education.fr/mediacentre");
+                }
+                
+                // check if the current user is already registered as being part of this classroom
+                $studentExistsInClassroom = $this->entityManager
+                                            ->getRepository(ClassroomLinkUser::class)
+                                            ->getStudentAndClassroomByIds($userFound->getId(),$classroom->getId()) ;
+                
+                if(!$studentExistsInClassroom){
+                    // the student not found in the classroom, add it to classroom_users_link_classrooms table
+                    $linkStudentToItsClassroom = new ClassroomLinkUser($userFound, $classroom);
+                    $linkStudentToItsClassroom->setRights(0);
+                    $this->entityManager->persist($linkStudentToItsClassroom);
+                    $this->entityManager->flush();
+                }
+               
+                // prepare the student data to be saved in $_SESSION
+                $sessionUserId = intval($userFound->getId());
+                $connectionToken = bin2hex(random_bytes(32));
+
+                // save the connection token in db
+                $res = DatabaseManager::getSharedInstance()
+                                        ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$connectionToken, $sessionUserId]);
+                if($res){
+                    // the token is aved in db, set session and redirect the student to its dashboard
+                    $_SESSION["id"] = $sessionUserId;
+                    $_SESSION['token'] =  $connectionToken;
+                    return header("Location: /classroom/home.php");
+                }
+               
+               
+                /* $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
+                    ->findBy(array("classroom" => $classroom));
+
+                //add all activities linked with the classroom to the learner
+                foreach ($activitiesLinkClassroom as $activity) {
+                    $activityLinkUser = new ActivityLinkUser(
+                        $activity->getActivity(), 
+                        $userFound, 
+                        $activity->getDateBegin(),  
+                        $activity->getDateEnd(), 
+                        $activity->getEvaluation(), 
+                        $activity->getAutocorrection(), 
+                        $activity->getIntroduction(),
+                        $activity->getReference()
+                    );
+                    $this->entityManager->persist($activityLinkUser);
+                } */
+            },
             'linkSystem' => function ($data) {
                 /**
                  * Limiting learner number @THOMAS MODIF
