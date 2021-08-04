@@ -486,6 +486,173 @@ class ControllerUser extends Controller
                     $this->entityManager->persist($activityLinkUser);
                 } */
             },
+            'save_gar_teacher'=> function(){
+                
+                // accept only POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+
+                // bind and sanitize incoming data
+                $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) :'';
+                $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) :'';
+                $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) :'';
+                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
+                $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) :null;
+                
+                // get the teacher by its ido(opaque identifier)
+                $garUserExists = $this->entityManager
+                                ->getRepository('User\Entity\ClassroomUser')
+                                ->findOneBy(array("garId" => $ido));
+
+                // the teacher exists, return its data
+                if($garUserExists){   
+
+                    // get its classrooms
+                    $garUserClassrooms = $this->entityManager
+                                                ->getRepository(ClassroomLinkUser::class)
+                                                ->findBy(array(
+                                                    'user'=>$garUserExists->getId()->getId()
+                                                ));
+
+                    // initiate an empty array to fill with extracted classrooms names
+                    $classroomNames = [];
+                    foreach($garUserClassrooms as $garUserClassroom){
+                        array_push($classroomNames,[$garUserClassroom->getClassroom()->getName(),$garUserClassroom->getClassroom()->getGroupe()]);
+                    }
+
+                     return array(
+                        'userId' => $garUserExists->getId()->getId(),
+                        'classrooms'=> $classroomNames
+                    );
+                } 
+                else 
+                {
+                    // the teacher is not registered yet
+                    // create a hashed password
+                    //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
+                    $hashedPassword = password_hash('Test1234!',PASSWORD_BCRYPT);
+
+                    // create the user to be saved in users table
+                    $user = new User;
+                    $user->setFirstname($pre);
+                    $user->setSurname($nom);
+                    $user->setPseudo("$pre $nom");
+                    $user->setPassword($hashedPassword);
+
+                    // save the user 
+                    $this->entityManager->persist($user);
+                    $this->entityManager->flush();
+
+                    // retrieve the lastInsertId to use for the next query 
+                    // this value is only available after a flush()
+                    $user->setId( $user->getId());
+
+                    // create a regular user to be saved in user_regulars table and persist it
+                    $regularUser = new Regular($user,$pmel);
+                    $regularUser->setActive(true);
+                    $this->entityManager->persist($regularUser);
+
+                    // create a premiumUser to be stored in user_premium table and persist it
+                    $userPremium = new UserPremium($user);
+                    $this->entityManager->persist($userPremium);
+
+                    // create a classroomUser to be saved in user_classroom_users
+                    $classroomUser = new ClassroomUser($user);
+                    $classroomUser->setGarId($ido);
+                    $classroomUser->setSchoolId($uai);
+                    $classroomUser->setIsTeacher(true);
+                    $classroomUser->setMailTeacher($pmel);
+
+                    // persist the classroomUser for later flush
+                    $this->entityManager->persist($classroomUser);
+
+                    // save regularUser and classroomUser in db
+                    $this->entityManager->flush();
+
+                    return array(
+                        'userId' => $user->getId()
+                    );  
+                }
+             },
+            'save_gar_teacher_classrooms'=> function(){
+
+                // Allow from any origin to be commented in production
+                if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
+
+                // accept only POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+    
+                // bind incoming json data and decode them
+                $incomingData= file_get_contents('php://input');
+                $decodedData = json_decode($incomingData);
+                 
+                // sanitize incoming data
+                $uai = htmlspecialchars(strip_tags(trim($decodedData->uai)));
+                $teacherId = htmlspecialchars(strip_tags(trim($decodedData->teacherId)));
+
+
+                for($i=0; $i < count($decodedData->classroomsToCreate); $i++){
+
+                    // bind and sanitize each classroom and related group
+                    $classroomName = htmlspecialchars(strip_tags(trim($decodedData->classroomsToCreate[$i]->classroom)));
+                    $relatedGroup = htmlspecialchars(strip_tags(trim($decodedData->classroomsToCreate[$i]->relatedGroup)));
+
+                    // get the classroom and group from classrooms and classroom_users_link_classrooms joined tables
+                    $classroomExists = $this->entityManager
+                                            ->getRepository(ClassroomLinkUser::class)
+                                            ->getTeacherClassroomBy($teacherId,$classroomName,$uai,$relatedGroup);
+
+                    
+                    // the classroom already exists, we do nothing
+                    if($classroomExists) continue;
+                    else{
+                        // the classroom does not exists
+                        // get the current teacher object for next query
+                        $teacher = $this->entityManager
+                                        ->getRepository(User::class)
+                                        ->findOneBy(array('id'=>$teacherId));
+
+
+                        // create the classroom
+                        $classroom = new Classroom($classroomName);
+                        $classroom->setGroupe($relatedGroup);
+                        $classroom->setUai($uai);
+                        $this->entityManager->persist($classroom);
+                        $this->entityManager->flush();
+                        $classroom->getId();
+
+                        // add the teacher to the classroom with teacher rights=2
+                        $classroomLinkUser = new ClassroomLinkUser($teacher,$classroom,2);
+                        $this->entityManager->persist($classroomLinkUser);
+                        $this->entityManager->flush();
+
+                        // create default vittademo user (required for the dashboard to work properly)
+                        $user = new User();
+                        $user->setFirstName("élève");
+                        $user->setSurname("modèl");
+                        $user->setPseudo('vittademo');
+                        $password = passwordGenerator();
+                        $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
+                        
+                        // persist and save vittademo user in users table
+                        $this->entityManager->persist($user);
+                        $this->entityManager->flush();
+
+                        // get vittademo user id from last db query => lastInsertId
+                        $user->setId($user->getId());
+
+                        // add the vittademo user to the classroom with students rights=0 (classroom_users_link_classrooms table)
+                        $classroomLinkUser = new ClassroomLinkUser($user,$classroom,0);
+                        $this->entityManager->persist($classroomLinkUser);
+                        $this->entityManager->flush();
+                    }
+                }
+                
+                return array(
+                        'teacherId' => $teacherId,
+                        'classroomsCreated' => true
+                    );
+               
+             },
             'linkSystem' => function ($data) {
                 /**
                  * Limiting learner number @THOMAS MODIF
