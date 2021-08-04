@@ -307,13 +307,17 @@ class ControllerUser extends Controller
             },
             'save_gar_student'=> function(){
                 
+                // accept only POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+                
+                // bind and sanitize incoming data
                 $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) :'';
                 $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) :'';
                 $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) :'';
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
                 $div = isset($_POST['div']) ? htmlspecialchars(strip_tags(trim($_POST['div']))) :'';
                 
-
+                // get the student classroom
                 $classroomParts = explode('##',$div);
                 $userClassroom = $classroomParts[0];
 
@@ -321,15 +325,37 @@ class ControllerUser extends Controller
                 $garUserExists = $this->entityManager
                                 ->getRepository('User\Entity\ClassroomUser')
                                 ->findOneBy(array("garId" => $ido));
+
                 // the user exists, return its data
                 if($garUserExists){              
-                
+               
+                    // retrieve the user classrooms, there can be either 1 or several classrooms(1classroom is a set of classroom+groupe)
+                    $classrooms = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->getStudentClassroomsAndRelatedTeacher($userClassroom,$uai);
+                    
+                   
+                    // initiate an empty array to fill with the student classrooms+groups
+                    $classroomsFound = [];
+                    foreach($classrooms as $classroom){
+
+                        array_push($classroomsFound,array(
+                        'name'=> $classroom['name'],
+                        'groupe'=> $classroom['groupe'],
+                        'link'=> $classroom['link'],
+                        'teacher' => $classroom['teacher'],
+                        'rights'=> $classroom['rights']
+                        ));
+                    }
+                   
                     return array(
-                       'userId' => $garUserExists->getId()->getId()
-                   );
+                    'userId' => $garUserExists->getId()->getId(),
+                    'classrooms'=> $classroomsFound
+                    );  
                } 
                else 
                {
+                   // the student is not registerd yet
                    // create a hashed password
                    //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
                    $hashedPassword = password_hash('Test1234!',PASSWORD_BCRYPT);
@@ -340,14 +366,14 @@ class ControllerUser extends Controller
                    $user->setSurname($nom);
                    $user->setPseudo("$pre $nom");
                    $user->setPassword($hashedPassword);
-
+                
                    // save the user 
                    $this->entityManager->persist($user);
                    $this->entityManager->flush();
 
                    // retrieve the lastInsertId to use for the next query 
                    // this value is only available after a flush()
-                   $user->setId( $user->getId());
+                   $user->setId($user->getId());
 
                    // create a classroomUser to be saved in user_classroom_users
                    $classroomUser = new ClassroomUser($user);
@@ -357,24 +383,32 @@ class ControllerUser extends Controller
 
                    // persist the classroomUser for later flush
                    $this->entityManager->persist($classroomUser);
+                   $this->entityManager->flush();
 
-                   // retrieve the user classroom
-                   $classroom = $this->entityManager
+                   // retrieve the user classrooms, there can be either 1 or several classrooms(1classroom is a set of classroom+groupe)
+                   $classrooms = $this->entityManager
                                             ->getRepository(Classroom::class)
-                                            ->findOneBy(array(
-                                                'school'=> $uai,
-                                                'groupe'=> $userClassroom
+                                            ->findBy(array(
+                                                'uai'=> $uai,
+                                                'name'=> $userClassroom
                                             ));
                     
-                    // add the current student to its classroom
-                    $classroomLinkUser = new ClassroomLinkUser($user,$classroom,0);
-                    $this->entityManager->persist($classroomLinkUser);
-                    
-                    // save classrommUser and classroomLinkUser in db
-                    $this->entityManager->flush();
-
+                    // initiate an empty array to fill with the student classrooms+groups
+                    $classroomsFound = [];
+                    foreach($classrooms as $classroom){
+                        
+                        array_push($classroomsFound,array(
+                            'id'=> $classroom->getId(),
+                            'name'=> $classroom->getName(),
+                            'school'=> $classroom->getSchool(),
+                            'link'=> $classroom->getLink(),
+                            'uai'=> $classroom->getUai(),
+                            'groupe'=> $classroom->getGroupe()
+                        ));
+                    }
                     return array(
-                        'userId' => $user->getId()
+                        'userId' => $user->getId(),
+                        'classrooms'=> $classroomsFound
                     );  
                }
             },
