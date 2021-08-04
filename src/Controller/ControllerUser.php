@@ -307,31 +307,37 @@ class ControllerUser extends Controller
             },
             'save_gar_teacher'=> function(){
                 
+                // accept only POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+
+                // bind and sanitize incoming data
                 $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) :'';
                 $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) :'';
                 $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) :'';
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
                 $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) :null;
                 
-                
-                // check if user is already registered
+                // get the teacher by its ido(opaque identifier)
                 $garUserExists = $this->entityManager
                                 ->getRepository('User\Entity\ClassroomUser')
                                 ->findOneBy(array("garId" => $ido));
 
-                // the user exists, return its data
-                if($garUserExists){              
+                // the teacher exists, return its data
+                if($garUserExists){   
+
                     // get its classrooms
                     $garUserClassrooms = $this->entityManager
-                                                    ->getRepository(ClassroomLinkUser::class)
-                                                    ->findBy(array(
-                                                        'user'=>$garUserExists->getId()->getId()
-                                                    ));
-                    // extract the classrooms names
+                                                ->getRepository(ClassroomLinkUser::class)
+                                                ->findBy(array(
+                                                    'user'=>$garUserExists->getId()->getId()
+                                                ));
+
+                    // initiate an empty array to fill with extracted classrooms names
                     $classroomNames = [];
                     foreach($garUserClassrooms as $garUserClassroom){
-                        array_push($classroomNames,$garUserClassroom->getClassroom()->getName());
+                        array_push($classroomNames,[$garUserClassroom->getClassroom()->getName(),$garUserClassroom->getClassroom()->getGroupe()]);
                     }
+
                      return array(
                         'userId' => $garUserExists->getId()->getId(),
                         'classrooms'=> $classroomNames
@@ -339,6 +345,7 @@ class ControllerUser extends Controller
                 } 
                 else 
                 {
+                    // the teacher is not registered yet
                     // create a hashed password
                     //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
                     $hashedPassword = password_hash('Test1234!',PASSWORD_BCRYPT);
