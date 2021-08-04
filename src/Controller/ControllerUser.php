@@ -393,50 +393,63 @@ class ControllerUser extends Controller
                 }
              },
              'save_gar_teacher_classrooms'=> function(){
-               
-                // bind incoming data
-                $uai = htmlspecialchars(strip_tags(trim($_POST['uai'])));
-                $teacherId = htmlspecialchars(strip_tags(trim($_POST['teacherId'])));
+                
+                // Allow from any origin to be commented in production
+                if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
 
+                // accept only POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+    
+                // bind incoming json data and decode them
+                $incomingData= file_get_contents('php://input');
+                $decodedData = json_decode($incomingData);
+                 
+                // sanitize incoming data
+                $uai = htmlspecialchars(strip_tags(trim($decodedData->uai)));
+                $teacherId = htmlspecialchars(strip_tags(trim($decodedData->teacherId)));
                 
-                $classroomsToBeCreated = [];
-                foreach($_POST['classrooms'] as $classroomToBeSanitized){
-                    array_push(
-                        $classroomsToBeCreated,
-                        htmlspecialchars(strip_tags(trim($classroomToBeSanitized)))
-                    );
-                }
-                
-                // retrieve the current teacher classrooms from db 
+                // retrieve the current teacher classrooms from classrooms and classroom_users_link_classrooms joined tables
                 $teacherClassroomsAlreadyCreated = $this->entityManager
                                             ->getRepository(ClassroomLinkUser::class)
                                             ->getTeacherClassrooms($teacherId,$uai);
-                
-                
-                foreach($classroomsToBeCreated as $classroomToBeCreated)
-                {                   
-                    // the classroom is already created
-                    if(in_array($classroomToBeCreated,$teacherClassroomsAlreadyCreated)) continue;
-                    else
-                    {
-                        // retrieve the user
+
+
+                for($i=0; $i < count($decodedData->classroomsToCreate); $i++){
+
+                    // bind and sanitize each classroom and related group
+                    $classroomName = htmlspecialchars(strip_tags(trim($decodedData->classroomsToCreate[$i]->classroom)));
+                    $relatedGroup = htmlspecialchars(strip_tags(trim($decodedData->classroomsToCreate[$i]->relatedGroup)));
+
+                    // get the classroom and group from classrooms and classroom_users_link_classrooms joined tables
+                    $classroomExists = $this->entityManager
+                                            ->getRepository(ClassroomLinkUser::class)
+                                            ->getTeacherClassroomBy($teacherId,$classroomName,$uai,$relatedGroup);
+
+                    
+                    // the classroom already exists, we do nothing
+                    if($classroomExists) continue;
+                    else{
+                        // the classroom does not exists
+                        // get the current teacher object for next query
                         $teacher = $this->entityManager
                                         ->getRepository(User::class)
                                         ->findOneBy(array('id'=>$teacherId));
 
+
                         // create the classroom
-                        $classroom = new Classroom($classroomToBeCreated,$uai);
-                        $classroom->setGroupe($classroomToBeCreated);
+                        $classroom = new Classroom($classroomName);
+                        $classroom->setGroupe($relatedGroup);
+                        $classroom->setUai($uai);
                         $this->entityManager->persist($classroom);
                         $this->entityManager->flush();
                         $classroom->getId();
 
-                        // add the teacher to the classroom with teacher rights
+                        // add the teacher to the classroom with teacher rights=2
                         $classroomLinkUser = new ClassroomLinkUser($teacher,$classroom,2);
                         $this->entityManager->persist($classroomLinkUser);
                         $this->entityManager->flush();
 
-                        // create default vittademo user
+                        // create default vittademo user (required for the dashboard to work properly)
                         $user = new User();
                         $user->setFirstName("élève");
                         $user->setSurname("modèl");
@@ -444,23 +457,23 @@ class ControllerUser extends Controller
                         $password = passwordGenerator();
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
                         
-                        // persist vittademo user
+                        // persist and save vittademo user in users table
                         $this->entityManager->persist($user);
                         $this->entityManager->flush();
 
                         // get vittademo user id from last db query => lastInsertId
                         $user->setId($user->getId());
 
-                        // add the vittademo user to the classroom with students rights=0
+                        // add the vittademo user to the classroom with students rights=0 (classroom_users_link_classrooms table)
                         $classroomLinkUser = new ClassroomLinkUser($user,$classroom,0);
                         $this->entityManager->persist($classroomLinkUser);
                         $this->entityManager->flush();
                     }
-                    
                 }
+                
                 return array(
                         'teacherId' => $teacherId,
-                        'uai' => $uai
+                        'classroomsCreated' => true
                     );
                
              },
