@@ -516,7 +516,11 @@ class ControllerUser extends Controller
                     // initiate an empty array to fill with extracted classrooms names
                     $classroomNames = [];
                     foreach($garUserClassrooms as $garUserClassroom){
-                        array_push($classroomNames,[$garUserClassroom->getClassroom()->getName(),$garUserClassroom->getClassroom()->getGroupe()]);
+                        array_push($classroomNames,[
+                            "name" => $garUserClassroom->getClassroom()->getName(),
+                            "group" => $garUserClassroom->getClassroom()->getGroupe(),
+                            "classroomLink" => $garUserClassroom->getClassroom()->getLink(),
+                        ]);
                     }
 
                      return array(
@@ -546,32 +550,36 @@ class ControllerUser extends Controller
                     // this value is only available after a flush()
                     $user->setId( $user->getId());
 
-                    // create a regular user to be saved in user_regulars table and persist it
-                    $regularUser = new Regular($user,$pmel);
-                    $regularUser->setActive(true);
-                    $this->entityManager->persist($regularUser);
-
-                    // create a premiumUser to be stored in user_premium table and persist it
-                    $userPremium = new UserPremium($user);
-                    $this->entityManager->persist($userPremium);
-
+                    /////////////////////////////
+                    // START REFACTO FOR THE PROD
                     // create a classroomUser to be saved in user_classroom_users
                     $classroomUser = new ClassroomUser($user);
                     $classroomUser->setGarId($ido);
                     $classroomUser->setSchoolId($uai);
                     $classroomUser->setIsTeacher(true);
                     $classroomUser->setMailTeacher($pmel);
-
-                    // persist the classroomUser for later flush
                     $this->entityManager->persist($classroomUser);
-
-                    // save regularUser and classroomUser in db
                     $this->entityManager->flush();
+
+                    // create a regular user to be saved in user_regulars table and persist it
+                    $regularUser = new Regular($user,$pmel);
+                    $regularUser->setActive(true);
+                    $this->entityManager->persist($regularUser);
+                    $this->entityManager->flush();
+
+                    /*  
+                    // TODO THERE ARE SOME ISSUES WITH THIS TABLE ON PRODUCTION
+                    // create a premiumUser to be stored in user_premium table and persist it
+                    $userPremium = new UserPremium($user);
+                    $this->entityManager->persist($userPremium);
+                    $this->entityManager->flush(); */
+
+                    // END REFACTO FOR THE PROD
+                    ///////////////////////////
 
                     return array(
                         'userId' => $user->getId()
                     );  
-                }
              },
             'save_gar_teacher_classrooms'=> function(){
 
