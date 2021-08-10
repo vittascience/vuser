@@ -580,6 +580,7 @@ class ControllerUser extends Controller
                     return array(
                         'userId' => $user->getId()
                     );  
+                }
              },
             'save_gar_teacher_classrooms'=> function(){
 
