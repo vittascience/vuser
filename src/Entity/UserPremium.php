@@ -1,6 +1,6 @@
 <?php
 
-namespace Learn\Entity;
+namespace User\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use User\Entity\User;
