@@ -5,24 +5,25 @@ namespace User\Controller;
 require __DIR__."/../../../../../bootstrap.php";
 require __DIR__.'/../../../../autoload.php';
 
+use Exception;
+use Utils\Mailer;
+use Dotenv\Dotenv;
+use DAO\RegularDAO;
 use User\Entity\User;
 use User\Entity\Regular;
-use User\Entity\ClassroomUser;
-use User\Entity\Teacher;
-use Classroom\Entity\Classroom;
-use Classroom\Entity\ClassroomLinkUser;
 /**
  * @ THOMAS MODIF 1 line just below
  */
-use DAO\RegularDAO;
-use Classroom\Entity\ActivityLinkUser;
-use Classroom\Entity\ActivityLinkClassroom;
+use User\Entity\Teacher;
+use Aiken\i18next\i18next;
+use User\Entity\UserPremium;
 use Utils\ConnectionManager;
 use Database\DataBaseManager;
-use Utils\Mailer;
-use Dotenv\Dotenv;
-use Aiken\i18next\i18next;
-use Exception;
+use User\Entity\ClassroomUser;
+use Classroom\Entity\Classroom;
+use Classroom\Entity\ActivityLinkUser;
+use Classroom\Entity\ClassroomLinkUser;
+use Classroom\Entity\ActivityLinkClassroom;
 
 
 
@@ -305,6 +306,44 @@ class ControllerUser extends Controller
                     var_dump($e);
                 }
             },
+            'get_gar_student_available_classrooms'=> function(){
+
+                // accept only POST request
+                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+
+                // bind and sanitize incoming data
+                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
+                $div = isset($_POST['div']) ? htmlspecialchars(strip_tags(trim($_POST['div']))) :'';
+
+                // get the student classroom
+                $classroomParts = explode('##',$div);
+                $userClassroom = $classroomParts[0];
+
+                // retrieve the user classrooms, there can be either 1 or several classrooms(1classroom is a set of classroom+groupe)
+                $classrooms = $this->entityManager
+                ->getRepository(ClassroomLinkUser::class)
+                ->getStudentClassroomsAndRelatedTeacher($userClassroom,$uai);
+                
+               
+                // initiate an empty array to fill with the student classrooms+groups
+                $classroomsFound = [];
+                foreach($classrooms as $classroom){
+
+                    array_push($classroomsFound,array(
+                        'id'=> $classroom['id'],
+                        'name'=> $classroom['name'],
+                        'groupe'=> $classroom['groupe'],
+                        'teacher' => $classroom['teacher'],
+                        'rights'=> $classroom['rights']
+                    ));
+                }
+              
+                return array(
+                    'classrooms'=> $classroomsFound
+                );  
+
+              
+            },
             'save_gar_student'=> function(){
                 
                 // accept only POST request
@@ -567,12 +606,12 @@ class ControllerUser extends Controller
                     $this->entityManager->persist($regularUser);
                     $this->entityManager->flush();
 
-                    /*  
+                     
                     // TODO THERE ARE SOME ISSUES WITH THIS TABLE ON PRODUCTION
                     // create a premiumUser to be stored in user_premium table and persist it
                     $userPremium = new UserPremium($user);
                     $this->entityManager->persist($userPremium);
-                    $this->entityManager->flush(); */
+                    $this->entityManager->flush();
 
                     // END REFACTO FOR THE PROD
                     ///////////////////////////
