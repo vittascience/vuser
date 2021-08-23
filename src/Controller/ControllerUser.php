@@ -612,7 +612,7 @@ class ControllerUser extends Controller
                     $userPremium = new UserPremium($user);
                     $this->entityManager->persist($userPremium);
                     $this->entityManager->flush();
-
+                    
                     // END REFACTO FOR THE PROD
                     ///////////////////////////
 

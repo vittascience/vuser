@@ -63,10 +63,10 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
     public function setGarId($garId)
     {
         if (is_string($garId) || $garId == NULL) {
-            if ((strlen($garId) == 0 || strlen($garId) == 128)) {
+            if ((strlen($garId) == 0 || strlen($garId) < 255)) {
                 $this->garId = $garId;
             } else {
-                throw new EntityDataIntegrityException("garId needs to have a lenght null or equal to 128");
+                throw new EntityDataIntegrityException("garId needs to have a lenght null or less than 255 characters");
             }
         } else {
             throw new EntityDataIntegrityException("garId needs to be string or null ");
