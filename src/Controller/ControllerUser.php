@@ -363,11 +363,12 @@ class ControllerUser extends Controller
                                         ? explode('##',htmlspecialchars(strip_tags(trim($incomingData->div))))[0]
                                         :'';
                 $sanitizedData->classroomId = isset($incomingData->classroomId) ? intval($incomingData->classroomId) : 0;
-                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->div}";                
+                $sanitizedData->classroomGroup = isset($incomingData->classroomGroup) ? htmlspecialchars(strip_tags(trim($incomingData->classroomGroup))) : '';
+                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->div}-{$sanitizedData->classroomGroup}";                
                 
                 // get the student
                 $studentRegistered = $this->registerGarStudentIfNeeded($sanitizedData);
-
+                
                 if($studentRegistered){
 
                     // get the classroom
