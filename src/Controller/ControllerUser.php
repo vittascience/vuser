@@ -344,186 +344,71 @@ class ControllerUser extends Controller
 
               
             },
-            'save_gar_student'=> function(){
-                
+            'register_and_add_gar_student_to_classroom'=> function(){
+                // enable cors
+                if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
+
                 // accept only POST request
                 if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
-                
-                // bind and sanitize incoming data
-                $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) :'';
-                $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) :'';
-                $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) :'';
-                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
-                $div = isset($_POST['div']) ? htmlspecialchars(strip_tags(trim($_POST['div']))) :'';
-                
-                // get the student classroom
-                $classroomParts = explode('##',$div);
-                $userClassroom = $classroomParts[0];
 
-                // check if user is already registered
-                $garUserExists = $this->entityManager
-                                ->getRepository('User\Entity\ClassroomUser')
-                                ->findOneBy(array("garId" => $ido));
+                $incomingData = json_decode(file_get_contents('php://input'));
 
-                // the user exists, return its data
-                if($garUserExists){              
-               
-                    // retrieve the user classrooms, there can be either 1 or several classrooms(1classroom is a set of classroom+groupe)
-                    $classrooms = $this->entityManager
-                    ->getRepository(ClassroomLinkUser::class)
-                    ->getStudentClassroomsAndRelatedTeacher($userClassroom,$uai);
+                // create empty object, bind and sanitize incoming data
+                $sanitizedData = new stdClass();
+                $sanitizedData->pre = isset($incomingData->pre) ?  htmlspecialchars(strip_tags(trim($incomingData->pre))) :'';
+                $sanitizedData->nom = isset($incomingData->nom) ? htmlspecialchars(strip_tags(trim($incomingData->nom))) :'';
+                $sanitizedData->ido = isset($incomingData->ido) ? htmlspecialchars(strip_tags(trim($incomingData->ido))) :'';
+                $sanitizedData->uai = isset($incomingData->uai) ? htmlspecialchars(strip_tags(trim($incomingData->uai))) :'';
+                $sanitizedData->div = isset($incomingData->div) 
+                                        ? explode('##',htmlspecialchars(strip_tags(trim($incomingData->div))))[0]
+                                        :'';
+                $sanitizedData->classroomId = isset($incomingData->classroomId) ? intval($incomingData->classroomId) : 0;
+                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->div}";                
+                
+                // get the student
+                $studentRegistered = $this->registerGarStudentIfNeeded($sanitizedData);
+
+                if($studentRegistered){
+
+                    // get the classroom
+                    $classroom = $this->entityManager->getRepository(Classroom::class)->find($sanitizedData->classroomId);
                     
+                    
+                    // check if the current user is already registered as being part of this classroom
+                    $studentExistsInClassroom = $this->entityManager
+                                                        ->getRepository(ClassroomLinkUser::class)
+                                                        ->getStudentAndClassroomByIds(
+                                                            $studentRegistered->getId()->getId(),
+                                                            $sanitizedData->classroomId
+                                                        );
                    
-                    // initiate an empty array to fill with the student classrooms+groups
-                    $classroomsFound = [];
-                    foreach($classrooms as $classroom){
-
-                        array_push($classroomsFound,array(
-                        'name'=> $classroom['name'],
-                        'groupe'=> $classroom['groupe'],
-                        'link'=> $classroom['link'],
-                        'teacher' => $classroom['teacher'],
-                        'rights'=> $classroom['rights']
-                        ));
+                    if(!$studentExistsInClassroom){
+                        // the student not found in the classroom, add it to classroom_users_link_classrooms table
+                        $linkStudentToItsClassroom = new ClassroomLinkUser($studentRegistered->getId(),$classroom);
+                        $linkStudentToItsClassroom->setRights(0);
+                        $this->entityManager->persist($linkStudentToItsClassroom);
+                        $this->entityManager->flush();
                     }
-                   
-                    return array(
-                    'userId' => $garUserExists->getId()->getId(),
-                    'classrooms'=> $classroomsFound
-                    );  
-               } 
-               else 
-               {
-                   // the student is not registerd yet
-                   // create a hashed password
-                   //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
-                   $hashedPassword = password_hash('Test1234!',PASSWORD_BCRYPT);
+                    
+                    // prepare the student data to be saved in $_SESSION
+                    $sessionUserId = intval($studentRegistered->getId()->getId());
+                    $connectionToken = bin2hex(random_bytes(32));
 
-                   // create the user to be saved in users table
-                   $user = new User;
-                   $user->setFirstname($pre);
-                   $user->setSurname($nom);
-                   $user->setPseudo("$pre $nom");
-                   $user->setPassword($hashedPassword);
-                
-                   // save the user 
-                   $this->entityManager->persist($user);
-                   $this->entityManager->flush();
+                    // save the connection token in db
+                    $res = DatabaseManager::getSharedInstance()
+                                ->exec(
+                                    "INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", 
+                                    [$connectionToken, $sessionUserId]
+                                );
 
-                   // retrieve the lastInsertId to use for the next query 
-                   // this value is only available after a flush()
-                   $user->setId($user->getId());
-
-                   // create a classroomUser to be saved in user_classroom_users
-                   $classroomUser = new ClassroomUser($user);
-                   $classroomUser->setGarId($ido);
-                   $classroomUser->setSchoolId($uai);
-                   $classroomUser->setIsTeacher(false);
-
-                   // persist the classroomUser for later flush
-                   $this->entityManager->persist($classroomUser);
-                   $this->entityManager->flush();
-
-                   // retrieve the user classrooms, there can be either 1 or several classrooms(1classroom is a set of classroom+groupe)
-                   $classrooms = $this->entityManager
-                   ->getRepository(ClassroomLinkUser::class)
-                   ->getStudentClassroomsAndRelatedTeacher($userClassroom,$uai);
-                   
-                  
-                   // initiate an empty array to fill with the student classrooms+groups
-                   $classroomsFound = [];
-                   foreach($classrooms as $classroom){
-
-                       array_push($classroomsFound,array(
-                       'name'=> $classroom['name'],
-                       'groupe'=> $classroom['groupe'],
-                       'link'=> $classroom['link'],
-                       'teacher' => $classroom['teacher'],
-                       'rights'=> $classroom['rights']
-                       ));
-                   }
-                  
-                   return array(
-                   'userId' => $garUserExists->getId()->getId(),
-                   'classrooms'=> $classroomsFound
-                   );  
-               }
-            },
-            'add_gar_student_to_its_classroom'=> function(){
-
-               
-                // accept only POST request
-                //if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
-
-                // bind and sanitize incoming data
-                $classroomLink = htmlspecialchars(strip_tags(trim($_GET['link'])));
-                $userId = intval($_GET['user_id']);
-
-                // retrieve the classroom by its link
-                $classroom = $this->entityManager
-                                    ->getRepository('Classroom\Entity\Classroom')
-                                    ->findOneBy(array("link" =>  $classroomLink));
-
-                // if the classroom is blocked, return to the mediacenter
-                if($classroom->getIsBlocked() === true ){
-                    return header("Location:https://simulent.partenaire.test-gar.education.fr/mediacentre");
-                }
-
-                // retrieve the user by its user_id
-                $userFound = $this->entityManager
-                                    ->getRepository(User::class)
-                                    ->findOneBy(array('id'=>$userId));
-                
-                // no user found, return to mediacenter
-                if(!$userFound){
-                    return header("Location:https://simulent.partenaire.test-gar.education.fr/mediacentre");
-                }
-                
-                // check if the current user is already registered as being part of this classroom
-                $studentExistsInClassroom = $this->entityManager
-                                            ->getRepository(ClassroomLinkUser::class)
-                                            ->getStudentAndClassroomByIds($userFound->getId(),$classroom->getId()) ;
-                
-                if(!$studentExistsInClassroom){
-                    // the student not found in the classroom, add it to classroom_users_link_classrooms table
-                    $linkStudentToItsClassroom = new ClassroomLinkUser($userFound, $classroom);
-                    $linkStudentToItsClassroom->setRights(0);
-                    $this->entityManager->persist($linkStudentToItsClassroom);
-                    $this->entityManager->flush();
-                }
-               
-                // prepare the student data to be saved in $_SESSION
-                $sessionUserId = intval($userFound->getId());
-                $connectionToken = bin2hex(random_bytes(32));
-
-                // save the connection token in db
-                $res = DatabaseManager::getSharedInstance()
-                                        ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$connectionToken, $sessionUserId]);
-                if($res){
-                    // the token is aved in db, set session and redirect the student to its dashboard
+                    // the token is saved in db, set session and redirect the student to its dashboard
                     $_SESSION["id"] = $sessionUserId;
                     $_SESSION['token'] =  $connectionToken;
-                    return header("Location: /classroom/home.php");
-                }
-               
-               
-                /* $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
-                    ->findBy(array("classroom" => $classroom));
 
-                //add all activities linked with the classroom to the learner
-                foreach ($activitiesLinkClassroom as $activity) {
-                    $activityLinkUser = new ActivityLinkUser(
-                        $activity->getActivity(), 
-                        $userFound, 
-                        $activity->getDateBegin(),  
-                        $activity->getDateEnd(), 
-                        $activity->getEvaluation(), 
-                        $activity->getAutocorrection(), 
-                        $activity->getIntroduction(),
-                        $activity->getReference()
-                    );
-                    $this->entityManager->persist($activityLinkUser);
-                } */
+                    $userAddedToClassroom = $res === true ? true : false;
+                        
+                    return array('userAddedToClassroom'=> $userAddedToClassroom);                    
+                }
             },
             'save_gar_teacher'=> function(){
                 
@@ -612,7 +497,7 @@ class ControllerUser extends Controller
                     $userPremium = new UserPremium($user);
                     $this->entityManager->persist($userPremium);
                     $this->entityManager->flush();
-                    
+
                     // END REFACTO FOR THE PROD
                     ///////////////////////////
 
@@ -1494,6 +1379,59 @@ class ControllerUser extends Controller
             }
         );
     }
+
+    /**
+     * registerGarStudentIfNeeded
+     * return a student if already registered
+     * or register a student and then return it
+     * @param  object $sanitizedData
+     * @return object
+     */
+    private function registerGarStudentIfNeeded($sanitizedData){
+                
+        // check if user is already registered
+        $garUserExists = $this->entityManager
+                        ->getRepository('User\Entity\ClassroomUser')
+                        ->findOneBy(array("garId" => $sanitizedData->customIdo));
+
+        // the user exists, return its data
+        if(!$garUserExists)
+        {
+            // the student is not registerd yet
+            // create a hashed password
+            //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
+            $hashedPassword = password_hash('Test1234!',PASSWORD_BCRYPT);
+
+            // create the user to be saved in users table
+            $user = new User;
+            $user->setFirstname($sanitizedData->pre);
+            $user->setSurname($sanitizedData->nom);
+            $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
+            $user->setPassword($hashedPassword);
+            
+            // save the user 
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+            
+            // retrieve the lastInsertId to use for the next query 
+            // this value is only available after a flush()
+            $user->setId($user->getId());
+
+            // create a classroomUser to be saved in user_classroom_users
+            $classroomUser = new ClassroomUser($user);
+            $classroomUser->setGarId($sanitizedData->customIdo);
+            $classroomUser->setSchoolId($sanitizedData->uai);
+            $classroomUser->setIsTeacher(false);
+
+            // persist the classroomUser for later flush
+            $this->entityManager->persist($classroomUser);
+            $this->entityManager->flush();
+            return $classroomUser;
+        }
+        else return $garUserExists;
+      
+    }
+    
     /**
      * generateUpdatedPassword
      * 
