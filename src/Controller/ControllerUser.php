@@ -354,7 +354,7 @@ class ControllerUser extends Controller
                 $incomingData = json_decode(file_get_contents('php://input'));
 
                 // create empty object, bind and sanitize incoming data
-                $sanitizedData = new stdClass();
+                $sanitizedData = new \stdClass();
                 $sanitizedData->pre = isset($incomingData->pre) ?  htmlspecialchars(strip_tags(trim($incomingData->pre))) :'';
                 $sanitizedData->nom = isset($incomingData->nom) ? htmlspecialchars(strip_tags(trim($incomingData->nom))) :'';
                 $sanitizedData->ido = isset($incomingData->ido) ? htmlspecialchars(strip_tags(trim($incomingData->ido))) :'';
@@ -421,7 +421,7 @@ class ControllerUser extends Controller
                 $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) :'';
                 $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) :'';
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
-                $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) :null;
+                $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) :'';
                 
                 // get the teacher by its ido(opaque identifier)
                 $garUserExists = $this->entityManager
@@ -441,9 +441,20 @@ class ControllerUser extends Controller
                     // initiate an empty array to fill with extracted classrooms names
                     $classroomNames = [];
                     foreach($garUserClassrooms as $garUserClassroom){
+
+                        // get the student count for each classroom
+                        $classroomStudents = $this->entityManager
+                                                    ->getRepository(ClassroomLinkUser::class)
+                                                    ->findBy(array(
+                                                        'classroom'=> $garUserClassroom->getClassroom()->getId(),
+                                                        'rights'=> 0
+                                                    ));
+                        $classroomStudentCount = count($classroomStudents);
+
                         array_push($classroomNames,[
                             "name" => $garUserClassroom->getClassroom()->getName(),
                             "group" => $garUserClassroom->getClassroom()->getGroupe(),
+                            "studentCount"=> $classroomStudentCount,
                             "classroomLink" => $garUserClassroom->getClassroom()->getLink(),
                         ]);
                     }
@@ -475,8 +486,6 @@ class ControllerUser extends Controller
                     // this value is only available after a flush()
                     $user->setId( $user->getId());
 
-                    /////////////////////////////
-                    // START REFACTO FOR THE PROD
                     // create a classroomUser to be saved in user_classroom_users
                     $classroomUser = new ClassroomUser($user);
                     $classroomUser->setGarId($ido);
@@ -487,20 +496,15 @@ class ControllerUser extends Controller
                     $this->entityManager->flush();
 
                     // create a regular user to be saved in user_regulars table and persist it
-                    $regularUser = new Regular($user,$pmel);
+                    $regularUser = new Regular($user,$pmel='');
                     $regularUser->setActive(true);
                     $this->entityManager->persist($regularUser);
                     $this->entityManager->flush();
 
-                     
-                    // TODO THERE ARE SOME ISSUES WITH THIS TABLE ON PRODUCTION
                     // create a premiumUser to be stored in user_premium table and persist it
                     $userPremium = new UserPremium($user);
                     $this->entityManager->persist($userPremium);
                     $this->entityManager->flush();
-
-                    // END REFACTO FOR THE PROD
-                    ///////////////////////////
 
                     return array(
                         'userId' => $user->getId()
