@@ -645,7 +645,7 @@ class ControllerUser extends Controller
                 // the current classroom owner is not allowed to have an unlimited number of students 
                 ///////////////////////////////////
                 // remove the limitations for CABRI
-                /* if(!$isAllowed){
+                if(!$isAllowed){
                     
                     // computer the total number of students registered +1 and return an error if > 50
                     $addedLearnerNumber = 1;
@@ -653,7 +653,7 @@ class ControllerUser extends Controller
                     if($totalLearnerCount > 50){
                         return ["isUsersAdded"=>false, "currentLearnerCount"=>$learnerNumberCheck["learnerNumber"], "addedLearnerNumber"=>$addedLearnerNumber];
                     }
-                } */
+                }
                 // end remove the limitations for CABRI
                 /////////////////////////////////////////
                 /**
