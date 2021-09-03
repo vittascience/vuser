@@ -167,8 +167,8 @@ class ControllerUser extends Controller
                     ->findOneBy(array('user' => $data['id']));
                 /* $teacher = $this->entityManager->getRepository('User\Entity\Teacher')
                     ->findOneBy(array('user' => $data['id'])); */
-                $classroomLinkUser = $this->entityManager->getRepository('User\Entity\ClassroomLinkUser')
-                    ->findOneBy(array('user' => $data['id']));
+                /* $classroomLinkUser = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
+                    ->findOneBy(array('user' => $data['id'])); */
                 $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
                     ->findOneBy(array('id' => $data['id']));
                 $pseudo = $user->getPseudo();
