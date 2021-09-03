@@ -660,6 +660,9 @@ class ControllerUser extends Controller
                 // the current user is premium
                 if($learnerNumberCheck["isPremium"]){
 
+                    // computer the total number of students registered +1 and return an error if > 50
+                    $addedLearnerNumber = 1;
+                    $totalLearnerCount = $learnerNumberCheck["learnerNumber"] + $addedLearnerNumber;
                     // check if the 400 students limit is reached and return an error when it is reached
                     if($totalLearnerCount > 400 ){
                         return ["isUsersAdded"=>false, "currentLearnerCount"=>$learnerNumberCheck["learnerNumber"], "addedLearnerNumber"=>$addedLearnerNumber];
