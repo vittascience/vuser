@@ -656,6 +656,16 @@ class ControllerUser extends Controller
                 }
                 // end remove the limitations for CABRI
                 /////////////////////////////////////////
+                
+                // the current user is premium
+                if($learnerNumberCheck["isPremium"]){
+
+                    // check if the 400 students limit is reached and return an error when it is reached
+                    if($totalLearnerCount > 400 ){
+                        return ["isUsersAdded"=>false, "currentLearnerCount"=>$learnerNumberCheck["learnerNumber"], "addedLearnerNumber"=>$addedLearnerNumber];
+                    }
+                    
+                }
                 /**
                  * End of learner number limiting
                  */
