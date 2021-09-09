@@ -513,7 +513,7 @@ class ControllerUser extends Controller
                     );  
                 }
              },
-            'save_gar_teacher_classrooms'=> function(){
+             'save_gar_teacher_classrooms'=> function(){
 
                 // Allow from any origin to be commented in production
                 if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
@@ -546,6 +546,11 @@ class ControllerUser extends Controller
                     if($classroomExists) continue;
                     else{
                         // the classroom does not exists
+                        // get demoStudent from .env file
+                        $demoStudent = !empty($this->envVariables['demoStudent'])
+                                ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
+                                : 'demostudent';
+                        
                         // get the current teacher object for next query
                         $teacher = $this->entityManager
                                         ->getRepository(User::class)
@@ -565,22 +570,22 @@ class ControllerUser extends Controller
                         $this->entityManager->persist($classroomLinkUser);
                         $this->entityManager->flush();
 
-                        // create default vittademo user (required for the dashboard to work properly)
+                        // create default demoStudent user (required for the dashboard to work properly)
                         $user = new User();
                         $user->setFirstName("élève");
                         $user->setSurname("modèl");
-                        $user->setPseudo('vittademo');
+                        $user->setPseudo($demoStudent);
                         $password = passwordGenerator();
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
                         
-                        // persist and save vittademo user in users table
+                        // persist and save demoStudent user in users table
                         $this->entityManager->persist($user);
                         $this->entityManager->flush();
 
-                        // get vittademo user id from last db query => lastInsertId
+                        // get demoStudent user id from last db query => lastInsertId
                         $user->setId($user->getId());
 
-                        // add the vittademo user to the classroom with students rights=0 (classroom_users_link_classrooms table)
+                        // add the demoStudent user to the classroom with students rights=0 (classroom_users_link_classrooms table)
                         $classroomLinkUser = new ClassroomLinkUser($user,$classroom,0);
                         $this->entityManager->persist($classroomLinkUser);
                         $this->entityManager->flush();
@@ -593,7 +598,7 @@ class ControllerUser extends Controller
                     );
                
              },
-            'linkSystem' => function ($data) {
+             'linkSystem' => function ($data) {
                 /**
                  * Limiting learner number @THOMAS MODIF
                  * Added Admin check to allow them an unlimited number of new student @NASER MODIF
@@ -620,6 +625,11 @@ class ControllerUser extends Controller
                 // get the statuses for the current classroom owner
                 $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
                 $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
+
+                // get demoStudent from .env file
+                $demoStudent = !empty($this->envVariables['demoStudent'])
+                                ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
+                                : 'demostudent';
 
                 $classrooms = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
                     ->findBy(array("user" => $currentUserId));
@@ -675,12 +685,12 @@ class ControllerUser extends Controller
                  * End of learner number limiting
                  */
 
-                // check if the submitted pseudo is vittademo
-                if( strtolower($data['pseudo']) == "vittademo"){
+                // check if the submitted pseudo is demoStudent
+                if( strtolower($data['pseudo']) == strtolower($demoStudent)){
                     return [
                         "isUsersAdded"=>false, 
                         "errorType"=> "reservedNickname",
-                        "currentNickname"=> "vittademo"
+                        "currentNickname"=> $demoStudent
                     ];
                 }
                 
