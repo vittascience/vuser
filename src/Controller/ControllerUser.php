@@ -598,7 +598,7 @@ class ControllerUser extends Controller
                     );
                
              },
-            'linkSystem' => function ($data) {
+             'linkSystem' => function ($data) {
                 /**
                  * Limiting learner number @THOMAS MODIF
                  * Added Admin check to allow them an unlimited number of new student @NASER MODIF
@@ -625,6 +625,11 @@ class ControllerUser extends Controller
                 // get the statuses for the current classroom owner
                 $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
                 $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
+
+                // get demoStudent from .env file
+                $demoStudent = !empty($this->envVariables['demoStudent'])
+                                ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
+                                : 'demostudent';
 
                 $classrooms = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
                     ->findBy(array("user" => $currentUserId));
@@ -680,12 +685,12 @@ class ControllerUser extends Controller
                  * End of learner number limiting
                  */
 
-                // check if the submitted pseudo is vittademo
-                if( strtolower($data['pseudo']) == "vittademo"){
+                // check if the submitted pseudo is demoStudent
+                if( strtolower($data['pseudo']) == strtolower($demoStudent)){
                     return [
                         "isUsersAdded"=>false, 
                         "errorType"=> "reservedNickname",
-                        "currentNickname"=> "vittademo"
+                        "currentNickname"=> $demoStudent
                     ];
                 }
                 
