@@ -686,6 +686,7 @@ class ControllerUser extends Controller
                  */
 
                 // check if the submitted pseudo is demoStudent
+               
                 if( strtolower($data['pseudo']) == strtolower($demoStudent)){
                     return [
                         "isUsersAdded"=>false, 
