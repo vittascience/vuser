@@ -2,8 +2,8 @@
 
 namespace User\Controller;
 
-require __DIR__."/../../../../../bootstrap.php";
-require __DIR__.'/../../../../autoload.php';
+require __DIR__ . "/../../../../../bootstrap.php";
+require __DIR__ . '/../../../../autoload.php';
 
 use Exception;
 use Utils\Mailer;
@@ -11,9 +11,11 @@ use Dotenv\Dotenv;
 use DAO\RegularDAO;
 use User\Entity\User;
 use User\Entity\Regular;
+
 /**
  * @ THOMAS MODIF 1 line just below
  */
+
 use User\Entity\Teacher;
 use Aiken\i18next\i18next;
 use User\Entity\UserPremium;
@@ -22,6 +24,7 @@ use Database\DataBaseManager;
 use User\Entity\ClassroomUser;
 use Classroom\Entity\Classroom;
 use Classroom\Entity\ActivityLinkUser;
+use Classroom\Entity\Applications;
 use Classroom\Entity\ClassroomLinkUser;
 use Classroom\Entity\ActivityLinkClassroom;
 
@@ -30,10 +33,10 @@ use Classroom\Entity\ActivityLinkClassroom;
 class ControllerUser extends Controller
 {
     public $URL = "";
-    public function __construct($entityManager, $user, $url =null)
+    public function __construct($entityManager, $user, $url = null)
     {
         // Load env variables 
-        $dotenv = Dotenv::createImmutable(__DIR__."/../../../../../");
+        $dotenv = Dotenv::createImmutable(__DIR__ . "/../../../../../");
         $dotenv->load();
         $this->URL = isset($url) ? $url : $_ENV['VS_HOST'];
         parent::__construct($entityManager, $user);
@@ -52,82 +55,77 @@ class ControllerUser extends Controller
                 $pseudo = $user->getPseudo();
                 return ['mdp' => $password, 'pseudo' => $pseudo];
             },
-            'get_student_password' => function(){
+            'get_student_password' => function () {
 
                 // accept only POST request
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
-                
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
                 // bind incoming id
                 $id = isset($_POST['id']) ?  intval($_POST['id']) : null;
 
                 // get the current user from user_regulars table
                 $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
-                if($userIsRegular){
+                if ($userIsRegular) {
                     // return an error if a record was found as only students are allowed here 
-                    return ["errorType"=>"RegularUserNotAllowed"];
-                } 
+                    return ["errorType" => "RegularUserNotAllowed"];
+                }
 
                 // get the student data from users table
                 $student = $this->entityManager->getRepository(User::class)->find($id);
-                if(!$student){
+                if (!$student) {
                     // return an error if no record found as only existing students are allowed here
-                    return ["errorType"=>"UserNotExists"];
-                }
-                else 
-                {
+                    return ["errorType" => "UserNotExists"];
+                } else {
                     // the user exists in db
-                    if(strlen($student->getPassword()) > 4){
+                    if (strlen($student->getPassword()) > 4) {
                         // return an error if its password is greater than 4 characters long
-                        return ["errorType"=>"PasswordLengthInvalid"];
-                    } 
+                        return ["errorType" => "PasswordLengthInvalid"];
+                    }
 
                     return array(
-                        "id"=> $student->getId(),
+                        "id" => $student->getId(),
                         "password" => $student->getPassword()
-                    ); 
-                } 
+                    );
+                }
             },
-            'reset_student_password' => function(){
+            'reset_student_password' => function () {
 
                 // accept only POST request
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
-                
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
                 // bind incoming id
                 $id = isset($_POST['id']) ? intval($_POST['id']) : null;
 
                 // get the current user from user_regulars table
                 $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
-                if($userIsRegular){
+                if ($userIsRegular) {
                     // a record was found,return an error as only students are allowed here 
-                    return ["errorType"=>"RegularUserNotAllowed"];
-                } 
+                    return ["errorType" => "RegularUserNotAllowed"];
+                }
 
                 // get the student data from users table
                 $student = $this->entityManager->getRepository(User::class)->find($id);
-                if(!$student){
+                if (!$student) {
                     // no record found,return an error as only existing students are allowed here 
-                    return ["errorType"=>"UserNotExists"];
-                } 
-                else 
-                {
+                    return ["errorType" => "UserNotExists"];
+                } else {
                     // the student was found
                     // set its current password as $oldPassword to check against the $newPassword  
                     $oldPassword = $student->getPassword();
 
                     // generate a new password
-                    $newPassword = $this->generateUpdatedPassword($student->getPseudo(),$oldPassword);
+                    $newPassword = $this->generateUpdatedPassword($student->getPseudo(), $oldPassword);
 
                     // update student password and save it in db
                     $student->setPassword($newPassword);
                     $this->entityManager->flush();
 
                     return array(
-                        "id"=> $student->getId(),
+                        "id" => $student->getId(),
                         "oldPassword" => $oldPassword,
                         "newPassword" => $student->getPassword()
-                    ); 
-                } 
-                
+                    );
+                }
             },
             'disconnect' => function () {
 
@@ -167,11 +165,14 @@ class ControllerUser extends Controller
                     ->findOneBy(array('user' => $data['id']));
                 /* $teacher = $this->entityManager->getRepository('User\Entity\Teacher')
                     ->findOneBy(array('user' => $data['id'])); */
-                /* $classroomLinkUser = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                    ->findOneBy(array('user' => $data['id'])); */
+                $classroomLinkUser = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
+                    ->findOneBy(array('user' => $data['id']));
                 $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
                     ->findOneBy(array('id' => $data['id']));
                 $pseudo = $user->getPseudo();
+
+                // fix @Rémi 
+                $this->entityManager->remove($classroomLinkUser);
                 $this->entityManager->remove($user);
                 if ($regular) {
                     $this->entityManager->remove($regular);
@@ -308,170 +309,166 @@ class ControllerUser extends Controller
                     var_dump($e);
                 }
             },
-            'get_gar_student_available_classrooms'=> function(){
+            'get_gar_student_available_classrooms' => function () {
 
                 // accept only POST request
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
                 // bind and sanitize incoming data
-                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
-                $div = isset($_POST['div']) ? htmlspecialchars(strip_tags(trim($_POST['div']))) :'';
+                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
+                $div = isset($_POST['div']) ? htmlspecialchars(strip_tags(trim($_POST['div']))) : '';
 
                 // get the student classroom
-                $classroomParts = explode('##',$div);
+                $classroomParts = explode('##', $div);
                 $userClassroom = $classroomParts[0];
 
                 // retrieve the user classrooms, there can be either 1 or several classrooms(1classroom is a set of classroom+groupe)
                 $classrooms = $this->entityManager
-                ->getRepository(ClassroomLinkUser::class)
-                ->getStudentClassroomsAndRelatedTeacher($userClassroom,$uai);
-                
-               
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->getStudentClassroomsAndRelatedTeacher($userClassroom, $uai);
+
+
                 // initiate an empty array to fill with the student classrooms+groups
                 $classroomsFound = [];
-                foreach($classrooms as $classroom){
+                foreach ($classrooms as $classroom) {
 
-                    array_push($classroomsFound,array(
-                        'id'=> $classroom['id'],
-                        'name'=> $classroom['name'],
-                        'groupe'=> $classroom['groupe'],
+                    array_push($classroomsFound, array(
+                        'id' => $classroom['id'],
+                        'name' => $classroom['name'],
+                        'groupe' => $classroom['groupe'],
                         'teacher' => $classroom['teacher'],
-                        'rights'=> $classroom['rights']
+                        'rights' => $classroom['rights']
                     ));
                 }
-              
-                return array(
-                    'classrooms'=> $classroomsFound
-                );  
 
-              
+                return array(
+                    'classrooms' => $classroomsFound
+                );
             },
-            'register_and_add_gar_student_to_classroom'=> function(){
+            'register_and_add_gar_student_to_classroom' => function () {
                 // enable cors
                 if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
 
                 // accept only POST request
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
                 $incomingData = json_decode(file_get_contents('php://input'));
 
                 // create empty object, bind and sanitize incoming data
                 $sanitizedData = new \stdClass();
-                $sanitizedData->pre = isset($incomingData->pre) ?  htmlspecialchars(strip_tags(trim($incomingData->pre))) :'';
-                $sanitizedData->nom = isset($incomingData->nom) ? htmlspecialchars(strip_tags(trim($incomingData->nom))) :'';
-                $sanitizedData->ido = isset($incomingData->ido) ? htmlspecialchars(strip_tags(trim($incomingData->ido))) :'';
-                $sanitizedData->uai = isset($incomingData->uai) ? htmlspecialchars(strip_tags(trim($incomingData->uai))) :'';
-                $sanitizedData->div = isset($incomingData->div) 
-                                        ? explode('##',htmlspecialchars(strip_tags(trim($incomingData->div))))[0]
-                                        :'';
+                $sanitizedData->pre = isset($incomingData->pre) ?  htmlspecialchars(strip_tags(trim($incomingData->pre))) : '';
+                $sanitizedData->nom = isset($incomingData->nom) ? htmlspecialchars(strip_tags(trim($incomingData->nom))) : '';
+                $sanitizedData->ido = isset($incomingData->ido) ? htmlspecialchars(strip_tags(trim($incomingData->ido))) : '';
+                $sanitizedData->uai = isset($incomingData->uai) ? htmlspecialchars(strip_tags(trim($incomingData->uai))) : '';
+                $sanitizedData->div = isset($incomingData->div)
+                    ? explode('##', htmlspecialchars(strip_tags(trim($incomingData->div))))[0]
+                    : '';
                 $sanitizedData->classroomId = isset($incomingData->classroomId) ? intval($incomingData->classroomId) : 0;
                 $sanitizedData->classroomGroup = isset($incomingData->classroomGroup) ? htmlspecialchars(strip_tags(trim($incomingData->classroomGroup))) : '';
-                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->div}-{$sanitizedData->classroomGroup}";                
-                
+                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->div}-{$sanitizedData->classroomGroup}";
+
                 // get the student
                 $studentRegistered = $this->registerGarStudentIfNeeded($sanitizedData);
-                
-                if($studentRegistered){
+
+                if ($studentRegistered) {
 
                     // get the classroom
                     $classroom = $this->entityManager->getRepository(Classroom::class)->find($sanitizedData->classroomId);
-                    
-                    
+
+
                     // check if the current user is already registered as being part of this classroom
                     $studentExistsInClassroom = $this->entityManager
-                                                        ->getRepository(ClassroomLinkUser::class)
-                                                        ->getStudentAndClassroomByIds(
-                                                            $studentRegistered->getId()->getId(),
-                                                            $sanitizedData->classroomId
-                                                        );
-                   
-                    if(!$studentExistsInClassroom){
+                        ->getRepository(ClassroomLinkUser::class)
+                        ->getStudentAndClassroomByIds(
+                            $studentRegistered->getId()->getId(),
+                            $sanitizedData->classroomId
+                        );
+
+                    if (!$studentExistsInClassroom) {
                         // the student not found in the classroom, add it to classroom_users_link_classrooms table
-                        $linkStudentToItsClassroom = new ClassroomLinkUser($studentRegistered->getId(),$classroom);
+                        $linkStudentToItsClassroom = new ClassroomLinkUser($studentRegistered->getId(), $classroom);
                         $linkStudentToItsClassroom->setRights(0);
                         $this->entityManager->persist($linkStudentToItsClassroom);
                         $this->entityManager->flush();
                     }
-                    
+
                     // prepare the student data to be saved in $_SESSION
                     $sessionUserId = intval($studentRegistered->getId()->getId());
                     $connectionToken = bin2hex(random_bytes(32));
 
                     // save the connection token in db
                     $res = DatabaseManager::getSharedInstance()
-                                ->exec(
-                                    "INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", 
-                                    [$connectionToken, $sessionUserId]
-                                );
+                        ->exec(
+                            "INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)",
+                            [$connectionToken, $sessionUserId]
+                        );
 
                     // the token is saved in db, set session and redirect the student to its dashboard
                     $_SESSION["id"] = $sessionUserId;
                     $_SESSION['token'] =  $connectionToken;
 
                     $userAddedToClassroom = $res === true ? true : false;
-                        
-                    return array('userAddedToClassroom'=> $userAddedToClassroom);                    
+
+                    return array('userAddedToClassroom' => $userAddedToClassroom);
                 }
             },
-            'save_gar_teacher'=> function(){
-                
+            'save_gar_teacher' => function () {
+
                 // accept only POST request
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
                 // bind and sanitize incoming data
-                $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) :'';
-                $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) :'';
-                $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) :'';
-                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) :'';
-                $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) :'';
-                
+                $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) : '';
+                $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) : '';
+                $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) : '';
+                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
+                $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) : '';
+
                 // get the teacher by its ido(opaque identifier)
                 $garUserExists = $this->entityManager
-                                ->getRepository('User\Entity\ClassroomUser')
-                                ->findOneBy(array("garId" => $ido));
+                    ->getRepository('User\Entity\ClassroomUser')
+                    ->findOneBy(array("garId" => $ido));
 
                 // the teacher exists, return its data
-                if($garUserExists){   
+                if ($garUserExists) {
 
                     // get its classrooms
                     $garUserClassrooms = $this->entityManager
-                                                ->getRepository(ClassroomLinkUser::class)
-                                                ->findBy(array(
-                                                    'user'=>$garUserExists->getId()->getId()
-                                                ));
+                        ->getRepository(ClassroomLinkUser::class)
+                        ->findBy(array(
+                            'user' => $garUserExists->getId()->getId()
+                        ));
 
                     // initiate an empty array to fill with extracted classrooms names
                     $classroomNames = [];
-                    foreach($garUserClassrooms as $garUserClassroom){
+                    foreach ($garUserClassrooms as $garUserClassroom) {
 
                         // get the student count for each classroom
                         $classroomStudents = $this->entityManager
-                                                    ->getRepository(ClassroomLinkUser::class)
-                                                    ->findBy(array(
-                                                        'classroom'=> $garUserClassroom->getClassroom()->getId(),
-                                                        'rights'=> 0
-                                                    ));
+                            ->getRepository(ClassroomLinkUser::class)
+                            ->findBy(array(
+                                'classroom' => $garUserClassroom->getClassroom()->getId(),
+                                'rights' => 0
+                            ));
                         $classroomStudentCount = count($classroomStudents);
 
-                        array_push($classroomNames,[
+                        array_push($classroomNames, [
                             "name" => $garUserClassroom->getClassroom()->getName(),
                             "group" => $garUserClassroom->getClassroom()->getGroupe(),
-                            "studentCount"=> $classroomStudentCount,
+                            "studentCount" => $classroomStudentCount,
                             "classroomLink" => $garUserClassroom->getClassroom()->getLink(),
                         ]);
                     }
 
-                     return array(
+                    return array(
                         'userId' => $garUserExists->getId()->getId(),
-                        'classrooms'=> $classroomNames
+                        'classrooms' => $classroomNames
                     );
-                } 
-                else 
-                {
+                } else {
                     // the teacher is not registered yet
                     // create a hashed password
                     //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
-                    $hashedPassword = password_hash('Test1234!',PASSWORD_BCRYPT);
+                    $hashedPassword = password_hash('Test1234!', PASSWORD_BCRYPT);
 
                     // create the user to be saved in users table
                     $user = new User;
@@ -486,7 +483,7 @@ class ControllerUser extends Controller
 
                     // retrieve the lastInsertId to use for the next query 
                     // this value is only available after a flush()
-                    $user->setId( $user->getId());
+                    $user->setId($user->getId());
 
                     // create a classroomUser to be saved in user_classroom_users
                     $classroomUser = new ClassroomUser($user);
@@ -498,7 +495,7 @@ class ControllerUser extends Controller
                     $this->entityManager->flush();
 
                     // create a regular user to be saved in user_regulars table and persist it
-                    $regularUser = new Regular($user,$pmel='');
+                    $regularUser = new Regular($user, $pmel = '');
                     $regularUser->setActive(true);
                     $this->entityManager->persist($regularUser);
                     $this->entityManager->flush();
@@ -510,27 +507,27 @@ class ControllerUser extends Controller
 
                     return array(
                         'userId' => $user->getId()
-                    );  
+                    );
                 }
-             },
-             'save_gar_teacher_classrooms'=> function(){
+            },
+            'save_gar_teacher_classrooms' => function () {
 
                 // Allow from any origin to be commented in production
                 if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
 
                 // accept only POST request
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
-    
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
                 // bind incoming json data and decode them
-                $incomingData= file_get_contents('php://input');
+                $incomingData = file_get_contents('php://input');
                 $decodedData = json_decode($incomingData);
-                 
+
                 // sanitize incoming data
                 $uai = htmlspecialchars(strip_tags(trim($decodedData->uai)));
                 $teacherId = htmlspecialchars(strip_tags(trim($decodedData->teacherId)));
 
 
-                for($i=0; $i < count($decodedData->classroomsToCreate); $i++){
+                for ($i = 0; $i < count($decodedData->classroomsToCreate); $i++) {
 
                     // bind and sanitize each classroom and related group
                     $classroomName = htmlspecialchars(strip_tags(trim($decodedData->classroomsToCreate[$i]->classroom)));
@@ -538,23 +535,23 @@ class ControllerUser extends Controller
 
                     // get the classroom and group from classrooms and classroom_users_link_classrooms joined tables
                     $classroomExists = $this->entityManager
-                                            ->getRepository(ClassroomLinkUser::class)
-                                            ->getTeacherClassroomBy($teacherId,$classroomName,$uai,$relatedGroup);
+                        ->getRepository(ClassroomLinkUser::class)
+                        ->getTeacherClassroomBy($teacherId, $classroomName, $uai, $relatedGroup);
 
-                    
+
                     // the classroom already exists, we do nothing
-                    if($classroomExists) continue;
-                    else{
+                    if ($classroomExists) continue;
+                    else {
                         // the classroom does not exists
                         // get demoStudent from .env file
                         $demoStudent = !empty($this->envVariables['demoStudent'])
-                                ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
-                                : 'demostudent';
-                        
+                            ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
+                            : 'demostudent';
+
                         // get the current teacher object for next query
                         $teacher = $this->entityManager
-                                        ->getRepository(User::class)
-                                        ->findOneBy(array('id'=>$teacherId));
+                            ->getRepository(User::class)
+                            ->findOneBy(array('id' => $teacherId));
 
 
                         // create the classroom
@@ -566,7 +563,7 @@ class ControllerUser extends Controller
                         $classroom->getId();
 
                         // add the teacher to the classroom with teacher rights=2
-                        $classroomLinkUser = new ClassroomLinkUser($teacher,$classroom,2);
+                        $classroomLinkUser = new ClassroomLinkUser($teacher, $classroom, 2);
                         $this->entityManager->persist($classroomLinkUser);
                         $this->entityManager->flush();
 
@@ -577,7 +574,7 @@ class ControllerUser extends Controller
                         $user->setPseudo($demoStudent);
                         $password = passwordGenerator();
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
-                        
+
                         // persist and save demoStudent user in users table
                         $this->entityManager->persist($user);
                         $this->entityManager->flush();
@@ -586,50 +583,49 @@ class ControllerUser extends Controller
                         $user->setId($user->getId());
 
                         // add the demoStudent user to the classroom with students rights=0 (classroom_users_link_classrooms table)
-                        $classroomLinkUser = new ClassroomLinkUser($user,$classroom,0);
+                        $classroomLinkUser = new ClassroomLinkUser($user, $classroom, 0);
                         $this->entityManager->persist($classroomLinkUser);
                         $this->entityManager->flush();
                     }
                 }
-                
+
                 return array(
-                        'teacherId' => $teacherId,
-                        'classroomsCreated' => true
-                    );
-               
-             },
-             'linkSystem' => function ($data) {
+                    'teacherId' => $teacherId,
+                    'classroomsCreated' => true
+                );
+            },
+            'linkSystem' => function ($data) {
                 /**
                  * Limiting learner number @THOMAS MODIF
                  * Added Admin check to allow them an unlimited number of new student @NASER MODIF
                  */
-                
-                 // retrieve the classroom by its link
+
+                // retrieve the classroom by its link
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
-                ->findOneBy(array("link" => $data['classroomLink']));
+                    ->findOneBy(array("link" => $data['classroomLink']));
 
                 // if the current classroom is Blocked by the teacher 
-                if($classroom->getIsBlocked() === true ){
+                if ($classroom->getIsBlocked() === true) {
                     // disallow students to join
                     return [
-                        "isUsersAdded"=>false, 
-                        "errorType"=> "classroomBlocked"
+                        "isUsersAdded" => false,
+                        "errorType" => "classroomBlocked"
                     ];
                 }
 
                 $classroomTeacher = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                ->findBy(array("classroom" => $classroom->getId()));
+                    ->findBy(array("classroom" => $classroom->getId()));
 
                 $currentUserId = $classroomTeacher[0]->getUser()->getId();
-                
+
                 // get the statuses for the current classroom owner
                 $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
                 $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
 
                 // get demoStudent from .env file
                 $demoStudent = !empty($this->envVariables['demoStudent'])
-                                ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
-                                : 'demostudent';
+                    ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
+                    : 'demostudent';
 
                 $classrooms = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
                     ->findBy(array("user" => $currentUserId));
@@ -639,62 +635,69 @@ class ControllerUser extends Controller
                 foreach ($classrooms as $c) {
                     $students = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
                         ->getAllStudentsInClassroom($c->getClassroom()->getId(), 0);
-                    
+
                     // add the current classroom users number and increase the total
                     $nbApprenants += count($students);
                 }
 
                 $learnerNumberCheck = [
-                    "idUser"=>$currentUserId, 
-                    "isPremium"=>$isPremium, 
-                    "isAdmin"=> $isAdmin,
-                    "learnerNumber"=>$nbApprenants
+                    "idUser" => $currentUserId,
+                    "isPremium" => $isPremium,
+                    "isAdmin" => $isAdmin,
+                    "learnerNumber" => $nbApprenants
                 ];
 
-                 // set the $isAllowed () flag to true  if the current user is admin or premium
-                 $isAllowed = $learnerNumberCheck["isAdmin"] || $learnerNumberCheck["isPremium"];
+                // set the $isAllowed () flag to true  if the current user is admin or premium
 
-                // the current classroom owner is not allowed to have an unlimited number of students 
-                ///////////////////////////////////
-                // remove the limitations for CABRI
-                if(!$isAllowed){
-                    
-                    // computer the total number of students registered +1 and return an error if > 50
+                /**
+                 * Update Rémi COINTE
+                 * if the user is not admin =>
+                 * we check how many students he can have
+                 * if it has no apps = default number => in the folder "default-restrictions"
+                 * otherwise the restrictions is set by the user apps or the group's apps he has
+                 */
+                if (!$learnerNumberCheck["isAdmin"]) {
+                    //@Note : the isPremium check is not deleted to restrein the actual user with the isPremium method
+                    // the restrictions by application is not implemented to every user
                     $addedLearnerNumber = 1;
-                    $totalLearnerCount = $learnerNumberCheck["learnerNumber"] + $addedLearnerNumber;
-                    if($totalLearnerCount > 50){
-                        return ["isUsersAdded"=>false, "currentLearnerCount"=>$learnerNumberCheck["learnerNumber"], "addedLearnerNumber"=>$addedLearnerNumber];
+                    if ($learnerNumberCheck["isPremium"]) {
+                        // computer the total number of students registered +1 and return an error if > 50
+                        $totalLearnerCount = $learnerNumberCheck["learnerNumber"] + $addedLearnerNumber;
+                        // check if the 400 students limit is reached and return an error when it is reached
+                        if ($totalLearnerCount > 400) {
+                            return [
+                                "isUsersAdded" => false,
+                                "currentLearnerCount" => $learnerNumberCheck["learnerNumber"],
+                                "addedLearnerNumber" => $addedLearnerNumber
+                            ];
+                        }
+                    } else {
+                        // Groups and teacher limitation per application
+                        $limitationsReached = $this->entityManager->getRepository(Applications::class)->isStudentsLimitReachedForTeacher($currentUserId, $addedLearnerNumber);
+                        if (!$limitationsReached['canAdd']) {
+                            return [
+                                "isUsersAdded" => false,
+                                "currentLearnerCount" => $limitationsReached["teacherInfo"]["actualStudents"],
+                                "addedLearnerNumber" => $addedLearnerNumber,
+                                "message" => $limitationsReached['message']
+                            ];
+                        }
                     }
-                }
-                // end remove the limitations for CABRI
-                /////////////////////////////////////////
-                
-                // the current user is premium
-                if($learnerNumberCheck["isPremium"]){
-
-                    // computer the total number of students registered +1 and return an error if > 50
-                    $addedLearnerNumber = 1;
-                    $totalLearnerCount = $learnerNumberCheck["learnerNumber"] + $addedLearnerNumber;
-                    // check if the 400 students limit is reached and return an error when it is reached
-                    if($totalLearnerCount > 400 ){
-                        return ["isUsersAdded"=>false, "currentLearnerCount"=>$learnerNumberCheck["learnerNumber"], "addedLearnerNumber"=>$addedLearnerNumber];
-                    }
-                    
                 }
                 /**
                  * End of learner number limiting
                  */
 
                 // check if the submitted pseudo is demoStudent
-               
-                if( strtolower($data['pseudo']) == strtolower($demoStudent)){
+
+                if (strtolower($data['pseudo']) == strtolower($demoStudent)) {
                     return [
-                        "isUsersAdded"=>false, 
-                        "errorType"=> "reservedNickname",
-                        "currentNickname"=> $demoStudent
+                        "isUsersAdded" => false,
+                        "errorType" => "reservedNickname",
+                        "currentNickname" => $demoStudent
                     ];
                 }
-                
+
                 $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $data['pseudo']));
                 foreach ($pseudoUsed as $p) {
                     $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p));
@@ -738,12 +741,12 @@ class ControllerUser extends Controller
                 //add all activities linked with the classroom to the learner
                 foreach ($activitiesLinkClassroom as $a) {
                     $activityLinkUser = new ActivityLinkUser(
-                        $a->getActivity(), 
-                        $user, 
-                        $a->getDateBegin(),  
-                        $a->getDateEnd(), 
-                        $a->getEvaluation(), 
-                        $a->getAutocorrection(), 
+                        $a->getActivity(),
+                        $user,
+                        $a->getDateBegin(),
+                        $a->getDateEnd(),
+                        $a->getEvaluation(),
+                        $a->getAutocorrection(),
                         $a->getIntroduction(),
                         $a->getReference()
                     );
@@ -755,13 +758,13 @@ class ControllerUser extends Controller
                 $user->pin = $password;
                 $_SESSION["id"] = $user->getId();
                 $_SESSION["pin"] = $password;
-                return ["isUsersAdded"=>true, "user"=>$user];
+                return ["isUsersAdded" => true, "user" => $user];
             },
-            'help_request_from_teacher'=> function(){
+            'help_request_from_teacher' => function () {
 
                 // allow only POST METHOD
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error'=> 'Method not Allowed');
-                
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error' => 'Method not Allowed');
+
                 // bind incoming data
                 $subject = isset($_POST['subject']) ? htmlspecialchars(strip_tags(trim($_POST['subject']))) : null;
                 $message = isset($_POST['message']) ? htmlspecialchars(strip_tags(trim($_POST['message']))) : null;
@@ -772,47 +775,47 @@ class ControllerUser extends Controller
                 $emailSent = false;
 
                 // check for errors if any
-                if(empty($subject)) $errors['subjectMissing'] = true;
-                if(empty($message)) $errors['messageMissing'] = true;
-                if($id == 0) $errors['invalidUserId'] = true;
-                
+                if (empty($subject)) $errors['subjectMissing'] = true;
+                if (empty($message)) $errors['messageMissing'] = true;
+                if ($id == 0) $errors['invalidUserId'] = true;
+
                 // some errors found, return them to the user
-                if(!empty($errors)){
+                if (!empty($errors)) {
                     return array(
                         'emailSent' => $emailSent,
-                        'errors'=> $errors
+                        'errors' => $errors
                     );
                 }
 
                 // no errors, we can process the data
                 // retrieve the user from db
                 $regularUserFound = $this->entityManager->getRepository(Regular::class)->find($id);
-                if(!$regularUserFound){
+                if (!$regularUserFound) {
                     // no regularUser found, return an error
                     return array(
                         'emailSent' => $emailSent,
                         'errorType' => 'unknownUser'
-                    );    
+                    );
                 }
 
                 // the user was found
-                if($regularUserFound){
+                if ($regularUserFound) {
 
                     $user =  $this->entityManager->getRepository(User::class)->find($id);
-                   
+
                     $emailReceiver = $_ENV['VS_REPLY_TO_MAIL'];
                     $replyToMail = $regularUserFound->getEmail();
-                    $replyToName = $user->getFirstname().' '.$user->getSurname();
-                    
+                    $replyToName = $user->getFirstname() . ' ' . $user->getSurname();
+
                     /////////////////////////////////////
                     // PREPARE EMAIL TO BE SENT
                     // received lang param
-                    $userLang = isset($_COOKIE['lng']) 
-                    ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))  
-                    : 'fr';
+                    $userLang = isset($_COOKIE['lng'])
+                        ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))
+                        : 'fr';
 
-                    
-                    $emailTtemplateBody = $userLang."_help_request";
+
+                    $emailTtemplateBody = $userLang . "_help_request";
 
                     $body = "
                         <br>
@@ -821,24 +824,24 @@ class ControllerUser extends Controller
                     ";
 
                     // send email
-                    $emailSent = Mailer::sendMail($emailReceiver,  $subject, $body, strip_tags($body),$emailTtemplateBody,$replyToMail,$replyToName); 
+                    $emailSent = Mailer::sendMail($emailReceiver,  $subject, $body, strip_tags($body), $emailTtemplateBody, $replyToMail, $replyToName);
                     /////////////////////////////////////
 
                     return array(
                         "emailSent" => $emailSent
-                    );   
+                    );
                 }
                 return array(
                     'id ' => $id,
-                    'subject'=> $subject,
-                    'message'=> $message
+                    'subject' => $subject,
+                    'message' => $message
                 );
             },
-            'help_request_from_student'=> function(){
+            'help_request_from_student' => function () {
 
                 // allow only POST METHOD
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error'=> 'Method not Allowed');
-                
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error' => 'Method not Allowed');
+
                 // bind incoming data
                 $subject = isset($_POST['subject']) ? htmlspecialchars(strip_tags(trim($_POST['subject']))) : null;
                 $message = isset($_POST['message']) ? htmlspecialchars(strip_tags(trim($_POST['message']))) : null;
@@ -849,73 +852,73 @@ class ControllerUser extends Controller
                 $emailSent = false;
 
                 // check for errors if any
-                if(empty($subject)) $errors['subjectMissing'] = true;
-                if(empty($message)) $errors['messageMissing'] = true;
-                if($id == 0) $errors['invalidUserId'] = true;
-                
+                if (empty($subject)) $errors['subjectMissing'] = true;
+                if (empty($message)) $errors['messageMissing'] = true;
+                if ($id == 0) $errors['invalidUserId'] = true;
+
                 // some errors found, return them to the user
-                if(!empty($errors)){
+                if (!empty($errors)) {
                     return array(
                         'emailSent' => $emailSent,
-                        'errors'=> $errors
+                        'errors' => $errors
                     );
                 }
 
                 // retrieve the user from db
                 $userFound = $this->entityManager->getRepository(User::class)->find($id);
 
-                if(!$userFound){
+                if (!$userFound) {
                     // no user found, return an error
                     return array(
                         'emailSent' => $emailSent,
                         'errorType' => 'unknownUser'
-                    );    
+                    );
                 }
 
                 // the user was found
-                if($userFound){
+                if ($userFound) {
                     // retrieve its classroom id
                     $userClassroomId = $this->entityManager
-                                            ->getRepository(ClassroomLinkUser::class)
-                                            ->findOneBy(array('user'=>$id))
-                                            ->getClassroom()
-                                            ->getId();
+                        ->getRepository(ClassroomLinkUser::class)
+                        ->findOneBy(array('user' => $id))
+                        ->getClassroom()
+                        ->getId();
 
                     // retrieve the classroom teacher id from classroom_users_link_classroom table
                     $classroomTeacherId = $this->entityManager
-                                                ->getRepository(ClassroomLinkUser::class)
-                                                ->findOneBy(array(
-                                                    'classroom'=> $userClassroomId,
-                                                    'rights'=> 2
-                                                ))
-                                                ->getUser()
-                                                ->getId();
+                        ->getRepository(ClassroomLinkUser::class)
+                        ->findOneBy(array(
+                            'classroom' => $userClassroomId,
+                            'rights' => 2
+                        ))
+                        ->getUser()
+                        ->getId();
 
                     // get the teacher email
                     $teacherEmail = $this->entityManager
-                                            ->getRepository(Regular::class)
-                                            ->find($classroomTeacherId)
-                                            ->getEmail();
+                        ->getRepository(Regular::class)
+                        ->find($classroomTeacherId)
+                        ->getEmail();
 
-                    if(!$teacherEmail){
+                    if (!$teacherEmail) {
                         return array(
                             'emailSent' => $emailSent,
                             'errorType' => 'unknownEmail'
-                        );  
+                        );
                     }
                     $emailReceiver = $teacherEmail;
                     $replyToMail = 'no-reply@gmail.com';
-                    $replyToName = $userFound->getFirstname().' '.$userFound->getSurname();
-                    
+                    $replyToName = $userFound->getFirstname() . ' ' . $userFound->getSurname();
+
                     /////////////////////////////////////
                     // PREPARE EMAIL TO BE SENT
                     // received lang param
-                    $userLang = isset($_COOKIE['lng']) 
-                    ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))  
-                    : 'fr';
+                    $userLang = isset($_COOKIE['lng'])
+                        ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))
+                        : 'fr';
 
-                    
-                    $emailTtemplateBody = $userLang."_help_request";
+
+                    $emailTtemplateBody = $userLang . "_help_request";
 
                     $body = "
                         <br>
@@ -924,12 +927,12 @@ class ControllerUser extends Controller
                     ";
 
                     // send email
-                    $emailSent = Mailer::sendMail($emailReceiver,  $subject, $body, strip_tags($body),$emailTtemplateBody,$replyToMail,$replyToName); 
+                    $emailSent = Mailer::sendMail($emailReceiver,  $subject, $body, strip_tags($body), $emailTtemplateBody, $replyToMail, $replyToName);
                     /////////////////////////////////////
 
                     return array(
                         "emailSent" => $emailSent
-                    );   
+                    );
                 }
             },
             'login' => function ($data) {
@@ -949,10 +952,10 @@ class ControllerUser extends Controller
                     return ["success" => false];
                 }
             },
-            'register' => function(){
+            'register' => function () {
 
                 // return error if the request is not a POST request
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
                 // bind incoming data to the value provided or null
                 $firstname = isset($_POST['firstname']) ? htmlspecialchars(strip_tags(trim($_POST['firstname']))) : null;
@@ -961,39 +964,39 @@ class ControllerUser extends Controller
                 $email = isset($_POST['email'])  ? htmlspecialchars(strip_tags(trim($_POST['email']))) : null;
                 $password = isset($_POST['password'])  ? htmlspecialchars(strip_tags(trim($_POST['password']))) : null;
                 $password_confirm = isset($_POST['password_confirm'])  ? htmlspecialchars(strip_tags(trim($_POST['password_confirm']))) : null;
-                
+
 
                 // create empty $errors and fill it with errors if any
                 $errors = [];
-                if(empty($firstname)) $errors['firstnameMissing'] = true;
-                if(empty($surname)) $errors['surnameMissing'] = true;
-                if(empty($pseudo)) $errors['pseudoMissing'] = true;
-                if(empty($email)) $errors['emailMissing'] = true;
-                elseif(!filter_var($email,FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
-                if(empty($password)) $errors['passwordMissing'] = true;
-                elseif(strlen($password) < 7) $errors['invalidPassword'] = true;
-                if(empty($password_confirm)) $errors['passwordConfirmMissing'] = true;
-                elseif($password !== $password_confirm) $errors['passwordsMismatch'] = true;
-                
+                if (empty($firstname)) $errors['firstnameMissing'] = true;
+                if (empty($surname)) $errors['surnameMissing'] = true;
+                if (empty($pseudo)) $errors['pseudoMissing'] = true;
+                if (empty($email)) $errors['emailMissing'] = true;
+                elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
+                if (empty($password)) $errors['passwordMissing'] = true;
+                elseif (strlen($password) < 7) $errors['invalidPassword'] = true;
+                if (empty($password_confirm)) $errors['passwordConfirmMissing'] = true;
+                elseif ($password !== $password_confirm) $errors['passwordsMismatch'] = true;
+
                 // check if the email is already listed in db
                 $emailAlreadyExists = $this->entityManager
-                                        ->getRepository('User\Entity\Regular')
-                                        ->findOneBy(array('email'=> $email));
-                
+                    ->getRepository('User\Entity\Regular')
+                    ->findOneBy(array('email' => $email));
+
                 // the email already exists in db,set emailExists error 
-                if($emailAlreadyExists) $errors['emailExists'] = true;
-                
+                if ($emailAlreadyExists) $errors['emailExists'] = true;
+
                 // some errors were found, return them to the user
-                if(!empty($errors)){
+                if (!empty($errors)) {
                     return array(
-                        'isUserAdded'=>false,
+                        'isUserAdded' => false,
                         "errors" => $errors
-                    );                    
+                    );
                 }
-                
+
                 // no errors found, we can process the data
                 // hash the password and set $emailSent default value
-                $passwordHash = password_hash($password,PASSWORD_BCRYPT);
+                $passwordHash = password_hash($password, PASSWORD_BCRYPT);
                 $emailSent = null;
                 // create user and persists it in memory
                 $user = new User;
@@ -1001,41 +1004,41 @@ class ControllerUser extends Controller
                 $user->setSurname($surname);
                 $user->setPseudo($pseudo);
                 $user->setPassword($passwordHash);
-                $user->setInsertDate( new \DateTime());
+                $user->setInsertDate(new \DateTime());
                 $user->setUpdateDate(new \DateTime());
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
-               
+
                 // retrieve the lastInsertId to use for the next query 
                 // this value is only available after a flush()
-                $user->setId( $user->getId());
-                
+                $user->setId($user->getId());
+
                 // create record in user_regulars table and persists it in memory
-                $regularUser = new Regular($user,$email);
+                $regularUser = new Regular($user, $email);
                 $regularUser->setActive(false);
-                
+
                 // create the confirm token and set user confirm token
-                $confirmationToken = time()."-".bin2hex($email);
+                $confirmationToken = time() . "-" . bin2hex($email);
                 $regularUser->setConfirmToken($confirmationToken);
                 $this->entityManager->persist($regularUser);
-                $this->entityManager->flush();  
+                $this->entityManager->flush();
 
                 /////////////////////////////////////
                 // PREPARE EMAIL TO BE SENT
                 // received lang param
-                $userLang = isset($_COOKIE['lng']) 
-                                ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))  
-                                : 'fr';
+                $userLang = isset($_COOKIE['lng'])
+                    ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))
+                    : 'fr';
 
                 // create the confirmation account link and set the email template to be used      
                 $accountConfirmationLink = "{$this->URL}/classroom/confirm_account.php?token=$confirmationToken";
-                $emailTtemplateBody = $userLang."_confirm_account";
+                $emailTtemplateBody = $userLang . "_confirm_account";
 
                 // init i18next instance
-                if(is_dir(__DIR__."/../../../../../openClassroom")){
-                    i18next::init($userLang,__DIR__."/../../../../../openClassroom/classroom/assets/lang/__lng__/ns.json");
-                }else {
-                    i18next::init($userLang,__DIR__."/../../../../../classroom/assets/lang/__lng__/ns.json");
+                if (is_dir(__DIR__ . "/../../../../../openClassroom")) {
+                    i18next::init($userLang, __DIR__ . "/../../../../../openClassroom/classroom/assets/lang/__lng__/ns.json");
+                } else {
+                    i18next::init($userLang, __DIR__ . "/../../../../../classroom/assets/lang/__lng__/ns.json");
                 }
 
                 $emailSubject = i18next::getTranslation('classroom.register.accountConfirmationEmail.emailSubject');
@@ -1049,137 +1052,135 @@ class ControllerUser extends Controller
                     <br>
                     <p>$textBeforeLink $accountConfirmationLink
                 ";
-                
+
                 // send email
-                $emailSent = Mailer::sendMail($email,  $emailSubject, $body, strip_tags($body),$emailTtemplateBody); 
+                $emailSent = Mailer::sendMail($email,  $emailSubject, $body, strip_tags($body), $emailTtemplateBody);
                 /////////////////////////////////////
 
                 return array(
-                    'isUserAdded'=>true,
+                    'isUserAdded' => true,
                     "id" => $user->getId(),
                     "emailSent" => $emailSent
-                );   
+                );
             },
-            'update_user_infos' => function(){
-              
+            'update_user_infos' => function () {
+
                 // return error if the request is not a POST request
-                if($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error"=> "Method not Allowed"];
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
                 // bind incoming id
                 $id = intval($_POST['id']);
 
                 // retrieve user by its id
                 $userToUpdate = $this->entityManager
-                                    ->getRepository(User::class)
-                                    ->find($id);
+                    ->getRepository(User::class)
+                    ->find($id);
 
                 $regularUserToUpdate = $this->entityManager
-                                        ->getRepository(Regular::class)
-                                        ->find($id);
+                    ->getRepository(Regular::class)
+                    ->find($id);
 
                 // no userFound
-                if(!$userToUpdate) {
+                if (!$userToUpdate) {
                     return array(
-                        'isUserUpdated'=>false,
+                        'isUserUpdated' => false,
                         "errorType" => "unknownUser"
-                    );    
-                } 
+                    );
+                }
 
                 // store old email for future check and set trigger for sending email or not
                 $tmpOldEmail = $regularUserToUpdate->getEmail();
                 $emailUpdatedRequested = false;
 
                 // user found in db, prepare data
-                $firstname = isset($_POST['firstname']) 
-                                ? htmlspecialchars(strip_tags(trim($_POST['firstname'])))
-                                : $userToUpdate->getFirstname();
+                $firstname = isset($_POST['firstname'])
+                    ? htmlspecialchars(strip_tags(trim($_POST['firstname'])))
+                    : $userToUpdate->getFirstname();
 
-                $surname = isset($_POST['surname']) 
-                                ? htmlspecialchars(strip_tags(trim($_POST['surname']))) 
-                                : $userToUpdate->getSurname();
+                $surname = isset($_POST['surname'])
+                    ? htmlspecialchars(strip_tags(trim($_POST['surname'])))
+                    : $userToUpdate->getSurname();
 
-                $pseudo = isset($_POST['pseudo']) 
-                                ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) 
-                                : $userToUpdate->getPseudo();
+                $pseudo = isset($_POST['pseudo'])
+                    ? htmlspecialchars(strip_tags(trim($_POST['pseudo'])))
+                    : $userToUpdate->getPseudo();
 
                 $email = isset($_POST['email'])
-                                ? strip_tags(trim($_POST['email']))
-                                : $regularUserToUpdate->getEmail();
+                    ? strip_tags(trim($_POST['email']))
+                    : $regularUserToUpdate->getEmail();
 
                 $password = isset($_POST['password']) ? strip_tags(trim($_POST['password'])) : null;
 
-                
+
                 // create empty $errors array and fill it with errors if any and $emailSend if necessary
                 $errors = [];
                 $emailSent = null;
-                if(!filter_var($email,FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
-                if(!empty($password)){
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
+                if (!empty($password)) {
                     // At least 8 characters including 1 Uppercase, 1 lowercase, 1 digit, and 1 special character
                     $regex = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/";
-                    if(!preg_match($regex,$password,$matches)){
+                    if (!preg_match($regex, $password, $matches)) {
                         $errors['passwordInvalid'] = true;
                     }
-                } 
-                if($email !== $tmpOldEmail){
-                   
-                     // check if the email is already listed in db
+                }
+                if ($email !== $tmpOldEmail) {
+
+                    // check if the email is already listed in db
                     $emailAlreadyExists = $this->entityManager
-                                            ->getRepository('User\Entity\Regular')
-                                            ->findOneBy(array('email'=> $email));
-                    if($emailAlreadyExists) $errors['emailExists']=true;
+                        ->getRepository('User\Entity\Regular')
+                        ->findOneBy(array('email' => $email));
+                    if ($emailAlreadyExists) $errors['emailExists'] = true;
                     else {
                         // set new_mail, confirm_token fields to be filled in user_regulars
                         $regularUserToUpdate->setNewMail($email);
-                        $confirmationToken = time()."-".bin2hex($email);
+                        $confirmationToken = time() . "-" . bin2hex($email);
                         $regularUserToUpdate->setConfirmToken($confirmationToken);
 
                         // set the flag to true for sending email later 
                         $emailUpdatedRequested = true;
                     }
                 }
-                
+
                 // some errors have been found, return them to the user
-                if(!empty($errors)){
+                if (!empty($errors)) {
                     return array(
-                        'isUserUpdated'=>false,
+                        'isUserUpdated' => false,
                         "errors" => $errors
-                    );    
+                    );
                 }
 
                 // no errors, update the fields value 
-                if(!empty($firstname)) $userToUpdate->setFirstname($firstname);
-                if(!empty($surname)) $userToUpdate->setSurname($surname);
-                if(!empty($pseudo)) $userToUpdate->setPseudo($pseudo);
+                if (!empty($firstname)) $userToUpdate->setFirstname($firstname);
+                if (!empty($surname)) $userToUpdate->setSurname($surname);
+                if (!empty($pseudo)) $userToUpdate->setPseudo($pseudo);
                 $userToUpdate->setUpdateDate(new \DateTime());
-                if(!empty($password))
-                {
+                if (!empty($password)) {
                     // the user requested a password change, so we hash the password
-                    $passwordHash = password_hash($password,PASSWORD_BCRYPT);
+                    $passwordHash = password_hash($password, PASSWORD_BCRYPT);
                     $userToUpdate->setPassword($passwordHash);
                 }
-                
+
                 // save data in both tables users and user_regulars
                 $this->entityManager->flush();
-                
+
                 // the user requested its email to changed
-                if($emailUpdatedRequested == true)
-                {
+                if ($emailUpdatedRequested == true) {
                     /////////////////////////////////////
                     // PREPARE EMAIL TO BE SENT
                     // received lang param
-                    $userLang = isset($_COOKIE['lng']) 
-                                ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))  
-                                : 'fr';
+                    $userLang = isset($_COOKIE['lng'])
+                        ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))
+                        : 'fr';
 
                     // set the email confirmation link and the email template to be used
                     $emailConfirmationLink = "{$this->URL}/classroom/confirm_email_update.php?token=$confirmationToken";
-                    $emailTtemplateBody = $userLang."_confirm_email_update";
+                    $emailTtemplateBody = $userLang . "_confirm_email_update";
 
                     // init i18next instance
-                    if(is_dir(__DIR__."/../../../../../openClassroom")){
-                        i18next::init($userLang,__DIR__."/../../../../../openClassroom/classroom/assets/lang/__lng__/ns.json");
-                    }else {
-                        i18next::init($userLang,__DIR__."/../../../../../classroom/assets/lang/__lng__/ns.json");
+                    if (is_dir(__DIR__ . "/../../../../../openClassroom")) {
+                        i18next::init($userLang, __DIR__ . "/../../../../../openClassroom/classroom/assets/lang/__lng__/ns.json");
+                    } else {
+                        i18next::init($userLang, __DIR__ . "/../../../../../classroom/assets/lang/__lng__/ns.json");
                     }
 
                     $emailSubject = i18next::getTranslation('classroom.updateUserInfos.emailUpdateConfirmation.emailSubject');
@@ -1202,19 +1203,19 @@ class ControllerUser extends Controller
                         <br>
                         <p>$textBeforeLink $emailConfirmationLink
                     ";
-                    
+
                     // send the email
-                    $emailSent = Mailer::sendMail($email, $emailSubject, $body, strip_tags($body),$emailTtemplateBody); 
+                    $emailSent = Mailer::sendMail($email, $emailSubject, $body, strip_tags($body), $emailTtemplateBody);
 
                     /////////////////////////////////////
                 }
                 return array(
-                    'isUserUpdated'=>true,
+                    'isUserUpdated' => true,
                     "user" => array(
-                        "id"=> $userToUpdate->getId(),
+                        "id" => $userToUpdate->getId(),
                         "emailSent" =>  $emailSent
                     )
-                );    
+                );
             },
             'disconnect' => function ($data) {
 
@@ -1418,20 +1419,20 @@ class ControllerUser extends Controller
      * @param  object $sanitizedData
      * @return object
      */
-    private function registerGarStudentIfNeeded($sanitizedData){
-                
+    private function registerGarStudentIfNeeded($sanitizedData)
+    {
+
         // check if user is already registered
         $garUserExists = $this->entityManager
-                        ->getRepository('User\Entity\ClassroomUser')
-                        ->findOneBy(array("garId" => $sanitizedData->customIdo));
+            ->getRepository('User\Entity\ClassroomUser')
+            ->findOneBy(array("garId" => $sanitizedData->customIdo));
 
         // the user exists, return its data
-        if(!$garUserExists)
-        {
+        if (!$garUserExists) {
             // the student is not registerd yet
             // create a hashed password
             //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
-            $hashedPassword = password_hash('Test1234!',PASSWORD_BCRYPT);
+            $hashedPassword = password_hash('Test1234!', PASSWORD_BCRYPT);
 
             // create the user to be saved in users table
             $user = new User;
@@ -1439,11 +1440,11 @@ class ControllerUser extends Controller
             $user->setSurname($sanitizedData->nom);
             $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
             $user->setPassword($hashedPassword);
-            
+
             // save the user 
             $this->entityManager->persist($user);
             $this->entityManager->flush();
-            
+
             // retrieve the lastInsertId to use for the next query 
             // this value is only available after a flush()
             $user->setId($user->getId());
@@ -1458,11 +1459,9 @@ class ControllerUser extends Controller
             $this->entityManager->persist($classroomUser);
             $this->entityManager->flush();
             return $classroomUser;
-        }
-        else return $garUserExists;
-      
+        } else return $garUserExists;
     }
-    
+
     /**
      * generateUpdatedPassword
      * 
@@ -1471,21 +1470,22 @@ class ControllerUser extends Controller
      * @return string generate a new password different for the old one
      *  and make sure there are no matching record in db
      */
-    private function generateUpdatedPassword($pseudo,$oldPassword){
-        
+    private function generateUpdatedPassword($pseudo, $oldPassword)
+    {
+
         // generate the new password and check if a record exists in db with these credentials
-        do{
-            $newPassword = passwordGenerator(); 
+        do {
+            $newPassword = passwordGenerator();
             $duplicateUserCredentialsFound = $this->entityManager
-                                                ->getRepository(User::class)
-                                                ->findOneBy(array(
-                                                    'pseudo'=>$pseudo,
-                                                    'password'=> $newPassword
-                                                ));
+                ->getRepository(User::class)
+                ->findOneBy(array(
+                    'pseudo' => $pseudo,
+                    'password' => $newPassword
+                ));
         }
         // continue as long as the passwords match and a record exists in db
-        while(($oldPassword === $newPassword) && $duplicateUserCredentialsFound !== null) ;
-       
+        while (($oldPassword === $newPassword) && $duplicateUserCredentialsFound !== null);
+
         return $newPassword;
     }
 }
