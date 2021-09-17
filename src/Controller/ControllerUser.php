@@ -163,6 +163,7 @@ class ControllerUser extends Controller
                     ->find($data['id']);
                 $regular = $this->entityManager->getRepository('User\Entity\Regular')
                     ->findOneBy(array('user' => $data['id']));
+                // Deleted with cascade
                 /* $teacher = $this->entityManager->getRepository('User\Entity\Teacher')
                     ->findOneBy(array('user' => $data['id'])); */
                 $classroomLinkUser = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
@@ -170,6 +171,7 @@ class ControllerUser extends Controller
                 $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
                     ->findOneBy(array('id' => $data['id']));
                 $pseudo = $user->getPseudo();
+
 
                 // fix @Rémi 
                 $this->entityManager->remove($classroomLinkUser);
