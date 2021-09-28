@@ -41,10 +41,6 @@ class ControllerUser extends Controller
         $this->URL = isset($url) ? $url : $_ENV['VS_HOST'];
         parent::__construct($entityManager, $user);
         $this->actions = array(
-            'get_all' => function () {
-                return $this->entityManager->getRepository('User\Entity\User')
-                    ->findAll();
-            },
             'generate_classroom_user_password' => function ($data) {
                 $user = $this->entityManager->getRepository('User\Entity\User')
                     ->find($data['id']);
@@ -226,89 +222,6 @@ class ControllerUser extends Controller
                     $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
                         ->find($data);
                     return $classroomUser;
-                }
-            },
-            'garSystem' => function () {
-                try {
-                    $_SESSION['UAI'] = $_GET['uai'];
-                    $_SESSION['DIV'] = json_decode(urldecode($_GET['div']));
-                    if (isset($_GET['pmel']) && $_GET['pmel'] != '') {
-                        $isTeacher = true;
-                    } else {
-                        $isTeacher = false;
-                    } // en fonction des infos sso
-                    //check if the user is in the database. If not, create a new User
-
-                    $garUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
-                        ->findBy(array("garId" => $_GET['ido']));
-                    if (!$garUser) {
-                        $user = new User();
-                        $user->setFirstName($_GET['pre']);
-                        $user->setSurname($_GET['nom']);
-                        $user->setPseudo($_GET['nom'] . " " . $_GET['pre']);
-                        $password = passwordGenerator();
-                        $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
-                        $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
-                        $user->setId($lastQuestion->getId() + 1);
-                        $this->entityManager->persist($user);
-
-                        $classroomUser = new ClassroomUser($user);
-                        $classroomUser->setGarId($_GET['ido']);
-                        $classroomUser->setSchoolId($_GET['uai']);
-                        if ($isTeacher) {
-                            $classroomUser->setIsTeacher(true);
-                            $classroomUser->setMailTeacher($_GET['pmel'] . passwordGenerator());
-                            $regular = new Regular($user, $_GET['pmel'] . passwordGenerator());
-                            $this->entityManager->persist($regular);
-
-                            /*  $subject = "Votre création de compte Vittascience (test, en prod envoi à l'adresse " . $_GET['pmel'];
-                        $body =  "<h4 style=\"font-family:'Open Sans'; margin-bottom:0; color:#27b88e; font-size:28px;\">Bonjour " . $user->getFirstname() . "</h4>";
-                        $body .= "<p style=\" font-family:'Open Sans'; \">Vous vous êtes connecté à l'application Vittascience via le GAR.</p>";
-                        $body .= "<p style=\" font-family:'Open Sans'; \">Si jamais vous souhaitez vous connecter sans passer par le GAR, voici votre mot de passe provisoire :<bold>" . $password . "</bold>.";
-
-                        Mailer::sendMail("support@vittascience.com", $subject, $body, $body); */
-                        } else {
-                            $classroomUser->setIsTeacher(false);
-                            $classroomUser->setMailTeacher(NULL);
-
-                            $classes = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findBy(array('groupe' => $_SESSION['DIV'], 'school' => $_SESSION['UAI']));
-                            foreach ($classes as $c) {
-                                $linkToClass = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findBy(array('user' => $user));
-
-                                if (!$linkToClass) {
-                                    $linkteacherToGroup = new ClassroomLinkUser($user, $c);
-                                    $linkteacherToGroup->setRights(0);
-                                    $this->entityManager->persist($linkteacherToGroup);
-                                }
-                            }
-                        }
-                        $this->entityManager->persist($classroomUser);
-                        $this->entityManager->flush();
-                        $_SESSION['id'] = $user->getId();
-                        $_SESSION['pin'] = $password;
-
-                        if ($user) {
-                            header('location:' . $this->URL . '/classroom/home.php');
-                        } else {
-                            header('location:' . $this->URL . '/classroom/login.php');
-                        }
-                    }
-                    $classes = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findBy(array('groupe' => $_SESSION['DIV'], 'school' => $_SESSION['UAI']));
-                    foreach ($classes as $c) {
-                        $linkToClass = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $garUser[0]->getId(), 'classroom' => $c));
-                        var_dump($linkToClass);
-                        if (!$linkToClass || $linkToClass == NULL) {
-
-                            $linkteacherToGroup = new ClassroomLinkUser($garUser[0]->getId(), $c);
-                            $linkteacherToGroup->setRights(0);
-                            $this->entityManager->persist($linkteacherToGroup);
-                        }
-                    }
-                    $this->entityManager->flush();
-                    $_SESSION['id'] = $garUser[0]->getId()->getId();
-                    header('location:' . $this->URL . '/classroom/home.php');
-                } catch (Exception $e) {
-                    var_dump($e);
                 }
             },
             'get_gar_student_available_classrooms' => function () {
@@ -1410,7 +1323,98 @@ class ControllerUser extends Controller
                 {
                     return ["success" => false, "errors" => $errorMessages];
                 }
-            }
+            },
+            /* 'get_all' => function () {
+                *
+                 * @Naser
+                 * @NoApiCallFound NO RECORD FOUND FOR /routing/Routing.php?controller=user&action=get_all in the search
+                 * last check => September 2021
+                 
+                return $this->entityManager->getRepository('User\Entity\User')->findAll();
+            }, */
+            /*'garSystem' => function () {
+                try {
+                    $_SESSION['UAI'] = $_GET['uai'];
+                    $_SESSION['DIV'] = json_decode(urldecode($_GET['div']));
+                    if (isset($_GET['pmel']) && $_GET['pmel'] != '') {
+                        $isTeacher = true;
+                    } else {
+                        $isTeacher = false;
+                    } // en fonction des infos sso
+                    //check if the user is in the database. If not, create a new User
+
+                    $garUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
+                        ->findBy(array("garId" => $_GET['ido']));
+                    if (!$garUser) {
+                        $user = new User();
+                        $user->setFirstName($_GET['pre']);
+                        $user->setSurname($_GET['nom']);
+                        $user->setPseudo($_GET['nom'] . " " . $_GET['pre']);
+                        $password = passwordGenerator();
+                        $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
+                        $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
+                        $user->setId($lastQuestion->getId() + 1);
+                        $this->entityManager->persist($user);
+
+                        $classroomUser = new ClassroomUser($user);
+                        $classroomUser->setGarId($_GET['ido']);
+                        $classroomUser->setSchoolId($_GET['uai']);
+                        if ($isTeacher) {
+                            $classroomUser->setIsTeacher(true);
+                            $classroomUser->setMailTeacher($_GET['pmel'] . passwordGenerator());
+                            $regular = new Regular($user, $_GET['pmel'] . passwordGenerator());
+                            $this->entityManager->persist($regular);
+
+                            /*  $subject = "Votre création de compte Vittascience (test, en prod envoi à l'adresse " . $_GET['pmel'];
+                        $body =  "<h4 style=\"font-family:'Open Sans'; margin-bottom:0; color:#27b88e; font-size:28px;\">Bonjour " . $user->getFirstname() . "</h4>";
+                        $body .= "<p style=\" font-family:'Open Sans'; \">Vous vous êtes connecté à l'application Vittascience via le GAR.</p>";
+                        $body .= "<p style=\" font-family:'Open Sans'; \">Si jamais vous souhaitez vous connecter sans passer par le GAR, voici votre mot de passe provisoire :<bold>" . $password . "</bold>.";
+
+                        Mailer::sendMail("support@vittascience.com", $subject, $body, $body); 
+                        } else {
+                            $classroomUser->setIsTeacher(false);
+                            $classroomUser->setMailTeacher(NULL);
+
+                            $classes = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findBy(array('groupe' => $_SESSION['DIV'], 'school' => $_SESSION['UAI']));
+                            foreach ($classes as $c) {
+                                $linkToClass = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findBy(array('user' => $user));
+
+                                if (!$linkToClass) {
+                                    $linkteacherToGroup = new ClassroomLinkUser($user, $c);
+                                    $linkteacherToGroup->setRights(0);
+                                    $this->entityManager->persist($linkteacherToGroup);
+                                }
+                            }
+                        }
+                        $this->entityManager->persist($classroomUser);
+                        $this->entityManager->flush();
+                        $_SESSION['id'] = $user->getId();
+                        $_SESSION['pin'] = $password;
+
+                        if ($user) {
+                            header('location:' . $this->URL . '/classroom/home.php');
+                        } else {
+                            header('location:' . $this->URL . '/classroom/login.php');
+                        }
+                    }
+                    $classes = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findBy(array('groupe' => $_SESSION['DIV'], 'school' => $_SESSION['UAI']));
+                    foreach ($classes as $c) {
+                        $linkToClass = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $garUser[0]->getId(), 'classroom' => $c));
+                        var_dump($linkToClass);
+                        if (!$linkToClass || $linkToClass == NULL) {
+
+                            $linkteacherToGroup = new ClassroomLinkUser($garUser[0]->getId(), $c);
+                            $linkteacherToGroup->setRights(0);
+                            $this->entityManager->persist($linkteacherToGroup);
+                        }
+                    }
+                    $this->entityManager->flush();
+                    $_SESSION['id'] = $garUser[0]->getId()->getId();
+                    header('location:' . $this->URL . '/classroom/home.php');
+                } catch (Exception $e) {
+                    var_dump($e);
+                }
+            },*/
         );
     }
 
