@@ -60,8 +60,8 @@ class ControllerUser extends Controller
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
-                // bind incoming id
-                $id = isset($_POST['id']) ?  intval($_POST['id']) : null;
+                // get and sanitize student id from $_SESSION
+                $id = isset($_SESSION['id']) ?  intval($_SESSION['id']) : null;
 
                 // get the current user from user_regulars table
                 $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
