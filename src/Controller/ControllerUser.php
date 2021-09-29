@@ -42,11 +42,57 @@ class ControllerUser extends Controller
         parent::__construct($entityManager, $user);
         $this->actions = array(
             'generate_classroom_user_password' => function ($data) {
-                $user = $this->entityManager->getRepository('User\Entity\User')
-                    ->find($data['id']);
+                /**
+                 * This method is called by the teacher (inside a classroom=> select 1 student=> clic the cog=>clic re-generate password)
+                 * @additionalCheckMissing
+                 * => we need the classroom link to check if the current user is really the teacher
+                 */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                //  bind and sanitize incoming data or session data
+                $studentId = !empty($_POST['id']) ? intval($_POST['id']) : null;
+                $teacherId = intval($_SESSION['id']);
+
+                // initialize empty error array and check for errors
+                if(empty($studentId)) $errors['studentIdMissing'] = true;
+
+                // return errors if any
+                if(!empty($errors)) return array('errors' => $errors);
+
+                // retirve the student in db, else return an error
+                $user = $this->entityManager ->getRepository('User\Entity\User')->find($studentId);
+                if(!$user) return array('errorType' => 'studentNotRetrieved');
+ 
+                // get the student classroom id
+                $userClassroomId = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'user'=> $studentId,
+                        'rights'=> 0
+                    ))->getClassroom()->getId();
+                
+                // get the teacher of the student classroom
+                $teacherFound = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'classroom' => $userClassroomId,
+                        'user' => $teacherId,
+                        'rights' => 2
+                    ));
+                
+                // no teacher found
+                if(!$teacherFound ) return array('errorType' => 'teacherNotRetrieved');
+
+                // teacher found, but logged user id and classroom teacher id do not match
+                if($teacherId != $teacherFound->getUser()->getId()) return array('errorType' => 'notStudentTeacher');
+
+                // all is ok, generate and update password and return data
                 $password = passwordGenerator();
                 $user->setPassword($password);
-                $this->entityManager->persist($user);
                 $this->entityManager->flush();
                 $pseudo = $user->getPseudo();
                 return ['mdp' => $password, 'pseudo' => $pseudo];
@@ -55,6 +101,9 @@ class ControllerUser extends Controller
 
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
                 // get and sanitize student id from $_SESSION
                 $id = isset($_SESSION['id']) ?  intval($_SESSION['id']) : null;
@@ -88,6 +137,9 @@ class ControllerUser extends Controller
 
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
                 // bind incoming id
                 $id = isset($_POST['id']) ? intval($_POST['id']) : null;
@@ -680,6 +732,9 @@ class ControllerUser extends Controller
                 // allow only POST METHOD
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error' => 'Method not Allowed');
 
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
                 // bind incoming data
                 $subject = isset($_POST['subject']) ? htmlspecialchars(strip_tags(trim($_POST['subject']))) : null;
                 $message = isset($_POST['message']) ? htmlspecialchars(strip_tags(trim($_POST['message']))) : null;
@@ -756,6 +811,9 @@ class ControllerUser extends Controller
 
                 // allow only POST METHOD
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error' => 'Method not Allowed');
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
                 // bind incoming data
                 $subject = isset($_POST['subject']) ? htmlspecialchars(strip_tags(trim($_POST['subject']))) : null;
@@ -983,6 +1041,9 @@ class ControllerUser extends Controller
                 // return error if the request is not a POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+                
                 // bind incoming id
                 $id = intval($_POST['id']);
 
