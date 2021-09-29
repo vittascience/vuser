@@ -41,7 +41,7 @@ class ControllerUser extends Controller
         $this->URL = isset($url) ? $url : $_ENV['VS_HOST'];
         parent::__construct($entityManager, $user);
         $this->actions = array(
-            'generate_classroom_user_password' => function ($data) {
+            'generate_classroom_user_password' => function () {
                 /**
                  * This method is called by the teacher (inside a classroom=> select 1 student=> clic the cog=>clic re-generate password)
                  * @additionalCheckMissing
@@ -106,7 +106,7 @@ class ControllerUser extends Controller
                 if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
                 // get and sanitize student id from $_SESSION
-                $id = isset($_SESSION['id']) ?  intval($_SESSION['id']) : null;
+                $id = !empty($_SESSION['id']) ?  intval($_SESSION['id']) : null;
 
                 // get the current user from user_regulars table
                 $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
@@ -134,6 +134,9 @@ class ControllerUser extends Controller
                 }
             },
             'reset_student_password' => function () {
+                /**
+                 * This method is called by the student (student profile => parameters => clic on re-initialize button)
+                 */
 
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
@@ -142,7 +145,7 @@ class ControllerUser extends Controller
                 if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
                 // bind incoming id
-                $id = isset($_POST['id']) ? intval($_POST['id']) : null;
+                $id = !empty($_SESSION['id']) ? intval($_SESSION['id']) : null;
 
                 // get the current user from user_regulars table
                 $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
