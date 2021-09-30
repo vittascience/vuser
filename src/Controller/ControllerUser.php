@@ -178,29 +178,6 @@ class ControllerUser extends Controller
                     );
                 }
             },
-            'disconnect' => function () {
-
-                try {
-                    $manager = ConnectionManager::getSharedInstance();
-                    $user = $manager->checkConnected();
-                    if (!$user) {
-                        return false;
-                    } else {
-                        $res = $manager->deleteToken($_SESSION["id"], $_SESSION["token"]);
-                        if ($res) {
-                            if (isset($_GET["url"]) && $_GET["url"] != '') {
-                                header('location:' . $this->URL . '/' . $_GET["url"]);
-                            } else {
-                                header('location:' . $this->URL . '/index.php');
-                            }
-                        } else {
-                            header('location:' . $this->URL . '/index.php');
-                        }
-                    }
-                } catch (\Exception $e) {
-                    return false;
-                }
-            },
             'change_pseudo_classroom_user' => function ($data) {
                 $user = $this->entityManager->getRepository('User\Entity\User')
                     ->find($data['id']);
@@ -1392,11 +1369,15 @@ class ControllerUser extends Controller
                 *
                  * @Naser
                  * @NoApiCallFound NO RECORD FOUND FOR /routing/Routing.php?controller=user&action=get_all in the search
+                 * @ToBeRemoved
                  * last check => September 2021
                  
                 return $this->entityManager->getRepository('User\Entity\User')->findAll();
             }, */
             /*'garSystem' => function () {
+                * @Naser
+                 * @ToBeRemoved method not used any and replaced by GAR Methods to be transferred to GAR Plugins
+                 * last check => September 2021
                 try {
                     $_SESSION['UAI'] = $_GET['uai'];
                     $_SESSION['DIV'] = json_decode(urldecode($_GET['div']));
@@ -1479,6 +1460,31 @@ class ControllerUser extends Controller
                     var_dump($e);
                 }
             },*/
+            /* 'disconnect' => function () {
+                * @Naser
+                 * @ToBeRemoved unused version of disconnect method to be removed
+                 * last check => September 2021
+                try {
+                    $manager = ConnectionManager::getSharedInstance();
+                    $user = $manager->checkConnected();
+                    if (!$user) {
+                        return false;
+                    } else {
+                        $res = $manager->deleteToken($_SESSION["id"], $_SESSION["token"]);
+                        if ($res) {
+                            if (isset($_GET["url"]) && $_GET["url"] != '') {
+                                header('location:' . $this->URL . '/' . $_GET["url"]);
+                            } else {
+                                header('location:' . $this->URL . '/index.php');
+                            }
+                        } else {
+                            header('location:' . $this->URL . '/index.php');
+                        }
+                    }
+                } catch (\Exception $e) {
+                    return false;
+                }
+            }, */
         );
     }
 
