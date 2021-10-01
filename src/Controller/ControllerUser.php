@@ -178,11 +178,65 @@ class ControllerUser extends Controller
                     );
                 }
             },
-            'change_pseudo_classroom_user' => function ($data) {
-                $user = $this->entityManager->getRepository('User\Entity\User')
-                    ->find($data['id']);
-                $user->setPseudo($data['pseudo']);
-                $this->entityManager->persist($user);
+            'change_pseudo_classroom_user' => function () {
+                /**
+                 * This method is called by the teacher (inside a classroom=> select 1 student=> clic the cog=> change pseudo)
+                 */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                // bind and sanitize data
+                $studentId = !empty($_POST['id']) ? intval($_POST['id']) : null;
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '' ;
+                $teacherId = intval($_SESSION['id']);
+
+                // initialize empty $error array and look for errors
+                $errors = [];
+                if(empty($studentId)) $errors['studentIdEmpty'] = true;
+                if(empty($pseudo)) $errors['pseudoEmpty'] = true;
+
+                // some errors found, return them
+                if(!empty($errors)){
+                    return array('errors' => $errors);
+                }
+
+                // no errors found
+                // get the student data
+                $student = $this->entityManager
+                    ->getRepository('User\Entity\User')
+                    ->find($studentId);
+                
+                // student not found, return an error
+                if(!$student) return array('errorType' => 'studentNotExists');
+
+                // get the student classroom
+                $studentClassroom = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'user' => $studentId,
+                        'rights' => 0
+                    ));
+                
+                // student classroom not found
+                if(!$studentClassroom) return array('errorType' => 'studentNotFoundInClassroom');
+
+                // get the classroom teacher
+                $teacherOfClassroom = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'user' => $teacherId,
+                        'classroom' => $studentClassroom->getClassroom()->getId(),
+                        'rights' => 2
+                    ));
+                
+                // current logged user is not the classroom teacher, return an error
+                if(!$teacherOfClassroom) return array('errorType' => 'userIsNotClassroomTeacher');
+
+                // all checks passed, update the student pseudo and return data
+                $student->setPseudo($pseudo);
                 $this->entityManager->flush();
                 return true;
             },
