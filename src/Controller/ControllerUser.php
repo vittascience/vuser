@@ -240,37 +240,68 @@ class ControllerUser extends Controller
                 $this->entityManager->flush();
                 return true;
             },
-            'delete' => function ($data) {
-                $user = $this->entityManager->getRepository('User\Entity\User')
-                    ->find($data['id']);
-                $regular = $this->entityManager->getRepository('User\Entity\Regular')
-                    ->findOneBy(array('user' => $data['id']));
-                // Deleted with cascade
-                /* $teacher = $this->entityManager->getRepository('User\Entity\Teacher')
-                    ->findOneBy(array('user' => $data['id'])); */
-                $classroomLinkUser = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                    ->findOneBy(array('user' => $data['id']));
-                $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
-                    ->findOneBy(array('id' => $data['id']));
-                $pseudo = $user->getPseudo();
+            'delete' => function () {
+                /**
+                 * This method is called by the teacher (inside a classroom=> select 1 student => clic the cog => delete)
+                 */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
-                // fix @Rémi 
-                $this->entityManager->remove($classroomLinkUser);
-                $this->entityManager->remove($user);
-                if ($regular) {
-                    $this->entityManager->remove($regular);
-                }
-                /* if ($teacher) {
-                    $this->entityManager->remove($teacher);
-                } */
-                if ($classroomUser) {
-                    $this->entityManager->remove($classroomUser);
-                }
+                // bind and sanitize data
+                $studentId = !empty($_POST['id']) ? intval($_POST['id']) : null;
+                $teacherId = intval($_SESSION['id']);
+
+                // initialize empty $errors array and check for errors
+                $errors = [];
+                if(empty($studentId)) $errors['studentIdEmpty'] = true;
+
+                // some errors found, return them
+                if(!empty($errors)) return array('errors' => $errors);
+
+                // no errors found, get the student from db
+                $student = $this->entityManager
+                    ->getRepository('User\Entity\User')
+                    ->find($studentId);
+
+                // student not found, return an error
+                if(!$student) return array('errorType' => 'studentNotExists');
+
+                // get student classroom
+                $studentClassroom = $this->entityManager
+                    ->getRepository('Classroom\Entity\ClassroomLinkUser')
+                    ->findOneBy(array(
+                        'user' => $studentId,
+                        'rights' => 0
+                        )
+                    );
+                
+                // student classroom not found
+                if(!$studentClassroom) return array('errorType' => 'studentNotFoundInClassroom');
+
+                // get the classroom teacher
+                $teacherOfClassroom = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'user' => $teacherId,
+                        'classroom' => $studentClassroom->getClassroom()->getId(),
+                        'rights' => 2
+                    ));
+
+                // current logged user is not the classroom teacher, return an error
+                if(!$teacherOfClassroom) return array('errorType' => 'userIsNotClassroomTeacher');
+
+                // the logged user has enough 'rights', remove the student record from classroom_users_link_classrooms table
+                $this->entityManager->remove($studentClassroom);
+
+                // delete student records in users and other joined tables using the CASCADE feature
+                $pseudoToReturn = $student->getPseudo();
+                $this->entityManager->remove($student);
                 $this->entityManager->flush();
-                return [
-                    'pseudo' => $pseudo
-                ];
+
+                return array( 'pseudo' => $pseudoToReturn);
             },
             'get_one_by_pseudo_and_password' => function ($data) {
                 $user = $this->entityManager->getRepository('User\Entity\User')
