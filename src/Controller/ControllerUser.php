@@ -304,25 +304,61 @@ class ControllerUser extends Controller
                 return array( 'pseudo' => $pseudoToReturn);
             },
             'get_one_by_pseudo_and_password' => function ($data) {
-                $user = $this->entityManager->getRepository('User\Entity\User')
-                    ->findBy(array("pseudo" => $data['pseudo']));
-                foreach ($user as $u) {
-                    if ($data['password'] == $u->getPassword()) {
-                        $trueUser = $u;
-                        break;
-                    }
-                }
-                if (isset($trueUser)) {
-                    $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
-                        ->findOneBy(array("link" => $data['classroomLink']));
-                    $isThere = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                        ->findOneBy(array("user" => $trueUser, "classroom" => $classroom));
-                    if ($isThere) {
-                        $_SESSION["id"] = $trueUser->getId();
-                        return true;
-                    }
-                }
-                return false;
+                /**
+                 * This method is used by the non logged students to login into a classroom
+                 * => /classroom/login.php?link=$CharLink => sign in 
+                 */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // bind and sanitize incoming data
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) :'';
+                $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
+                $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
+
+                // check for errors
+                if(empty($pseudo) || empty($password)) return false;
+
+                // no errors found, retrieve the user in db
+                $user = $this->entityManager
+                    ->getRepository('User\Entity\User')
+                    ->findOneBy(array(
+                        "pseudo" => $pseudo,
+                        "password" => $password
+                    ));
+
+                // no user found, return false
+                if(!$user) return false;
+                
+                // retrieve the classroom by the link provided
+                $classroomExists = $this->entityManager
+                    ->getRepository('Classroom\Entity\Classroom')
+                    ->findOneBy(array("link" => $classroomLink));
+                
+                // no classroom found, return an error
+                if(!$classroomExists) return false;
+
+                // check if the user belongs to the classroom
+                $userClassroomData = $this->entityManager
+                    ->getRepository('Classroom\Entity\ClassroomLinkUser')
+                    ->findOneBy(array(
+                        "user" => $user,
+                        "classroom" => $classroomExists,
+                        "rights" => 0
+                    ));
+                
+                // no classroom data found, return an error
+                if(!$userClassroomData) return false;
+
+                // set,save the token and connect the user
+                $token = bin2hex(random_bytes(32));
+                DatabaseManager::getSharedInstance()
+                    ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
+
+                $_SESSION['token'] = $token;
+                $_SESSION["id"] = $user->getId();
+                return true;
+
             },
             'get_one' => function ($data) {
                 $regular = $this->entityManager->getRepository('User\Entity\Regular')
