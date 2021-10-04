@@ -894,7 +894,9 @@ class ControllerUser extends Controller
                 );
             },
             'help_request_from_student' => function () {
-
+                /**
+                 * This method is called by the student (student help panel => clic on send message)
+                 */
                 // allow only POST METHOD
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error' => 'Method not Allowed');
 
@@ -904,7 +906,7 @@ class ControllerUser extends Controller
                 // bind incoming data
                 $subject = isset($_POST['subject']) ? htmlspecialchars(strip_tags(trim($_POST['subject']))) : null;
                 $message = isset($_POST['message']) ? htmlspecialchars(strip_tags(trim($_POST['message']))) : null;
-                $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+                $id = intval($_SESSION['id']);
 
                 // initialize empty $errors array and $emailSent flag
                 $errors = [];
@@ -913,7 +915,7 @@ class ControllerUser extends Controller
                 // check for errors if any
                 if (empty($subject)) $errors['subjectMissing'] = true;
                 if (empty($message)) $errors['messageMissing'] = true;
-                if ($id == 0) $errors['invalidUserId'] = true;
+                if (empty($id)) $errors['invalidUserId'] = true;
 
                 // some errors found, return them to the user
                 if (!empty($errors)) {
