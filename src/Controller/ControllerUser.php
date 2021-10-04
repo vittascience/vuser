@@ -360,23 +360,6 @@ class ControllerUser extends Controller
                 return true;
 
             },
-            'get_one' => function ($data) {
-                $regular = $this->entityManager->getRepository('User\Entity\Regular')
-                    ->find($data);
-                if ($regular) {
-                    $teacher = $this->entityManager->getRepository('User\Entity\Teacher')
-                        ->find($data);
-                    if ($teacher) {
-                        return $teacher;
-                    } else {
-                        return $regular;
-                    }
-                } else {
-                    $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
-                        ->find($data);
-                    return $classroomUser;
-                }
-            },
             'get_gar_student_available_classrooms' => function () {
 
                 // accept only POST request
@@ -1604,6 +1587,26 @@ class ControllerUser extends Controller
                     }
                 } catch (\Exception $e) {
                     return false;
+                }
+            }, */
+            /* 'get_one' => function ($data) {
+                 * @Naser
+                 * @ToBeRemoved unused version of disconnect method to be removed
+                 * last check => October 2021
+                $regular = $this->entityManager->getRepository('User\Entity\Regular')
+                    ->find($data);
+                if ($regular) {
+                    $teacher = $this->entityManager->getRepository('User\Entity\Teacher')
+                        ->find($data);
+                    if ($teacher) {
+                        return $teacher;
+                    } else {
+                        return $regular;
+                    }
+                } else {
+                    $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
+                        ->find($data);
+                    return $classroomUser;
                 }
             }, */
         );
