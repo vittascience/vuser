@@ -1176,13 +1176,7 @@ class ControllerUser extends Controller
                 $errors = [];
                 $emailSent = null;
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
-                if (!empty($password)) {
-                    // At least 8 characters including 1 Uppercase, 1 lowercase, 1 digit, and 1 special character
-                    $regex = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/";
-                    if (!preg_match($regex, $password, $matches)) {
-                        $errors['passwordInvalid'] = true;
-                    }
-                }
+                if(!empty($password) && strlen($password) < 7) $errors['passwordInvalid'] = true;
                 if ($email !== $tmpOldEmail) {
 
                     // check if the email is already listed in db
