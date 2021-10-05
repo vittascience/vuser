@@ -1132,8 +1132,7 @@ class ControllerUser extends Controller
                 // accept only connected user
                 if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
                 
-                // bind incoming id
-                $id = intval($_POST['id']);
+                $id = intval($_SESSION['id']);
 
                 // retrieve user by its id
                 $userToUpdate = $this->entityManager
