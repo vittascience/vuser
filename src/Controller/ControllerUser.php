@@ -595,8 +595,8 @@ class ControllerUser extends Controller
                     else {
                         // the classroom does not exists
                         // get demoStudent from .env file
-                        $demoStudent = !empty($this->envVariables['demoStudent'])
-                            ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
+                        $demoStudent = !empty($this->envVariables['VS_DEMOSTUDENT'])
+                            ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['VS_DEMOSTUDENT']))))
                             : 'demostudent';
 
                         // get the current teacher object for next query
@@ -674,8 +674,8 @@ class ControllerUser extends Controller
                 $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
 
                 // get demoStudent from .env file
-                $demoStudent = !empty($this->envVariables['demoStudent'])
-                    ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
+                $demoStudent = !empty($this->envVariables['VS_DEMOSTUDENT'])
+                    ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['VS_DEMOSTUDENT']))))
                     : 'demostudent';
 
                 $classrooms = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
