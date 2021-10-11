@@ -1016,13 +1016,28 @@ class ControllerUser extends Controller
                     );
                 }
             },
-            'login' => function ($data) {
+            'login' => function () {
+                $mail = !empty($_POST['mail']) ? htmlspecialchars(strip_tags(trim($_POST['mail']))) : '';
+                $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
 
-                if (ConnectionManager::getSharedInstance()->checkConnected()) {
+                if(empty($mail) || empty($password)) return array(
+                    'success' => false,
+                    'error' => "badInput"
+                 );
+
+                if (ConnectionManager::getSharedInstance()->checkConnected()) return ["success" => true];
+
+                $credentials = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
+
+                if ($credentials !== false) {
+                    $_SESSION["id"] = $credentials[0];
+                    $_SESSION["token"] = $credentials[1];
                     return ["success" => true];
+                } else {
+                    return ["success" => false];
                 }
-                if (!empty($data["mail"]) && !empty($data["password"])) {
-                    $credentials = ConnectionManager::getSharedInstance()->checkLogin($data["mail"], $data["password"]);
+                /* if (!empty($mail) && !empty($password)) {
+                    $credentials = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
                     if ($credentials !== false) {
                         $_SESSION["id"] = $credentials[0];
                         $_SESSION["token"] = $credentials[1];
@@ -1031,7 +1046,7 @@ class ControllerUser extends Controller
                         return ["success" => false];
                     }
                     return ["success" => false];
-                }
+                } */
             },
             'register' => function () {
 
