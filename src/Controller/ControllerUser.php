@@ -645,15 +645,28 @@ class ControllerUser extends Controller
                     'classroomsCreated' => true
                 );
             },
-            'linkSystem' => function ($data) {
+            'linkSystem' => function () {
                 /**
                  * Limiting learner number @THOMAS MODIF
                  * Added Admin check to allow them an unlimited number of new student @NASER MODIF
                  */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // bind incoming data
+                $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
+
+                // return an error when the pseudo is missing               
+                if(empty($pseudo)){
+                    return array(
+                        'isUsersAdded' => false,
+                        'errorType' =>'pseudoIsMissing'
+                    );
+                } 
 
                 // retrieve the classroom by its link
-                $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
-                    ->findOneBy(array("link" => $data['classroomLink']));
+                $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findOneBy(array("link" => $classroomLink));
 
                 // if the current classroom is Blocked by the teacher 
                 if ($classroom->getIsBlocked() === true) {
@@ -741,7 +754,7 @@ class ControllerUser extends Controller
 
                 // check if the submitted pseudo is demoStudent
 
-                if (strtolower($data['pseudo']) == strtolower($demoStudent)) {
+                if (strtolower($pseudo) == strtolower($demoStudent)) {
                     return [
                         "isUsersAdded" => false,
                         "errorType" => "reservedNickname",
@@ -749,7 +762,7 @@ class ControllerUser extends Controller
                     ];
                 }
 
-                $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $data['pseudo']));
+                $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $pseudo));
                 foreach ($pseudoUsed as $p) {
                     $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p));
                     if ($pseudoUsedInClassroom) {
@@ -762,7 +775,7 @@ class ControllerUser extends Controller
                 $user = new User();
                 $user->setFirstName("élève");
                 $user->setSurname("modèl");
-                $user->setPseudo($data['pseudo']);
+                $user->setPseudo($pseudo);
                 $password = passwordGenerator();
                 $user->setPassword($password);
                 $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
@@ -781,7 +794,7 @@ class ControllerUser extends Controller
                 $this->entityManager->persist($classroomUser);
 
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
-                    ->findOneBy(array("link" => $data['classroomLink']));
+                ->findOneBy(array("link" => $classroomLink));
                 $linkteacherToGroup = new ClassroomLinkUser($user, $classroom);
                 $linkteacherToGroup->setRights(0);
                 $this->entityManager->persist($linkteacherToGroup);
@@ -807,6 +820,13 @@ class ControllerUser extends Controller
                 $this->entityManager->flush();
                 $user->classroomUser = $classroomUser;
                 $user->pin = $password;
+
+                // set/save the token,user and pin in session 
+                $token = bin2hex(random_bytes(32));
+                DatabaseManager::getSharedInstance()
+                    ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
+
+                $_SESSION['token'] = $token;
                 $_SESSION["id"] = $user->getId();
                 $_SESSION["pin"] = $password;
                 return ["isUsersAdded" => true, "user" => $user];
