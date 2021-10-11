@@ -1309,25 +1309,41 @@ class ControllerUser extends Controller
                     )
                 );
             },
-            'disconnect' => function ($data) {
+            'disconnect' => function () {
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                // bind and sanitize incoming data and session data
+                $sessionUserId = intval($_SESSION["id"]);
+                $sessionToken = htmlspecialchars(strip_tags(trim($_SESSION["token"])));
+                $url = !empty($_POST['url']) ? htmlspecialchars(strip_tags(trim($_POST['url']))) : '';
+                
                 try {
                     $manager = ConnectionManager::getSharedInstance();
                     $user = $manager->checkConnected();
-                    if (!$user) {
-                        return false;
-                    } else {
-                        $res = $manager->deleteToken($_SESSION["id"], $_SESSION["token"]);
+                    if (!$user)  return false;
+
+                    $res = $manager->deleteToken($sessionUserId, $sessionToken);
+                    if(!$res) return false;
+
+                    return !empty($url) ? $url : "/index.php";
+
+                    /* else 
+                    {
+                        $res = $manager->deleteToken($sessionUserId, $sessionToken);
                         if ($res) {
-                            if (isset($data["url"]) && $data["url"] != '') {
-                                return $data["url"];
+                            if (!empty($url)) {
+                                return $url;
                             } else {
                                 return "/index.php";
                             }
                         } else {
                             return false;
                         }
-                    }
+                    } */
                 } catch (\Exception $e) {
                     return false;
                 }
