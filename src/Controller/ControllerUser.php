@@ -1017,6 +1017,9 @@ class ControllerUser extends Controller
                 }
             },
             'login' => function () {
+                 // accept only POST request
+                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+                 
                 $mail = !empty($_POST['mail']) ? htmlspecialchars(strip_tags(trim($_POST['mail']))) : '';
                 $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
 
