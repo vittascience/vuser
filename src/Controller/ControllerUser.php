@@ -799,7 +799,10 @@ class ControllerUser extends Controller
                 $linkteacherToGroup->setRights(0);
                 $this->entityManager->persist($linkteacherToGroup);
 
-                $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
+                $this->entityManager->flush();
+
+                // TODO DISABLE CLASSROOM ACTIVITIES ATTRIBUTION TO NEW STUDENTS
+                /* $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
                     ->findBy(array("classroom" => $classroom));
 
                 //add all activities linked with the classroom to the learner
@@ -811,13 +814,17 @@ class ControllerUser extends Controller
                         $a->getDateEnd(),
                         $a->getEvaluation(),
                         $a->getAutocorrection(),
+                        null,
                         $a->getIntroduction(),
                         $a->getReference()
                     );
                     $this->entityManager->persist($activityLinkUser);
                 }
 
-                $this->entityManager->flush();
+                $this->entityManager->flush(); */
+                // END TODO
+
+
                 $user->classroomUser = $classroomUser;
                 $user->pin = $password;
 
