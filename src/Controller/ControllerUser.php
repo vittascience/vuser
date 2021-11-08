@@ -242,14 +242,14 @@ class ControllerUser extends Controller
                     $garUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
                         ->findBy(array("garId" => $_GET['ido']));
                     if (!$garUser) {
+                        $password = passwordGenerator();
                         $user = new User();
                         $user->setFirstName($_GET['pre']);
                         $user->setSurname($_GET['nom']);
                         $user->setPseudo($_GET['nom'] . " " . $_GET['pre']);
-                        $password = passwordGenerator();
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
                         $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
-                        $user->setId($lastQuestion->getId() + 1);
+                        //$user->setId($lastQuestion->getId() + 1);
                         $this->entityManager->persist($user);
 
                         $classroomUser = new ClassroomUser($user);
@@ -473,7 +473,7 @@ class ControllerUser extends Controller
                     $hashedPassword = password_hash('Test1234!', PASSWORD_BCRYPT);
 
                     // create the user to be saved in users table
-                    $user = new User;
+                    $user = new User();
                     $user->setFirstname($pre);
                     $user->setSurname($nom);
                     $user->setPseudo("$pre $nom");
@@ -485,7 +485,7 @@ class ControllerUser extends Controller
 
                     // retrieve the lastInsertId to use for the next query 
                     // this value is only available after a flush()
-                    $user->setId($user->getId());
+                    //$user->setId($user->getId());
 
                     // create a classroomUser to be saved in user_classroom_users
                     $classroomUser = new ClassroomUser($user);
@@ -570,11 +570,11 @@ class ControllerUser extends Controller
                         $this->entityManager->flush();
 
                         // create default demoStudent user (required for the dashboard to work properly)
+                        $password = passwordGenerator();
                         $user = new User();
-                        $user->setFirstName("élève");
+                        $user->setFirstname("élève");
                         $user->setSurname("modèl");
                         $user->setPseudo($demoStudent);
-                        $password = passwordGenerator();
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
 
                         // persist and save demoStudent user in users table
@@ -582,7 +582,7 @@ class ControllerUser extends Controller
                         $this->entityManager->flush();
 
                         // get demoStudent user id from last db query => lastInsertId
-                        $user->setId($user->getId());
+                        //$user->setId($user->getId());
 
                         // add the demoStudent user to the classroom with students rights=0 (classroom_users_link_classrooms table)
                         $classroomLinkUser = new ClassroomLinkUser($user, $classroom, 0);
@@ -710,14 +710,14 @@ class ControllerUser extends Controller
 
 
                 // related to users table in db
+                $password = passwordGenerator();
                 $user = new User();
                 $user->setFirstName("élève");
                 $user->setSurname("modèl");
                 $user->setPseudo($data['pseudo']);
-                $password = passwordGenerator();
                 $user->setPassword($password);
                 $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
-                $user->setId($lastQuestion->getId() + 1);
+                // $user->setId($lastQuestion->getId() + 1);
                 // persist in doctrine memory and save it with the flush()
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
@@ -1001,7 +1001,7 @@ class ControllerUser extends Controller
                 $passwordHash = password_hash($password, PASSWORD_BCRYPT);
                 $emailSent = null;
                 // create user and persists it in memory
-                $user = new User;
+                $user = new User();
                 $user->setFirstname($firstname);
                 $user->setSurname($surname);
                 $user->setPseudo($pseudo);
@@ -1013,7 +1013,7 @@ class ControllerUser extends Controller
 
                 // retrieve the lastInsertId to use for the next query 
                 // this value is only available after a flush()
-                $user->setId($user->getId());
+                //$user->setId($user->getId());
 
                 // create record in user_regulars table and persists it in memory
                 $regularUser = new Regular($user, $email);
@@ -1345,7 +1345,7 @@ class ControllerUser extends Controller
                     $user->setPseudo($surname . " " . $firstname);
                     $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
                     $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
-                    $user->setId($lastQuestion->getId() + 1);
+                    //$user->setId($lastQuestion->getId() + 1);
                     $this->entityManager->persist($user);
 
                     $regular = new Regular($user, $email);
@@ -1437,7 +1437,7 @@ class ControllerUser extends Controller
             $hashedPassword = password_hash('Test1234!', PASSWORD_BCRYPT);
 
             // create the user to be saved in users table
-            $user = new User;
+            $user = new User();
             $user->setFirstname($sanitizedData->pre);
             $user->setSurname($sanitizedData->nom);
             $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
@@ -1449,7 +1449,7 @@ class ControllerUser extends Controller
 
             // retrieve the lastInsertId to use for the next query 
             // this value is only available after a flush()
-            $user->setId($user->getId());
+            //$user->setId($user->getId());
 
             // create a classroomUser to be saved in user_classroom_users
             $classroomUser = new ClassroomUser($user);

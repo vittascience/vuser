@@ -29,57 +29,78 @@ class Regular
      * @ORM\Column(name="bio", type="string", length=2000, nullable=true)
      */
     private $bio;
+
+
     /** 
      * @ORM\Column(name="email", type="string", length=255, unique=true, nullable=false)
      * @var string
      */
     private $email;
+
+
     /**
      * @ORM\Column(name="telephone", type="string", length=255, nullable=true)
      * @var string
      */
     private $telephone = NULL;
 
+
     /** 
-     * @ORM\Column(name="confirm_token", type="string", length=250, nullable=true)
+     * @ORM\Column(name="confirm_token", type="string", length=255, nullable=true)
      * @var string
      */
     private $confirmToken = null;
+
+
     /**
      * @ORM\Column(name="contact_flag", type="boolean",options={"default":true})
      * @var bool
      */
     private $contactFlag = false;
+
+
     /**
      * @ORM\Column(name="newsletter", type="boolean",options={"default":true})
      * @var bool
      */
     private $newsletter = false;
+
+
     /**
      * @ORM\Column(name="mail_messages", type="boolean")
      * @var bool
      */
     private $mailMessages = false;
+
+
     /**
      * @ORM\Column(name="is_active", type="boolean",options={"default":false})
      * @var bool
      */
     private $active = false;
+
+
     /**
      * @ORM\Column(name="recovery_token", type="string", length=255, nullable=true)
      * @var string
      */
     private $recoveryToken = null;
+
+
     /**
      * @ORM\Column(name="new_mail", type="string", length=1000, nullable=true)
      * @var string
      */
     private $newMail = null;
+
+
     /**
      * @ORM\Column(name="is_admin", type="boolean",options={"default":false})
      * @var bool
      */
     private $isAdmin = null;
+
+
     /**
      * @ORM\Column(name="private_flag", type="boolean")
      * @var bool
@@ -106,21 +127,21 @@ class Regular
     /**
      * @return User
      */
-    public function getUser()
+    public function getUser(): ?User
     {
         return $this->user;
     }
     /**
      * @param User $id
      */
-    public function setUser($user)
+    public function setUser(User $user)
     {
         $this->user = $user;
     }
     /** 
      * @return bool
      */
-    public function getIsAdmin()
+    public function getIsAdmin(): bool
     {
         return $this->isAdmin;
     }
@@ -128,19 +149,15 @@ class Regular
     /**
      * @param bool $isAdmin
      */
-    public function setIsAdmin($isAdmin)
+    public function setIsAdmin(bool $isAdmin)
     {
-        if (is_bool($isAdmin)) {
-            $this->isAdmin = $isAdmin;
-        } else {
-            throw new EntityDataIntegrityException("isAdmin needs to be boolean");
-        }
+        $this->isAdmin = $isAdmin;
     }
 
     /**
      * @return string
      */
-    public function getBio()
+    public function getBio(): ?string
     {
         return $this->bio;
     }
@@ -148,7 +165,7 @@ class Regular
     /**
      * @param string $bio
      */
-    public function setBio($bio)
+    public function setBio(string $bio)
     {
         if (preg_match(self::REG_BIO, $bio) || $bio == null) {
             $this->bio = $bio;
@@ -161,7 +178,7 @@ class Regular
     /**
      * @return string
      */
-    public function getEmail()
+    public function getEmail(): string
     {
         return $this->email;
     }
@@ -169,20 +186,16 @@ class Regular
     /**
      * @param string $email
      */
-    public function setEmail($email)
+    public function setEmail(string $email)
     {
-        /* if (filter_var($email, FILTER_VALIDATE_EMAIL)) { */
         $this->email = $email;
-        /* } else {
-            throw new EntityDataIntegrityException("invalid e-mail adresse");
-        } */
     }
 
 
     /**
      * @return int
      */
-    public function isActive()
+    public function isActive(): ?int
     {
         return $this->active;
     }
@@ -190,16 +203,15 @@ class Regular
     /**
      * @param bool $active
      */
-    public function setActive($active)
+    public function setActive(bool $active)
     {
-
         $this->active = $active;
     }
 
     /**
      * @return string
      */
-    public function getTelephone()
+    public function getTelephone(): ?string
     {
         return $this->telephone;
     }
@@ -207,19 +219,15 @@ class Regular
     /**
      * @param string $telephone
      */
-    public function setTelephone($telephone)
+    public function setTelephone(?string $telephone)
     {
-        if (is_string($telephone) || $telephone == null) {
-            $this->telephone = $telephone;
-        } else {
-            throw new EntityDataIntegrityException("telephone needs to be string or null");
-        }
+        $this->telephone = $telephone;
     }
 
     /**
      * @return string
      */
-    public function getConfirmToken()
+    public function getConfirmToken(): ?string
     {
         return $this->confirmToken;
     }
@@ -227,19 +235,15 @@ class Regular
     /**
      * @param string $confirmToken
      */
-    public function setConfirmToken($confirmToken)
+    public function setConfirmToken(?string $confirmToken)
     {
-        if (is_string($confirmToken) || $confirmToken == null) {
-            $this->confirmToken = $confirmToken;
-        } else {
-            throw new EntityDataIntegrityException("confirmToken needs to be string or null");
-        }
+        $this->confirmToken = $confirmToken;
     }
 
     /**
      * @return bool
      */
-    public function isContactFlag()
+    public function isContactFlag(): bool
     {
         return $this->contactFlag;
     }
@@ -247,16 +251,15 @@ class Regular
     /**
      * @param bool $contactFlag
      */
-    public function setContactFlag($contactFlag)
+    public function setContactFlag(bool $contactFlag)
     {
-
         $this->contactFlag = $contactFlag;
     }
 
     /**
      * @return bool
      */
-    public function isNewsletter()
+    public function isNewsletter(): bool
     {
         return $this->newsletter;
     }
@@ -264,16 +267,15 @@ class Regular
     /**
      * @param bool $newsletter
      */
-    public function setNewsletter($newsletter)
+    public function setNewsletter(bool $newsletter)
     {
-
         $this->newsletter = $newsletter;
     }
 
     /**
      * @return bool
      */
-    public function isMailMessages()
+    public function isMailMessages(): bool
     {
         return $this->mailMessages;
     }
@@ -281,17 +283,15 @@ class Regular
     /**
      * @param bool $mailMessages
      */
-    public function setMailMessages($mailMessages)
+    public function setMailMessages(bool $mailMessages)
     {
-
-
         $this->mailMessages = $mailMessages;
     }
 
     /**
      * @return string
      */
-    public function getRecoveryToken()
+    public function getRecoveryToken(): ?string
     {
         return $this->recoveryToken;
     }
@@ -299,19 +299,15 @@ class Regular
     /**
      * @param string $recoveryToken
      */
-    public function setRecoveryToken($recoveryToken)
+    public function setRecoveryToken(?string $recoveryToken)
     {
-        if (is_string($recoveryToken) || $recoveryToken == null) {
-            $this->recoveryToken = $recoveryToken;
-        } else {
-            throw new EntityDataIntegrityException("recoveryToken needs to be string or null");
-        }
+        $this->recoveryToken = $recoveryToken;
     }
 
     /**
      * @return string
      */
-    public function getNewMail()
+    public function getNewMail(): string
     {
         return $this->newMail;
     }
@@ -319,18 +315,14 @@ class Regular
     /**
      * @param string $newMail
      */
-    public function setNewMail($newMail)
+    public function setNewMail(?string $newMail)
     {
-        if (is_string($newMail) || $newMail == null) {
-            $this->newMail = $newMail;
-        } else {
-            throw new EntityDataIntegrityException("newMail needs to be string or null");
-        }
+        $this->newMail = $newMail;
     }
     /**
      * @return bool
      */
-    public function isPrivateFlag()
+    public function isPrivateFlag(): bool
     {
         return $this->privateFlag;
     }
@@ -338,23 +330,17 @@ class Regular
     /**
      * @param bool $privateFlag
      */
-    public function setPrivateFlag($privateFlag)
+    public function setPrivateFlag(bool $privateFlag)
     {
         $this->privateFlag = $privateFlag;
     }
+
     public function jsonSerialize()
     {
-        if ($this->isPrivateFlag() == false) {
-            $array = [
-                "bio" => $this->getBio(),
-                "email" => $this->getEmail()
-            ];
-        } else {
-            $array = [
-                "bio" => $this->getBio(),
-                "email" => $this->getEmail()
-            ];
-        }
+        $array = [
+            "bio" => $this->getBio(),
+            "email" => $this->getEmail()
+        ];
         return $array;
     }
 

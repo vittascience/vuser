@@ -19,19 +19,25 @@ class Teacher
      * @var User
      */
     private $user;
+
+
     /**
-     * @ORM\Column(name="subject", type="integer", length=3, nullable=false)
+     * @ORM\Column(name="subject", type="integer", length=3, nullable=true)
      * the correspondance table is in /resources
      * @var integer
      */
     private $subject;
+
+
     /**
-     * @ORM\Column(name="school", type="string", length=255, nullable=false)
+     * @ORM\Column(name="school", type="string", length=255, nullable=true)
      * @var string
      */
     private $school;
+
+
     /**
-     * @ORM\Column(name="grade", type="integer", length=3, nullable=false)
+     * @ORM\Column(name="grade", type="integer", length=3, nullable=true)
      * * the correspondance table is in /resources
      * @var integer
      */
@@ -48,73 +54,70 @@ class Teacher
     /**
      * @return User
      */
-    public function getUser()
+    public function getUser(): ?User
     {
         return $this->user;
     }
     /**
      * @param User $id
      */
-    public function setUser($user)
+    public function setUser(User $user)
     {
         $this->user = $user;
     }
     /**
      * @return integer
      */
-    public function getSubject()
+    public function getSubject(): ?int
     {
         return $this->subject;
     }
     /**
      * @param int $subject
      */
-    public function setSubject($subject)
+    public function setSubject(?int $subject)
     {
-        if (is_int($subject) && $subject >= 1 && $subject <= 22) {
+        if (is_int($subject) && $subject >= 1 && $subject <= 38)
             $this->subject = $subject;
-        } else
-            throw new EntityDataIntegrityException("subject needs to be integer and between 1 and 22");
+        else
+            throw new EntityDataIntegrityException("subject needs to be integer and between 1 and 38");
     }
     /**
      * @return string
      */
-    public function getSchool()
+    public function getSchool(): ?string
     {
         return $this->school;
     }
     /**
      * @param string $school
      */
-    public function setSchool($school)
+    public function setSchool(?string $school)
     {
-        if (is_string($school)) {
-            $this->school = $school;
-        } else {
-            throw new EntityDataIntegrityException("school needs to be string");
-        }
+        $this->school = $school;
     }
     /**
      * @return integer
      */
-    public function getGrade()
+    public function getGrade(): ?int
     {
         return $this->grade;
     }
     /**
      * @param int $grade
      */
-    public function setGrade($grade)
+    public function setGrade(?int $grade)
     {
-        if (is_int($grade) && $grade >= 1 && $grade <= 13) {
+        if (is_int($grade) && $grade >= 1 && $grade <= 5) {
             $this->grade = $grade;
         } else
-            throw new EntityDataIntegrityException("grade needs to be integer and between 1 and 13");
+            throw new EntityDataIntegrityException("grade needs to be integer and between 1 and 5");
     }
 
     public function jsonSerialize()
     {
         return [
+            'user' => $this->getUser(),
             'grade' => $this->getGrade(),
             'school' => $this->getSchool(),
             'subject' => $this->getSubject()
