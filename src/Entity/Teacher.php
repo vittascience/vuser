@@ -65,6 +65,7 @@ class Teacher
     {
         $this->user = $user;
     }
+
     /**
      * @return integer
      */
@@ -72,16 +73,15 @@ class Teacher
     {
         return $this->subject;
     }
+
     /**
      * @param int $subject
      */
     public function setSubject(?int $subject)
     {
-        if (is_int($subject) && $subject >= 1 && $subject <= 38)
-            $this->subject = $subject;
-        else
-            throw new EntityDataIntegrityException("subject needs to be integer and between 1 and 38");
+        $this->subject = $subject;
     }
+
     /**
      * @return string
      */
@@ -89,6 +89,7 @@ class Teacher
     {
         return $this->school;
     }
+
     /**
      * @param string $school
      */
@@ -96,6 +97,7 @@ class Teacher
     {
         $this->school = $school;
     }
+
     /**
      * @return integer
      */
@@ -103,15 +105,13 @@ class Teacher
     {
         return $this->grade;
     }
+
     /**
      * @param int $grade
      */
     public function setGrade(?int $grade)
     {
-        if (is_int($grade) && $grade >= 1 && $grade <= 5) {
-            $this->grade = $grade;
-        } else
-            throw new EntityDataIntegrityException("grade needs to be integer and between 1 and 5");
+        $this->grade = $grade;
     }
 
     public function jsonSerialize()

@@ -79,10 +79,6 @@ class User
      */
     private $picture = NULL;
 
-    public function __construct()
-    {
-    }
-
     /**
      * @return int
      */

@@ -165,13 +165,9 @@ class Regular
     /**
      * @param string $bio
      */
-    public function setBio(string $bio)
+    public function setBio(?string $bio)
     {
-        if (preg_match(self::REG_BIO, $bio) || $bio == null) {
-            $this->bio = $bio;
-        } else {
-            throw new EntityDataIntegrityException("bio needs to be string and have between 1 and 1000 characters");
-        }
+        $this->bio = htmlspecialchars($bio);
     }
 
 
