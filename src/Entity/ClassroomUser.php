@@ -21,7 +21,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
     private $id = null;
 
     /**
-     * @ORM\Column(name="gar_id", type="string", length=128, nullable=true)
+     * @ORM\Column(name="gar_id", type="string", length=255, nullable=true)
      * @var string
      */
     private $garId;
