@@ -474,7 +474,7 @@ class ControllerUser extends Controller
 
                     // create the user to be saved in users table
                     $user = new User();
-                    $user->setFirstname($pre);
+                    $user->setFirstName($pre);
                     $user->setSurname($nom);
                     $user->setPseudo("$pre $nom");
                     $user->setPassword($hashedPassword);
@@ -572,7 +572,7 @@ class ControllerUser extends Controller
                         // create default demoStudent user (required for the dashboard to work properly)
                         $password = passwordGenerator();
                         $user = new User();
-                        $user->setFirstname("élève");
+                        $user->setFirstName("élève");
                         $user->setSurname("modèl");
                         $user->setPseudo($demoStudent);
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
@@ -1002,7 +1002,7 @@ class ControllerUser extends Controller
                 $emailSent = null;
                 // create user and persists it in memory
                 $user = new User();
-                $user->setFirstname($firstname);
+                $user->setFirstName($firstname);
                 $user->setSurname($surname);
                 $user->setPseudo($pseudo);
                 $user->setPassword($passwordHash);
@@ -1152,7 +1152,7 @@ class ControllerUser extends Controller
                 }
 
                 // no errors, update the fields value 
-                if (!empty($firstname)) $userToUpdate->setFirstname($firstname);
+                if (!empty($firstname)) $userToUpdate->setFirstName($firstname);
                 if (!empty($surname)) $userToUpdate->setSurname($surname);
                 if (!empty($pseudo)) $userToUpdate->setPseudo($pseudo);
                 $userToUpdate->setUpdateDate(new \DateTime());
@@ -1438,7 +1438,7 @@ class ControllerUser extends Controller
 
             // create the user to be saved in users table
             $user = new User();
-            $user->setFirstname($sanitizedData->pre);
+            $user->setFirstName($sanitizedData->pre);
             $user->setSurname($sanitizedData->nom);
             $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
             $user->setPassword($hashedPassword);
