@@ -244,7 +244,7 @@ class ControllerUser extends Controller
                     if (!$garUser) {
                         $password = passwordGenerator();
                         $user = new User();
-                        $user->setFirstName($_GET['pre']);
+                        $user->setFirstname($_GET['pre']);
                         $user->setSurname($_GET['nom']);
                         $user->setPseudo($_GET['nom'] . " " . $_GET['pre']);
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
@@ -712,7 +712,7 @@ class ControllerUser extends Controller
                 // related to users table in db
                 $password = passwordGenerator();
                 $user = new User();
-                $user->setFirstName("élève");
+                $user->setFirstname("élève");
                 $user->setSurname("modèl");
                 $user->setPseudo($data['pseudo']);
                 $user->setPassword($password);
@@ -1340,7 +1340,7 @@ class ControllerUser extends Controller
                     $hasPicture = false;
                     $isTeacher = false;
                     $user = new User();
-                    $user->setFirstName($firstname);
+                    $user->setFirstname($firstname);
                     $user->setSurname($surname);
                     $user->setPseudo($surname . " " . $firstname);
                     $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
