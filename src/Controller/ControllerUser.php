@@ -523,7 +523,7 @@ class ControllerUser extends Controller
 
                     // create the user to be saved in users table
                     $user = new User();
-                    $user->setFirstName($pre);
+                    $user->setFirstname($pre);
                     $user->setSurname($nom);
                     $user->setPseudo("$pre $nom");
                     $user->setPassword($hashedPassword);
@@ -621,7 +621,7 @@ class ControllerUser extends Controller
                         // create default demoStudent user (required for the dashboard to work properly)
                         $password = passwordGenerator();
                         $user = new User();
-                        $user->setFirstName("élève");
+                        $user->setFirstname("élève");
                         $user->setSurname("modèl");
                         $user->setPseudo($demoStudent);
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
@@ -1107,7 +1107,7 @@ class ControllerUser extends Controller
                 $emailSent = null;
                 // create user and persists it in memory
                 $user = new User();
-                $user->setFirstName($firstname);
+                $user->setFirstname($firstname);
                 $user->setSurname($surname);
                 $user->setPseudo($pseudo);
                 $user->setPassword($passwordHash);
@@ -1253,7 +1253,7 @@ class ControllerUser extends Controller
                 }
 
                 // no errors, update the fields value 
-                if (!empty($firstname)) $userToUpdate->setFirstName($firstname);
+                if (!empty($firstname)) $userToUpdate->setFirstname($firstname);
                 if (!empty($surname)) $userToUpdate->setSurname($surname);
                 if (!empty($pseudo)) $userToUpdate->setPseudo($pseudo);
                 $userToUpdate->setUpdateDate(new \DateTime());
@@ -1555,7 +1555,7 @@ class ControllerUser extends Controller
                         ->findBy(array("garId" => $_GET['ido']));
                     if (!$garUser) {
                         $user = new User();
-                        $user->setFirstName($_GET['pre']);
+                        $user->setFirstname($_GET['pre']);
                         $user->setSurname($_GET['nom']);
                         $user->setPseudo($_GET['nom'] . " " . $_GET['pre']);
                         $password = passwordGenerator();
@@ -1695,7 +1695,7 @@ class ControllerUser extends Controller
 
             // create the user to be saved in users table
             $user = new User();
-            $user->setFirstName($sanitizedData->pre);
+            $user->setFirstname($sanitizedData->pre);
             $user->setSurname($sanitizedData->nom);
             $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
             $user->setPassword($hashedPassword);
