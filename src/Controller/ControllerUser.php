@@ -41,16 +41,58 @@ class ControllerUser extends Controller
         $this->URL = isset($url) ? $url : $_ENV['VS_HOST'];
         parent::__construct($entityManager, $user);
         $this->actions = array(
-            'get_all' => function () {
-                return $this->entityManager->getRepository('User\Entity\User')
-                    ->findAll();
-            },
-            'generate_classroom_user_password' => function ($data) {
-                $user = $this->entityManager->getRepository('User\Entity\User')
-                    ->find($data['id']);
+            'generate_classroom_user_password' => function () {
+                /**
+                 * This method is called by the teacher (inside a classroom=> select 1 student=> clic the cog=>clic re-generate password)
+                 * @additionalCheckMissing
+                 * => we need the classroom link to check if the current user is really the teacher
+                 */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                //  bind and sanitize incoming data or session data
+                $studentId = !empty($_POST['id']) ? intval($_POST['id']) : null;
+                $teacherId = intval($_SESSION['id']);
+
+                // initialize empty error array and check for errors
+                if (empty($studentId)) $errors['studentIdMissing'] = true;
+
+                // return errors if any
+                if (!empty($errors)) return array('errors' => $errors);
+
+                // retirve the student in db, else return an error
+                $user = $this->entityManager->getRepository('User\Entity\User')->find($studentId);
+                if (!$user) return array('errorType' => 'studentNotRetrieved');
+
+                // get the student classroom id
+                $userClassroomId = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'user' => $studentId,
+                        'rights' => 0
+                    ))->getClassroom()->getId();
+
+                // get the teacher of the student classroom
+                $teacherFound = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'classroom' => $userClassroomId,
+                        'user' => $teacherId,
+                        'rights' => 2
+                    ));
+
+                // no teacher found
+                if (!$teacherFound) return array('errorType' => 'teacherNotRetrieved');
+
+                // teacher found, but logged user id and classroom teacher id do not match
+                if ($teacherId != $teacherFound->getUser()->getId()) return array('errorType' => 'notStudentTeacher');
+
+                // all is ok, generate and update password and return data
                 $password = passwordGenerator();
                 $user->setPassword($password);
-                $this->entityManager->persist($user);
                 $this->entityManager->flush();
                 $pseudo = $user->getPseudo();
                 return ['mdp' => $password, 'pseudo' => $pseudo];
@@ -60,8 +102,11 @@ class ControllerUser extends Controller
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
-                // bind incoming id
-                $id = isset($_POST['id']) ?  intval($_POST['id']) : null;
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                // get and sanitize student id from $_SESSION
+                $id = !empty($_SESSION['id']) ?  intval($_SESSION['id']) : null;
 
                 // get the current user from user_regulars table
                 $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
@@ -89,12 +134,18 @@ class ControllerUser extends Controller
                 }
             },
             'reset_student_password' => function () {
+                /**
+                 * This method is called by the student (student profile => parameters => clic on re-initialize button)
+                 */
 
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
                 // bind incoming id
-                $id = isset($_POST['id']) ? intval($_POST['id']) : null;
+                $id = !empty($_SESSION['id']) ? intval($_SESSION['id']) : null;
 
                 // get the current user from user_regulars table
                 $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
@@ -127,189 +178,187 @@ class ControllerUser extends Controller
                     );
                 }
             },
-            'disconnect' => function () {
+            'change_pseudo_classroom_user' => function () {
+                /**
+                 * This method is called by the teacher (inside a classroom=> select 1 student=> clic the cog=> change pseudo)
+                 */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
-                try {
-                    $manager = ConnectionManager::getSharedInstance();
-                    $user = $manager->checkConnected();
-                    if (!$user) {
-                        return false;
-                    } else {
-                        $res = $manager->deleteToken($_SESSION["id"], $_SESSION["token"]);
-                        if ($res) {
-                            if (isset($_GET["url"]) && $_GET["url"] != '') {
-                                header('location:' . $this->URL . '/' . $_GET["url"]);
-                            } else {
-                                header('location:' . $this->URL . '/index.php');
-                            }
-                        } else {
-                            header('location:' . $this->URL . '/index.php');
-                        }
-                    }
-                } catch (\Exception $e) {
-                    return false;
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                // bind and sanitize data
+                $studentId = !empty($_POST['id']) ? intval($_POST['id']) : null;
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
+                $teacherId = intval($_SESSION['id']);
+
+                // initialize empty $error array and look for errors
+                $errors = [];
+                if (empty($studentId)) $errors['studentIdEmpty'] = true;
+                if (empty($pseudo)) $errors['pseudoEmpty'] = true;
+
+                // some errors found, return them
+                if (!empty($errors)) {
+                    return array('errors' => $errors);
                 }
-            },
-            'change_pseudo_classroom_user' => function ($data) {
-                $user = $this->entityManager->getRepository('User\Entity\User')
-                    ->find($data['id']);
-                $user->setPseudo($data['pseudo']);
-                $this->entityManager->persist($user);
+
+                // no errors found
+                // get the student data
+                $student = $this->entityManager
+                    ->getRepository('User\Entity\User')
+                    ->find($studentId);
+
+                // student not found, return an error
+                if (!$student) return array('errorType' => 'studentNotExists');
+
+                // get the student classroom
+                $studentClassroom = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'user' => $studentId,
+                        'rights' => 0
+                    ));
+
+                // student classroom not found
+                if (!$studentClassroom) return array('errorType' => 'studentNotFoundInClassroom');
+
+                // get the classroom teacher
+                $teacherOfClassroom = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'user' => $teacherId,
+                        'classroom' => $studentClassroom->getClassroom()->getId(),
+                        'rights' => 2
+                    ));
+
+                // current logged user is not the classroom teacher, return an error
+                if (!$teacherOfClassroom) return array('errorType' => 'userIsNotClassroomTeacher');
+
+                // all checks passed, update the student pseudo and return data
+                $student->setPseudo($pseudo);
                 $this->entityManager->flush();
                 return true;
             },
-            'delete' => function ($data) {
-                $user = $this->entityManager->getRepository('User\Entity\User')
-                    ->find($data['id']);
-                $regular = $this->entityManager->getRepository('User\Entity\Regular')
-                    ->findOneBy(array('user' => $data['id']));
-                // Deleted with cascade
-                /* $teacher = $this->entityManager->getRepository('User\Entity\Teacher')
-                    ->findOneBy(array('user' => $data['id'])); */
-                $classroomLinkUser = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                    ->findOneBy(array('user' => $data['id']));
-                $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
-                    ->findOneBy(array('id' => $data['id']));
-                $pseudo = $user->getPseudo();
+            'delete' => function () {
+                /**
+                 * This method is called by the teacher (inside a classroom=> select 1 student => clic the cog => delete)
+                 */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
-                // fix @Rémi 
-                $this->entityManager->remove($classroomLinkUser);
-                $this->entityManager->remove($user);
-                if ($regular) {
-                    $this->entityManager->remove($regular);
-                }
-                /* if ($teacher) {
-                    $this->entityManager->remove($teacher);
-                } */
-                if ($classroomUser) {
-                    $this->entityManager->remove($classroomUser);
-                }
+                // bind and sanitize data
+                $studentId = !empty($_POST['id']) ? intval($_POST['id']) : null;
+                $teacherId = intval($_SESSION['id']);
+
+                // initialize empty $errors array and check for errors
+                $errors = [];
+                if (empty($studentId)) $errors['studentIdEmpty'] = true;
+
+                // some errors found, return them
+                if (!empty($errors)) return array('errors' => $errors);
+
+                // no errors found, get the student from db
+                $student = $this->entityManager
+                    ->getRepository('User\Entity\User')
+                    ->find($studentId);
+
+                // student not found, return an error
+                if (!$student) return array('errorType' => 'studentNotExists');
+
+                // get student classroom
+                $studentClassroom = $this->entityManager
+                    ->getRepository('Classroom\Entity\ClassroomLinkUser')
+                    ->findOneBy(
+                        array(
+                            'user' => $studentId,
+                            'rights' => 0
+                        )
+                    );
+
+                // student classroom not found
+                if (!$studentClassroom) return array('errorType' => 'studentNotFoundInClassroom');
+
+                // get the classroom teacher
+                $teacherOfClassroom = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'user' => $teacherId,
+                        'classroom' => $studentClassroom->getClassroom()->getId(),
+                        'rights' => 2
+                    ));
+
+                // current logged user is not the classroom teacher, return an error
+                if (!$teacherOfClassroom) return array('errorType' => 'userIsNotClassroomTeacher');
+
+                // the logged user has enough 'rights', remove the student record from classroom_users_link_classrooms table
+                $this->entityManager->remove($studentClassroom);
+
+                // delete student records in users and other joined tables using the CASCADE feature
+                $pseudoToReturn = $student->getPseudo();
+                $this->entityManager->remove($student);
                 $this->entityManager->flush();
-                return [
-                    'pseudo' => $pseudo
-                ];
+
+                return array('pseudo' => $pseudoToReturn);
             },
             'get_one_by_pseudo_and_password' => function ($data) {
-                $user = $this->entityManager->getRepository('User\Entity\User')
-                    ->findBy(array("pseudo" => $data['pseudo']));
-                foreach ($user as $u) {
-                    if ($data['password'] == $u->getPassword()) {
-                        $trueUser = $u;
-                        break;
-                    }
-                }
-                if (isset($trueUser)) {
-                    $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
-                        ->findOneBy(array("link" => $data['classroomLink']));
-                    $isThere = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                        ->findOneBy(array("user" => $trueUser, "classroom" => $classroom));
-                    if ($isThere) {
-                        $_SESSION["id"] = $trueUser->getId();
-                        return true;
-                    }
-                }
-                return false;
-            },
-            'get_one' => function ($data) {
-                $regular = $this->entityManager->getRepository('User\Entity\Regular')
-                    ->find($data);
-                if ($regular) {
-                    $teacher = $this->entityManager->getRepository('User\Entity\Teacher')
-                        ->find($data);
-                    if ($teacher) {
-                        return $teacher;
-                    } else {
-                        return $regular;
-                    }
-                } else {
-                    $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
-                        ->find($data);
-                    return $classroomUser;
-                }
-            },
-            'garSystem' => function () {
-                try {
-                    $_SESSION['UAI'] = $_GET['uai'];
-                    $_SESSION['DIV'] = json_decode(urldecode($_GET['div']));
-                    if (isset($_GET['pmel']) && $_GET['pmel'] != '') {
-                        $isTeacher = true;
-                    } else {
-                        $isTeacher = false;
-                    } // en fonction des infos sso
-                    //check if the user is in the database. If not, create a new User
+                /**
+                 * This method is used by the non logged students to login into a classroom
+                 * => /classroom/login.php?link=$CharLink => sign in 
+                 */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
-                    $garUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
-                        ->findBy(array("garId" => $_GET['ido']));
-                    if (!$garUser) {
-                        $password = passwordGenerator();
-                        $user = new User();
-                        $user->setFirstname($_GET['pre']);
-                        $user->setSurname($_GET['nom']);
-                        $user->setPseudo($_GET['nom'] . " " . $_GET['pre']);
-                        $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
-                        $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
-                        //$user->setId($lastQuestion->getId() + 1);
-                        $this->entityManager->persist($user);
+                // bind and sanitize incoming data
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
+                $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
+                $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
 
-                        $classroomUser = new ClassroomUser($user);
-                        $classroomUser->setGarId($_GET['ido']);
-                        $classroomUser->setSchoolId($_GET['uai']);
-                        if ($isTeacher) {
-                            $classroomUser->setIsTeacher(true);
-                            $classroomUser->setMailTeacher($_GET['pmel'] . passwordGenerator());
-                            $regular = new Regular($user, $_GET['pmel'] . passwordGenerator());
-                            $this->entityManager->persist($regular);
+                // check for errors
+                if (empty($pseudo) || empty($password)) return false;
 
-                            /*  $subject = "Votre création de compte Vittascience (test, en prod envoi à l'adresse " . $_GET['pmel'];
-                        $body =  "<h4 style=\"font-family:'Open Sans'; margin-bottom:0; color:#27b88e; font-size:28px;\">Bonjour " . $user->getFirstname() . "</h4>";
-                        $body .= "<p style=\" font-family:'Open Sans'; \">Vous vous êtes connecté à l'application Vittascience via le GAR.</p>";
-                        $body .= "<p style=\" font-family:'Open Sans'; \">Si jamais vous souhaitez vous connecter sans passer par le GAR, voici votre mot de passe provisoire :<bold>" . $password . "</bold>.";
+                // no errors found, retrieve the user in db
+                $user = $this->entityManager
+                    ->getRepository('User\Entity\User')
+                    ->findOneBy(array(
+                        "pseudo" => $pseudo,
+                        "password" => $password
+                    ));
 
-                        Mailer::sendMail("support@vittascience.com", $subject, $body, $body); */
-                        } else {
-                            $classroomUser->setIsTeacher(false);
-                            $classroomUser->setMailTeacher(NULL);
+                // no user found, return false
+                if (!$user) return false;
 
-                            $classes = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findBy(array('groupe' => $_SESSION['DIV'], 'school' => $_SESSION['UAI']));
-                            foreach ($classes as $c) {
-                                $linkToClass = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findBy(array('user' => $user));
+                // retrieve the classroom by the link provided
+                $classroomExists = $this->entityManager
+                    ->getRepository('Classroom\Entity\Classroom')
+                    ->findOneBy(array("link" => $classroomLink));
 
-                                if (!$linkToClass) {
-                                    $linkteacherToGroup = new ClassroomLinkUser($user, $c);
-                                    $linkteacherToGroup->setRights(0);
-                                    $this->entityManager->persist($linkteacherToGroup);
-                                }
-                            }
-                        }
-                        $this->entityManager->persist($classroomUser);
-                        $this->entityManager->flush();
-                        $_SESSION['id'] = $user->getId();
-                        $_SESSION['pin'] = $password;
+                // no classroom found, return an error
+                if (!$classroomExists) return false;
 
-                        if ($user) {
-                            header('location:' . $this->URL . '/classroom/home.php');
-                        } else {
-                            header('location:' . $this->URL . '/classroom/login.php');
-                        }
-                    }
-                    $classes = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findBy(array('groupe' => $_SESSION['DIV'], 'school' => $_SESSION['UAI']));
-                    foreach ($classes as $c) {
-                        $linkToClass = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $garUser[0]->getId(), 'classroom' => $c));
-                        var_dump($linkToClass);
-                        if (!$linkToClass || $linkToClass == NULL) {
+                // check if the user belongs to the classroom
+                $userClassroomData = $this->entityManager
+                    ->getRepository('Classroom\Entity\ClassroomLinkUser')
+                    ->findOneBy(array(
+                        "user" => $user,
+                        "classroom" => $classroomExists,
+                        "rights" => 0
+                    ));
 
-                            $linkteacherToGroup = new ClassroomLinkUser($garUser[0]->getId(), $c);
-                            $linkteacherToGroup->setRights(0);
-                            $this->entityManager->persist($linkteacherToGroup);
-                        }
-                    }
-                    $this->entityManager->flush();
-                    $_SESSION['id'] = $garUser[0]->getId()->getId();
-                    header('location:' . $this->URL . '/classroom/home.php');
-                } catch (Exception $e) {
-                    var_dump($e);
-                }
+                // no classroom data found, return an error
+                if (!$userClassroomData) return false;
+
+                // set,save the token and connect the user
+                $token = bin2hex(random_bytes(32));
+                DatabaseManager::getSharedInstance()
+                    ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
+
+                $_SESSION['token'] = $token;
+                $_SESSION["id"] = $user->getId();
+                return true;
             },
             'get_gar_student_available_classrooms' => function () {
 
@@ -474,7 +523,7 @@ class ControllerUser extends Controller
 
                     // create the user to be saved in users table
                     $user = new User();
-                    $user->setFirstname($pre);
+                    $user->setFirstName($pre);
                     $user->setSurname($nom);
                     $user->setPseudo("$pre $nom");
                     $user->setPassword($hashedPassword);
@@ -546,8 +595,8 @@ class ControllerUser extends Controller
                     else {
                         // the classroom does not exists
                         // get demoStudent from .env file
-                        $demoStudent = !empty($this->envVariables['demoStudent'])
-                            ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
+                        $demoStudent = !empty($this->envVariables['VS_DEMOSTUDENT'])
+                            ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['VS_DEMOSTUDENT']))))
                             : 'demostudent';
 
                         // get the current teacher object for next query
@@ -572,7 +621,7 @@ class ControllerUser extends Controller
                         // create default demoStudent user (required for the dashboard to work properly)
                         $password = passwordGenerator();
                         $user = new User();
-                        $user->setFirstname("élève");
+                        $user->setFirstName("élève");
                         $user->setSurname("modèl");
                         $user->setPseudo($demoStudent);
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
@@ -596,15 +645,28 @@ class ControllerUser extends Controller
                     'classroomsCreated' => true
                 );
             },
-            'linkSystem' => function ($data) {
+            'linkSystem' => function () {
                 /**
                  * Limiting learner number @THOMAS MODIF
                  * Added Admin check to allow them an unlimited number of new student @NASER MODIF
                  */
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // bind incoming data
+                $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
+
+                // return an error when the pseudo is missing               
+                if (empty($pseudo)) {
+                    return array(
+                        'isUsersAdded' => false,
+                        'errorType' => 'pseudoIsMissing'
+                    );
+                }
 
                 // retrieve the classroom by its link
-                $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
-                    ->findOneBy(array("link" => $data['classroomLink']));
+                $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findOneBy(array("link" => $classroomLink));
 
                 // if the current classroom is Blocked by the teacher 
                 if ($classroom->getIsBlocked() === true) {
@@ -625,8 +687,8 @@ class ControllerUser extends Controller
                 $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
 
                 // get demoStudent from .env file
-                $demoStudent = !empty($this->envVariables['demoStudent'])
-                    ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['demoStudent']))))
+                $demoStudent = !empty($this->envVariables['VS_DEMOSTUDENT'])
+                    ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['VS_DEMOSTUDENT']))))
                     : 'demostudent';
 
                 $classrooms = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
@@ -636,7 +698,7 @@ class ControllerUser extends Controller
                 $nbApprenants = 0;
                 foreach ($classrooms as $c) {
                     $students = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                        ->getAllStudentsInClassroom($c->getClassroom()->getId(), 0);
+                        ->getAllStudentsInClassroom($c->getClassroom()->getId(), 0, $demoStudent);
 
                     // add the current classroom users number and increase the total
                     $nbApprenants += count($students);
@@ -692,7 +754,7 @@ class ControllerUser extends Controller
 
                 // check if the submitted pseudo is demoStudent
 
-                if (strtolower($data['pseudo']) == strtolower($demoStudent)) {
+                if (strtolower($pseudo) == strtolower($demoStudent)) {
                     return [
                         "isUsersAdded" => false,
                         "errorType" => "reservedNickname",
@@ -700,7 +762,7 @@ class ControllerUser extends Controller
                     ];
                 }
 
-                $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $data['pseudo']));
+                $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $pseudo));
                 foreach ($pseudoUsed as $p) {
                     $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p));
                     if ($pseudoUsedInClassroom) {
@@ -714,7 +776,8 @@ class ControllerUser extends Controller
                 $user = new User();
                 $user->setFirstname("élève");
                 $user->setSurname("modèl");
-                $user->setPseudo($data['pseudo']);
+                $user->setPseudo($pseudo);
+                $password = passwordGenerator();
                 $user->setPassword($password);
                 $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
                 // $user->setId($lastQuestion->getId() + 1);
@@ -732,12 +795,15 @@ class ControllerUser extends Controller
                 $this->entityManager->persist($classroomUser);
 
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
-                    ->findOneBy(array("link" => $data['classroomLink']));
+                    ->findOneBy(array("link" => $classroomLink));
                 $linkteacherToGroup = new ClassroomLinkUser($user, $classroom);
                 $linkteacherToGroup->setRights(0);
                 $this->entityManager->persist($linkteacherToGroup);
 
-                $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
+                $this->entityManager->flush();
+
+                // TODO DISABLE CLASSROOM ACTIVITIES ATTRIBUTION TO NEW STUDENTS
+                /* $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
                     ->findBy(array("classroom" => $classroom));
 
                 //add all activities linked with the classroom to the learner
@@ -749,28 +815,44 @@ class ControllerUser extends Controller
                         $a->getDateEnd(),
                         $a->getEvaluation(),
                         $a->getAutocorrection(),
+                        null,
                         $a->getIntroduction(),
                         $a->getReference()
                     );
                     $this->entityManager->persist($activityLinkUser);
                 }
 
-                $this->entityManager->flush();
+                $this->entityManager->flush(); */
+                // END TODO
+
+
                 $user->classroomUser = $classroomUser;
                 $user->pin = $password;
+
+                // set/save the token,user and pin in session 
+                $token = bin2hex(random_bytes(32));
+                DatabaseManager::getSharedInstance()
+                    ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
+
+                $_SESSION['token'] = $token;
                 $_SESSION["id"] = $user->getId();
                 $_SESSION["pin"] = $password;
                 return ["isUsersAdded" => true, "user" => $user];
             },
             'help_request_from_teacher' => function () {
-
+                /**
+                 * This method is called by the teacher (teacher profil => clic on help => clic on send message)
+                 */
                 // allow only POST METHOD
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error' => 'Method not Allowed');
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
                 // bind incoming data
                 $subject = isset($_POST['subject']) ? htmlspecialchars(strip_tags(trim($_POST['subject']))) : null;
                 $message = isset($_POST['message']) ? htmlspecialchars(strip_tags(trim($_POST['message']))) : null;
-                $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+                $id = intval($_SESSION['id']);
 
                 // initialize empty $errors array and $emailSent flag
                 $errors = [];
@@ -779,7 +861,7 @@ class ControllerUser extends Controller
                 // check for errors if any
                 if (empty($subject)) $errors['subjectMissing'] = true;
                 if (empty($message)) $errors['messageMissing'] = true;
-                if ($id == 0) $errors['invalidUserId'] = true;
+                if (empty($id)) $errors['invalidUserId'] = true;
 
                 // some errors found, return them to the user
                 if (!empty($errors)) {
@@ -840,14 +922,19 @@ class ControllerUser extends Controller
                 );
             },
             'help_request_from_student' => function () {
-
+                /**
+                 * This method is called by the student (student help panel => clic on send message)
+                 */
                 // allow only POST METHOD
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return array('error' => 'Method not Allowed');
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
                 // bind incoming data
                 $subject = isset($_POST['subject']) ? htmlspecialchars(strip_tags(trim($_POST['subject']))) : null;
                 $message = isset($_POST['message']) ? htmlspecialchars(strip_tags(trim($_POST['message']))) : null;
-                $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+                $id = intval($_SESSION['id']);
 
                 // initialize empty $errors array and $emailSent flag
                 $errors = [];
@@ -856,7 +943,7 @@ class ControllerUser extends Controller
                 // check for errors if any
                 if (empty($subject)) $errors['subjectMissing'] = true;
                 if (empty($message)) $errors['messageMissing'] = true;
-                if ($id == 0) $errors['invalidUserId'] = true;
+                if (empty($id)) $errors['invalidUserId'] = true;
 
                 // some errors found, return them to the user
                 if (!empty($errors)) {
@@ -937,13 +1024,31 @@ class ControllerUser extends Controller
                     );
                 }
             },
-            'login' => function ($data) {
+            'login' => function () {
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
-                if (ConnectionManager::getSharedInstance()->checkConnected()) {
+                $mail = !empty($_POST['mail']) ? htmlspecialchars(strip_tags(trim($_POST['mail']))) : '';
+                $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
+
+                if (empty($mail) || empty($password)) return array(
+                    'success' => false,
+                    'error' => "badInput"
+                );
+
+                if (ConnectionManager::getSharedInstance()->checkConnected()) return ["success" => true];
+
+                $credentials = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
+
+                if ($credentials !== false) {
+                    $_SESSION["id"] = $credentials[0];
+                    $_SESSION["token"] = $credentials[1];
                     return ["success" => true];
+                } else {
+                    return ["success" => false];
                 }
-                if (!empty($data["mail"]) && !empty($data["password"])) {
-                    $credentials = ConnectionManager::getSharedInstance()->checkLogin($data["mail"], $data["password"]);
+                /* if (!empty($mail) && !empty($password)) {
+                    $credentials = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
                     if ($credentials !== false) {
                         $_SESSION["id"] = $credentials[0];
                         $_SESSION["token"] = $credentials[1];
@@ -952,7 +1057,7 @@ class ControllerUser extends Controller
                         return ["success" => false];
                     }
                     return ["success" => false];
-                }
+                } */
             },
             'register' => function () {
 
@@ -1002,7 +1107,7 @@ class ControllerUser extends Controller
                 $emailSent = null;
                 // create user and persists it in memory
                 $user = new User();
-                $user->setFirstname($firstname);
+                $user->setFirstName($firstname);
                 $user->setSurname($surname);
                 $user->setPseudo($pseudo);
                 $user->setPassword($passwordHash);
@@ -1070,8 +1175,10 @@ class ControllerUser extends Controller
                 // return error if the request is not a POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
-                // bind incoming id
-                $id = intval($_POST['id']);
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                $id = intval($_SESSION['id']);
 
                 // retrieve user by its id
                 $userToUpdate = $this->entityManager
@@ -1118,13 +1225,7 @@ class ControllerUser extends Controller
                 $errors = [];
                 $emailSent = null;
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
-                if (!empty($password)) {
-                    // At least 8 characters including 1 Uppercase, 1 lowercase, 1 digit, and 1 special character
-                    $regex = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/";
-                    if (!preg_match($regex, $password, $matches)) {
-                        $errors['passwordInvalid'] = true;
-                    }
-                }
+                if (!empty($password) && strlen($password) < 7) $errors['passwordInvalid'] = true;
                 if ($email !== $tmpOldEmail) {
 
                     // check if the email is already listed in db
@@ -1152,7 +1253,7 @@ class ControllerUser extends Controller
                 }
 
                 // no errors, update the fields value 
-                if (!empty($firstname)) $userToUpdate->setFirstname($firstname);
+                if (!empty($firstname)) $userToUpdate->setFirstName($firstname);
                 if (!empty($surname)) $userToUpdate->setSurname($surname);
                 if (!empty($pseudo)) $userToUpdate->setPseudo($pseudo);
                 $userToUpdate->setUpdateDate(new \DateTime());
@@ -1219,25 +1320,41 @@ class ControllerUser extends Controller
                     )
                 );
             },
-            'disconnect' => function ($data) {
+            'disconnect' => function () {
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                // bind and sanitize incoming data and session data
+                $sessionUserId = intval($_SESSION["id"]);
+                $sessionToken = htmlspecialchars(strip_tags(trim($_SESSION["token"])));
+                $url = !empty($_POST['url']) ? htmlspecialchars(strip_tags(trim($_POST['url']))) : '';
 
                 try {
                     $manager = ConnectionManager::getSharedInstance();
                     $user = $manager->checkConnected();
-                    if (!$user) {
-                        return false;
-                    } else {
-                        $res = $manager->deleteToken($_SESSION["id"], $_SESSION["token"]);
+                    if (!$user)  return false;
+
+                    $res = $manager->deleteToken($sessionUserId, $sessionToken);
+                    if (!$res) return false;
+
+                    return !empty($url) ? $url : "/index.php";
+
+                    /* else 
+                    {
+                        $res = $manager->deleteToken($sessionUserId, $sessionToken);
                         if ($res) {
-                            if (isset($data["url"]) && $data["url"] != '') {
-                                return $data["url"];
+                            if (!empty($url)) {
+                                return $url;
                             } else {
                                 return "/index.php";
                             }
                         } else {
                             return false;
                         }
-                    }
+                    } */
                 } catch (\Exception $e) {
                     return false;
                 }
@@ -1410,7 +1527,147 @@ class ControllerUser extends Controller
                 {
                     return ["success" => false, "errors" => $errorMessages];
                 }
-            }
+            },
+            /* 'get_all' => function () {
+                *
+                 * @Naser
+                 * @NoApiCallFound NO RECORD FOUND FOR /routing/Routing.php?controller=user&action=get_all in the search
+                 * @ToBeRemoved
+                 * last check => September 2021
+                 
+                return $this->entityManager->getRepository('User\Entity\User')->findAll();
+            }, */
+            /*'garSystem' => function () {
+                * @Naser
+                 * @ToBeRemoved method not used any and replaced by GAR Methods to be transferred to GAR Plugins
+                 * last check => September 2021
+                try {
+                    $_SESSION['UAI'] = $_GET['uai'];
+                    $_SESSION['DIV'] = json_decode(urldecode($_GET['div']));
+                    if (isset($_GET['pmel']) && $_GET['pmel'] != '') {
+                        $isTeacher = true;
+                    } else {
+                        $isTeacher = false;
+                    } // en fonction des infos sso
+                    //check if the user is in the database. If not, create a new User
+
+                    $garUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
+                        ->findBy(array("garId" => $_GET['ido']));
+                    if (!$garUser) {
+                        $user = new User();
+                        $user->setFirstName($_GET['pre']);
+                        $user->setSurname($_GET['nom']);
+                        $user->setPseudo($_GET['nom'] . " " . $_GET['pre']);
+                        $password = passwordGenerator();
+                        $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
+                        $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
+                        $user->setId($lastQuestion->getId() + 1);
+                        $this->entityManager->persist($user);
+
+                        $classroomUser = new ClassroomUser($user);
+                        $classroomUser->setGarId($_GET['ido']);
+                        $classroomUser->setSchoolId($_GET['uai']);
+                        if ($isTeacher) {
+                            $classroomUser->setIsTeacher(true);
+                            $classroomUser->setMailTeacher($_GET['pmel'] . passwordGenerator());
+                            $regular = new Regular($user, $_GET['pmel'] . passwordGenerator());
+                            $this->entityManager->persist($regular);
+
+                            /*  $subject = "Votre création de compte Vittascience (test, en prod envoi à l'adresse " . $_GET['pmel'];
+                        $body =  "<h4 style=\"font-family:'Open Sans'; margin-bottom:0; color:#27b88e; font-size:28px;\">Bonjour " . $user->getFirstname() . "</h4>";
+                        $body .= "<p style=\" font-family:'Open Sans'; \">Vous vous êtes connecté à l'application Vittascience via le GAR.</p>";
+                        $body .= "<p style=\" font-family:'Open Sans'; \">Si jamais vous souhaitez vous connecter sans passer par le GAR, voici votre mot de passe provisoire :<bold>" . $password . "</bold>.";
+
+                        Mailer::sendMail("support@vittascience.com", $subject, $body, $body); 
+                        } else {
+                            $classroomUser->setIsTeacher(false);
+                            $classroomUser->setMailTeacher(NULL);
+
+                            $classes = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findBy(array('groupe' => $_SESSION['DIV'], 'school' => $_SESSION['UAI']));
+                            foreach ($classes as $c) {
+                                $linkToClass = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findBy(array('user' => $user));
+
+                                if (!$linkToClass) {
+                                    $linkteacherToGroup = new ClassroomLinkUser($user, $c);
+                                    $linkteacherToGroup->setRights(0);
+                                    $this->entityManager->persist($linkteacherToGroup);
+                                }
+                            }
+                        }
+                        $this->entityManager->persist($classroomUser);
+                        $this->entityManager->flush();
+                        $_SESSION['id'] = $user->getId();
+                        $_SESSION['pin'] = $password;
+
+                        if ($user) {
+                            header('location:' . $this->URL . '/classroom/home.php');
+                        } else {
+                            header('location:' . $this->URL . '/classroom/login.php');
+                        }
+                    }
+                    $classes = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findBy(array('groupe' => $_SESSION['DIV'], 'school' => $_SESSION['UAI']));
+                    foreach ($classes as $c) {
+                        $linkToClass = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $garUser[0]->getId(), 'classroom' => $c));
+                        var_dump($linkToClass);
+                        if (!$linkToClass || $linkToClass == NULL) {
+
+                            $linkteacherToGroup = new ClassroomLinkUser($garUser[0]->getId(), $c);
+                            $linkteacherToGroup->setRights(0);
+                            $this->entityManager->persist($linkteacherToGroup);
+                        }
+                    }
+                    $this->entityManager->flush();
+                    $_SESSION['id'] = $garUser[0]->getId()->getId();
+                    header('location:' . $this->URL . '/classroom/home.php');
+                } catch (Exception $e) {
+                    var_dump($e);
+                }
+            },*/
+            /* 'disconnect' => function () {
+                * @Naser
+                 * @ToBeRemoved unused version of disconnect method to be removed
+                 * last check => September 2021
+                try {
+                    $manager = ConnectionManager::getSharedInstance();
+                    $user = $manager->checkConnected();
+                    if (!$user) {
+                        return false;
+                    } else {
+                        $res = $manager->deleteToken($_SESSION["id"], $_SESSION["token"]);
+                        if ($res) {
+                            if (isset($_GET["url"]) && $_GET["url"] != '') {
+                                header('location:' . $this->URL . '/' . $_GET["url"]);
+                            } else {
+                                header('location:' . $this->URL . '/index.php');
+                            }
+                        } else {
+                            header('location:' . $this->URL . '/index.php');
+                        }
+                    }
+                } catch (\Exception $e) {
+                    return false;
+                }
+            }, */
+            /* 'get_one' => function ($data) {
+                 * @Naser
+                 * @ToBeRemoved unused version of disconnect method to be removed
+                 * last check => October 2021
+                $regular = $this->entityManager->getRepository('User\Entity\Regular')
+                    ->find($data);
+                if ($regular) {
+                    $teacher = $this->entityManager->getRepository('User\Entity\Teacher')
+                        ->find($data);
+                    if ($teacher) {
+                        return $teacher;
+                    } else {
+                        return $regular;
+                    }
+                } else {
+                    $classroomUser = $this->entityManager->getRepository('User\Entity\ClassroomUser')
+                        ->find($data);
+                    return $classroomUser;
+                }
+            }, */
         );
     }
 
@@ -1438,7 +1695,7 @@ class ControllerUser extends Controller
 
             // create the user to be saved in users table
             $user = new User();
-            $user->setFirstname($sanitizedData->pre);
+            $user->setFirstName($sanitizedData->pre);
             $user->setSurname($sanitizedData->nom);
             $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
             $user->setPassword($hashedPassword);
