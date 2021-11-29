@@ -243,7 +243,7 @@ class ControllerUser extends Controller
                         ->findBy(array("garId" => $_GET['ido']));
                     if (!$garUser) {
                         $user = new User();
-                        $user->setFirstName($_GET['pre']);
+                        $user->setFirstname($_GET['pre']);
                         $user->setSurname($_GET['nom']);
                         $user->setPseudo($_GET['nom'] . " " . $_GET['pre']);
                         $password = passwordGenerator();
@@ -571,7 +571,7 @@ class ControllerUser extends Controller
 
                         // create default demoStudent user (required for the dashboard to work properly)
                         $user = new User();
-                        $user->setFirstName("élève");
+                        $user->setFirstname("élève");
                         $user->setSurname("modèl");
                         $user->setPseudo($demoStudent);
                         $password = passwordGenerator();
@@ -711,7 +711,7 @@ class ControllerUser extends Controller
 
                 // related to users table in db
                 $user = new User();
-                $user->setFirstName("élève");
+                $user->setFirstname("élève");
                 $user->setSurname("modèl");
                 $user->setPseudo($data['pseudo']);
                 $password = passwordGenerator();
@@ -1340,7 +1340,7 @@ class ControllerUser extends Controller
                     $hasPicture = false;
                     $isTeacher = false;
                     $user = new User();
-                    $user->setFirstName($firstname);
+                    $user->setFirstname($firstname);
                     $user->setSurname($surname);
                     $user->setPseudo($surname . " " . $firstname);
                     $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
