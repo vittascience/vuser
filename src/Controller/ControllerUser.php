@@ -903,6 +903,7 @@ class ControllerUser extends Controller
 
                     $body = "
                         <br>
+                        <p>from : $replyToName</p>
                         <p>$message</p>
                         <br>
                     ";
@@ -1011,12 +1012,13 @@ class ControllerUser extends Controller
 
                     $body = "
                         <br>
+                        <p>from : $replyToName</p>
                         <p>$message</p>
                         <br>
                     ";
 
                     // send email
-                    $emailSent = Mailer::sendMail($emailReceiver,  $subject, $body, strip_tags($body), $emailTtemplateBody, $replyToMail, $replyToName);
+                    $emailSent = Mailer::sendMail($emailReceiver, $subject, $body, strip_tags($body), $emailTtemplateBody, $replyToMail, $replyToName);
                     /////////////////////////////////////
 
                     return array(
