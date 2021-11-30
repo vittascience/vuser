@@ -9,7 +9,8 @@ use Utils\Exceptions\EntityDataIntegrityException;
 
 class UserTest extends TestCase
 {
-   public function testIdIsSet()
+
+/*    public function testIdIsSet()
    {
       $user = new User();
       $user->setId(TestConstants::TEST_INTEGER); // right argument
@@ -18,54 +19,48 @@ class UserTest extends TestCase
       $user->setId(-1); // negative
       $user->setId(true); // boolean
       $user->setId(null); // null
-   }
+   } */
 
+   // Firstname is a string only
    public function testFirstNameIsSet()
    {
       $user = new User();
 
       $acceptedFirstName = 'aaaa';
-      $nonAcceptedFirstName = '';
-      for ($i = 0; $i <= TestConstants::NAME_MAX_LENGTH; $i++) //add more than 20 characters 
-         $nonAcceptedFirstName .= 'a';
-
       $user->setFirstName($acceptedFirstName); // right argument
       $this->assertEquals($user->getFirstName(), $acceptedFirstName);
-      $this->expectException(EntityDataIntegrityException::class);
+      $this->expectException(TypeError::class);
       $user->setFirstName(TestConstants::TEST_INTEGER); // integer
       $user->setFirstName(true); // boolean
       $user->setFirstName(null); // null
-      $user->setFirstName($nonAcceptedFirstName); // more than 20 chars
    }
+   // Surname is a string only
    public function testSurnameIsSet()
    {
       $user = new User();
 
       $acceptedFirstName = 'aaaa';
-      $nonAcceptedFirstName = '';
-      for ($i = 0; $i <= TestConstants::NAME_MAX_LENGTH; $i++) //add more than 20 characters 
-         $nonAcceptedFirstName .= 'a';
 
       $user->setSurname($acceptedFirstName); // right argument
       $this->assertEquals($user->getSurname(), $acceptedFirstName);
-      $this->expectException(EntityDataIntegrityException::class);
+      $this->expectException(TypeError::class);
       $user->setSurname(TestConstants::TEST_INTEGER); // integer
       $user->setSurname(true); // boolean
       $user->setSurname(null); // null
-      $user->setSurname($nonAcceptedFirstName); // more than 20 chars
    }
-
+   // Password is a string only
    public function testPasswordIsSet()
    {
       $user = new User();
       $user->setPassword(TestConstants::TEST_STRING); // right argument
       $this->assertEquals($user->getPassword(), TestConstants::TEST_STRING);
-      $this->expectException(EntityDataIntegrityException::class);
+      $this->expectException(TypeError::class);
       $user->setPassword(TestConstants::TEST_INTEGER); // integer
       $user->setPassword(true); // boolean
       $user->setPassword(null); // null
    }
 
+   // Update date is datetime or null only
    public function testDateIsSet()
    {
       $user = new User();
@@ -74,7 +69,7 @@ class UserTest extends TestCase
       $this->assertEquals($user->getInsertDate(), $date);
       $user->setUpdateDate(null); // can be null
       $this->assertEquals($user->getUpdateDate(), null);
-      $this->expectException(EntityDataIntegrityException::class);
+      $this->expectException(TypeError::class);
       $user->setUpdateDate(TestConstants::TEST_INTEGER); // should not be integer
       $user->setUpdateDate(TestConstants::TEST_STRING); // should not be a string
    }
