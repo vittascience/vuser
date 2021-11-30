@@ -80,6 +80,17 @@ class User
     private $picture = NULL;
 
     /**
+     * @param int $id
+     */
+    public function setId($id)
+    {
+        if (is_int($id) && $id > 0) {
+            $this->id = $id;
+        } else
+            throw new EntityDataIntegrityException("id needs to be integer and positive");
+    }
+
+    /**
      * @return int
      */
     public function getId(): int
