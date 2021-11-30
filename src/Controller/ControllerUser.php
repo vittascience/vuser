@@ -58,23 +58,23 @@ class ControllerUser extends Controller
                 $teacherId = intval($_SESSION['id']);
 
                 // initialize empty error array and check for errors
-                if(empty($studentId)) $errors['studentIdMissing'] = true;
+                if (empty($studentId)) $errors['studentIdMissing'] = true;
 
                 // return errors if any
-                if(!empty($errors)) return array('errors' => $errors);
+                if (!empty($errors)) return array('errors' => $errors);
 
                 // retirve the student in db, else return an error
-                $user = $this->entityManager ->getRepository('User\Entity\User')->find($studentId);
-                if(!$user) return array('errorType' => 'studentNotRetrieved');
- 
+                $user = $this->entityManager->getRepository('User\Entity\User')->find($studentId);
+                if (!$user) return array('errorType' => 'studentNotRetrieved');
+
                 // get the student classroom id
                 $userClassroomId = $this->entityManager
                     ->getRepository(ClassroomLinkUser::class)
                     ->findOneBy(array(
-                        'user'=> $studentId,
-                        'rights'=> 0
+                        'user' => $studentId,
+                        'rights' => 0
                     ))->getClassroom()->getId();
-                
+
                 // get the teacher of the student classroom
                 $teacherFound = $this->entityManager
                     ->getRepository(ClassroomLinkUser::class)
@@ -83,12 +83,12 @@ class ControllerUser extends Controller
                         'user' => $teacherId,
                         'rights' => 2
                     ));
-                
+
                 // no teacher found
-                if(!$teacherFound ) return array('errorType' => 'teacherNotRetrieved');
+                if (!$teacherFound) return array('errorType' => 'teacherNotRetrieved');
 
                 // teacher found, but logged user id and classroom teacher id do not match
-                if($teacherId != $teacherFound->getUser()->getId()) return array('errorType' => 'notStudentTeacher');
+                if ($teacherId != $teacherFound->getUser()->getId()) return array('errorType' => 'notStudentTeacher');
 
                 // all is ok, generate and update password and return data
                 $password = passwordGenerator();
@@ -190,16 +190,16 @@ class ControllerUser extends Controller
 
                 // bind and sanitize data
                 $studentId = !empty($_POST['id']) ? intval($_POST['id']) : null;
-                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '' ;
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
                 $teacherId = intval($_SESSION['id']);
 
                 // initialize empty $error array and look for errors
                 $errors = [];
-                if(empty($studentId)) $errors['studentIdEmpty'] = true;
-                if(empty($pseudo)) $errors['pseudoEmpty'] = true;
+                if (empty($studentId)) $errors['studentIdEmpty'] = true;
+                if (empty($pseudo)) $errors['pseudoEmpty'] = true;
 
                 // some errors found, return them
-                if(!empty($errors)){
+                if (!empty($errors)) {
                     return array('errors' => $errors);
                 }
 
@@ -208,9 +208,9 @@ class ControllerUser extends Controller
                 $student = $this->entityManager
                     ->getRepository('User\Entity\User')
                     ->find($studentId);
-                
+
                 // student not found, return an error
-                if(!$student) return array('errorType' => 'studentNotExists');
+                if (!$student) return array('errorType' => 'studentNotExists');
 
                 // get the student classroom
                 $studentClassroom = $this->entityManager
@@ -219,9 +219,9 @@ class ControllerUser extends Controller
                         'user' => $studentId,
                         'rights' => 0
                     ));
-                
+
                 // student classroom not found
-                if(!$studentClassroom) return array('errorType' => 'studentNotFoundInClassroom');
+                if (!$studentClassroom) return array('errorType' => 'studentNotFoundInClassroom');
 
                 // get the classroom teacher
                 $teacherOfClassroom = $this->entityManager
@@ -231,9 +231,9 @@ class ControllerUser extends Controller
                         'classroom' => $studentClassroom->getClassroom()->getId(),
                         'rights' => 2
                     ));
-                
+
                 // current logged user is not the classroom teacher, return an error
-                if(!$teacherOfClassroom) return array('errorType' => 'userIsNotClassroomTeacher');
+                if (!$teacherOfClassroom) return array('errorType' => 'userIsNotClassroomTeacher');
 
                 // all checks passed, update the student pseudo and return data
                 $student->setPseudo($pseudo);
@@ -256,10 +256,10 @@ class ControllerUser extends Controller
 
                 // initialize empty $errors array and check for errors
                 $errors = [];
-                if(empty($studentId)) $errors['studentIdEmpty'] = true;
+                if (empty($studentId)) $errors['studentIdEmpty'] = true;
 
                 // some errors found, return them
-                if(!empty($errors)) return array('errors' => $errors);
+                if (!empty($errors)) return array('errors' => $errors);
 
                 // no errors found, get the student from db
                 $student = $this->entityManager
@@ -267,19 +267,20 @@ class ControllerUser extends Controller
                     ->find($studentId);
 
                 // student not found, return an error
-                if(!$student) return array('errorType' => 'studentNotExists');
+                if (!$student) return array('errorType' => 'studentNotExists');
 
                 // get student classroom
                 $studentClassroom = $this->entityManager
                     ->getRepository('Classroom\Entity\ClassroomLinkUser')
-                    ->findOneBy(array(
-                        'user' => $studentId,
-                        'rights' => 0
+                    ->findOneBy(
+                        array(
+                            'user' => $studentId,
+                            'rights' => 0
                         )
                     );
-                
+
                 // student classroom not found
-                if(!$studentClassroom) return array('errorType' => 'studentNotFoundInClassroom');
+                if (!$studentClassroom) return array('errorType' => 'studentNotFoundInClassroom');
 
                 // get the classroom teacher
                 $teacherOfClassroom = $this->entityManager
@@ -291,7 +292,7 @@ class ControllerUser extends Controller
                     ));
 
                 // current logged user is not the classroom teacher, return an error
-                if(!$teacherOfClassroom) return array('errorType' => 'userIsNotClassroomTeacher');
+                if (!$teacherOfClassroom) return array('errorType' => 'userIsNotClassroomTeacher');
 
                 // the logged user has enough 'rights', remove the student record from classroom_users_link_classrooms table
                 $this->entityManager->remove($studentClassroom);
@@ -301,7 +302,7 @@ class ControllerUser extends Controller
                 $this->entityManager->remove($student);
                 $this->entityManager->flush();
 
-                return array( 'pseudo' => $pseudoToReturn);
+                return array('pseudo' => $pseudoToReturn);
             },
             'get_one_by_pseudo_and_password' => function ($data) {
                 /**
@@ -312,12 +313,12 @@ class ControllerUser extends Controller
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
                 // bind and sanitize incoming data
-                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) :'';
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
                 $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
                 $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
 
                 // check for errors
-                if(empty($pseudo) || empty($password)) return false;
+                if (empty($pseudo) || empty($password)) return false;
 
                 // no errors found, retrieve the user in db
                 $user = $this->entityManager
@@ -328,15 +329,15 @@ class ControllerUser extends Controller
                     ));
 
                 // no user found, return false
-                if(!$user) return false;
-                
+                if (!$user) return false;
+
                 // retrieve the classroom by the link provided
                 $classroomExists = $this->entityManager
                     ->getRepository('Classroom\Entity\Classroom')
                     ->findOneBy(array("link" => $classroomLink));
-                
+
                 // no classroom found, return an error
-                if(!$classroomExists) return false;
+                if (!$classroomExists) return false;
 
                 // check if the user belongs to the classroom
                 $userClassroomData = $this->entityManager
@@ -346,9 +347,9 @@ class ControllerUser extends Controller
                         "classroom" => $classroomExists,
                         "rights" => 0
                     ));
-                
+
                 // no classroom data found, return an error
-                if(!$userClassroomData) return false;
+                if (!$userClassroomData) return false;
 
                 // set,save the token and connect the user
                 $token = bin2hex(random_bytes(32));
@@ -358,7 +359,6 @@ class ControllerUser extends Controller
                 $_SESSION['token'] = $token;
                 $_SESSION["id"] = $user->getId();
                 return true;
-
             },
             'get_gar_student_available_classrooms' => function () {
 
@@ -522,7 +522,7 @@ class ControllerUser extends Controller
                     $hashedPassword = password_hash('Test1234!', PASSWORD_BCRYPT);
 
                     // create the user to be saved in users table
-                    $user = new User;
+                    $user = new User();
                     $user->setFirstname($pre);
                     $user->setSurname($nom);
                     $user->setPseudo("$pre $nom");
@@ -534,7 +534,7 @@ class ControllerUser extends Controller
 
                     // retrieve the lastInsertId to use for the next query 
                     // this value is only available after a flush()
-                    $user->setId($user->getId());
+                    //$user->setId($user->getId());
 
                     // create a classroomUser to be saved in user_classroom_users
                     $classroomUser = new ClassroomUser($user);
@@ -619,11 +619,11 @@ class ControllerUser extends Controller
                         $this->entityManager->flush();
 
                         // create default demoStudent user (required for the dashboard to work properly)
+                        $password = passwordGenerator();
                         $user = new User();
                         $user->setFirstname("élève");
                         $user->setSurname("modèl");
                         $user->setPseudo($demoStudent);
-                        $password = passwordGenerator();
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
 
                         // persist and save demoStudent user in users table
@@ -631,7 +631,7 @@ class ControllerUser extends Controller
                         $this->entityManager->flush();
 
                         // get demoStudent user id from last db query => lastInsertId
-                        $user->setId($user->getId());
+                        //$user->setId($user->getId());
 
                         // add the demoStudent user to the classroom with students rights=0 (classroom_users_link_classrooms table)
                         $classroomLinkUser = new ClassroomLinkUser($user, $classroom, 0);
@@ -658,12 +658,12 @@ class ControllerUser extends Controller
                 $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
 
                 // return an error when the pseudo is missing               
-                if(empty($pseudo)){
+                if (empty($pseudo)) {
                     return array(
                         'isUsersAdded' => false,
-                        'errorType' =>'pseudoIsMissing'
+                        'errorType' => 'pseudoIsMissing'
                     );
-                } 
+                }
 
                 // retrieve the classroom by its link
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findOneBy(array("link" => $classroomLink));
@@ -772,6 +772,7 @@ class ControllerUser extends Controller
 
 
                 // related to users table in db
+                $password = passwordGenerator();
                 $user = new User();
                 $user->setFirstname("élève");
                 $user->setSurname("modèl");
@@ -779,7 +780,7 @@ class ControllerUser extends Controller
                 $password = passwordGenerator();
                 $user->setPassword($password);
                 $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
-                $user->setId($lastQuestion->getId() + 1);
+                // $user->setId($lastQuestion->getId() + 1);
                 // persist in doctrine memory and save it with the flush()
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
@@ -794,7 +795,7 @@ class ControllerUser extends Controller
                 $this->entityManager->persist($classroomUser);
 
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
-                ->findOneBy(array("link" => $classroomLink));
+                    ->findOneBy(array("link" => $classroomLink));
                 $linkteacherToGroup = new ClassroomLinkUser($user, $classroom);
                 $linkteacherToGroup->setRights(0);
                 $this->entityManager->persist($linkteacherToGroup);
@@ -902,6 +903,7 @@ class ControllerUser extends Controller
 
                     $body = "
                         <br>
+                        <p>from : $replyToName</p>
                         <p>$message</p>
                         <br>
                     ";
@@ -1010,12 +1012,13 @@ class ControllerUser extends Controller
 
                     $body = "
                         <br>
+                        <p>from : $replyToName</p>
                         <p>$message</p>
                         <br>
                     ";
 
                     // send email
-                    $emailSent = Mailer::sendMail($emailReceiver,  $subject, $body, strip_tags($body), $emailTtemplateBody, $replyToMail, $replyToName);
+                    $emailSent = Mailer::sendMail($emailReceiver, $subject, $body, strip_tags($body), $emailTtemplateBody, $replyToMail, $replyToName);
                     /////////////////////////////////////
 
                     return array(
@@ -1024,16 +1027,16 @@ class ControllerUser extends Controller
                 }
             },
             'login' => function () {
-                 // accept only POST request
-                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
-                 
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
                 $mail = !empty($_POST['mail']) ? htmlspecialchars(strip_tags(trim($_POST['mail']))) : '';
                 $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
 
-                if(empty($mail) || empty($password)) return array(
+                if (empty($mail) || empty($password)) return array(
                     'success' => false,
                     'error' => "badInput"
-                 );
+                );
 
                 if (ConnectionManager::getSharedInstance()->checkConnected()) return ["success" => true];
 
@@ -1105,7 +1108,7 @@ class ControllerUser extends Controller
                 $passwordHash = password_hash($password, PASSWORD_BCRYPT);
                 $emailSent = null;
                 // create user and persists it in memory
-                $user = new User;
+                $user = new User();
                 $user->setFirstname($firstname);
                 $user->setSurname($surname);
                 $user->setPseudo($pseudo);
@@ -1117,7 +1120,7 @@ class ControllerUser extends Controller
 
                 // retrieve the lastInsertId to use for the next query 
                 // this value is only available after a flush()
-                $user->setId($user->getId());
+                //$user->setId($user->getId());
 
                 // create record in user_regulars table and persists it in memory
                 $regularUser = new Regular($user, $email);
@@ -1176,7 +1179,7 @@ class ControllerUser extends Controller
 
                 // accept only connected user
                 if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
-                
+
                 $id = intval($_SESSION['id']);
 
                 // retrieve user by its id
@@ -1224,7 +1227,7 @@ class ControllerUser extends Controller
                 $errors = [];
                 $emailSent = null;
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
-                if(!empty($password) && strlen($password) < 7) $errors['passwordInvalid'] = true;
+                if (!empty($password) && strlen($password) < 7) $errors['passwordInvalid'] = true;
                 if ($email !== $tmpOldEmail) {
 
                     // check if the email is already listed in db
@@ -1330,14 +1333,14 @@ class ControllerUser extends Controller
                 $sessionUserId = intval($_SESSION["id"]);
                 $sessionToken = htmlspecialchars(strip_tags(trim($_SESSION["token"])));
                 $url = !empty($_POST['url']) ? htmlspecialchars(strip_tags(trim($_POST['url']))) : '';
-                
+
                 try {
                     $manager = ConnectionManager::getSharedInstance();
                     $user = $manager->checkConnected();
                     if (!$user)  return false;
 
                     $res = $manager->deleteToken($sessionUserId, $sessionToken);
-                    if(!$res) return false;
+                    if (!$res) return false;
 
                     return !empty($url) ? $url : "/index.php";
 
@@ -1461,7 +1464,7 @@ class ControllerUser extends Controller
                     $user->setPseudo($surname . " " . $firstname);
                     $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
                     $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
-                    $user->setId($lastQuestion->getId() + 1);
+                    //$user->setId($lastQuestion->getId() + 1);
                     $this->entityManager->persist($user);
 
                     $regular = new Regular($user, $email);
@@ -1554,7 +1557,7 @@ class ControllerUser extends Controller
                         ->findBy(array("garId" => $_GET['ido']));
                     if (!$garUser) {
                         $user = new User();
-                        $user->setFirstName($_GET['pre']);
+                        $user->setFirstname($_GET['pre']);
                         $user->setSurname($_GET['nom']);
                         $user->setPseudo($_GET['nom'] . " " . $_GET['pre']);
                         $password = passwordGenerator();
@@ -1693,7 +1696,7 @@ class ControllerUser extends Controller
             $hashedPassword = password_hash('Test1234!', PASSWORD_BCRYPT);
 
             // create the user to be saved in users table
-            $user = new User;
+            $user = new User();
             $user->setFirstname($sanitizedData->pre);
             $user->setSurname($sanitizedData->nom);
             $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
@@ -1705,7 +1708,7 @@ class ControllerUser extends Controller
 
             // retrieve the lastInsertId to use for the next query 
             // this value is only available after a flush()
-            $user->setId($user->getId());
+            //$user->setId($user->getId());
 
             // create a classroomUser to be saved in user_classroom_users
             $classroomUser = new ClassroomUser($user);

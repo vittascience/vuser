@@ -2,6 +2,7 @@
 
 namespace User\Entity;
 
+use DateTime;
 use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use Utils\ImageManager;
@@ -29,68 +30,67 @@ class User
      */
     private $favorite;
 
+
     /** 
      * @ORM\Column(name="firstname", type="string", length=100, nullable=false)
      * @var string
      */
     private $firstname;
+
+
     /** 
-     * @ORM\Column(name="pseudo", type="string", length=100, nullable=false)
+     * @ORM\Column(name="pseudo", type="string", length=100, nullable=true)
      * @var string
      */
     private $pseudo;
+
+
     /**
      * @ORM\Column(name="surname", type="string", length=100, nullable=false)
      * @var string
      */
     private $surname;
+
+
     /**
      * @ORM\Column(name="password", type="string", length=255, nullable=false)
      * @var string
      */
     private $password;
+
+
     /**
      * @ORM\Column(name="insert_date", type="datetime", columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
      * @var \DateTime
      */
     private $insertDate;
+
+
     /**
      * @ORM\Column(name="update_date", type="datetime", columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
      * @var \DateTime
      */
     private $updateDate;
+
+
     /**
      * @ORM\Column(name="picture", type="string", length=250, nullable=true)
      * @var string
      */
     private $picture = NULL;
-    public function __construct()
-    {
-    }
 
     /**
      * @return int
      */
-    public function getId()
+    public function getId(): int
     {
         return $this->id;
     }
 
     /**
-     * @param int $id
-     */
-    public function setId($id)
-    {
-        if (is_int($id) && $id > 0) {
-            $this->id = $id;
-        } else
-            throw new EntityDataIntegrityException("id needs to be integer and positive");
-    }
-
-    /**
      * @return string
      */
-    public function getFirstname()
+    public function getFirstname(): string
     {
         return $this->firstname;
     }
@@ -98,18 +98,15 @@ class User
     /**
      * @param string $firstname
      */
-    public function setFirstname($firstname)
+    public function setFirstname(string $firstname)
     {
-        if (preg_match(self::REG_NAME, $firstname)) {
-            $this->firstname = $firstname;
-        } else
-            throw new EntityDataIntegrityException("firstname needs to be string and have between 1 and 100 characters");
+        $this->firstname = $firstname;
     }
 
     /**
      * @return string
      */
-    public function getPseudo()
+    public function getPseudo(): ?string
     {
         return $this->pseudo;
     }
@@ -117,19 +114,15 @@ class User
     /**
      * @param string $pseudo
      */
-    public function setPseudo($pseudo)
+    public function setPseudo(?string $pseudo)
     {
-
-        if (preg_match(self::REG_NAME, $pseudo)) {
-            $this->pseudo = $pseudo;
-        } else
-            throw new EntityDataIntegrityException("pseudo needs to be string and have between 1 and 100 characters");
+        $this->pseudo = $pseudo;
     }
 
     /**
      * @return string
      */
-    public function getSurname()
+    public function getSurname(): string
     {
         return $this->surname;
     }
@@ -137,20 +130,15 @@ class User
     /**
      * @param string $surname
      */
-    public function setSurname($surname)
+    public function setSurname(string $surname)
     {
-
-        if (preg_match(self::REG_NAME, $surname)) {
-            $this->surname = $surname;
-        } else {
-            throw new EntityDataIntegrityException("surname needs to be string and have between 1 and 100 characters");
-        }
+        $this->surname = $surname;
     }
 
     /**
      * @return string
      */
-    public function getPassword()
+    public function getPassword(): string
     {
         return $this->password;
     }
@@ -158,19 +146,15 @@ class User
     /**
      * @param string $password
      */
-    public function setPassword($password)
+    public function setPassword(string $password)
     {
-        if (is_string($password)) {
-            $this->password = $password;
-        } else {
-            throw new EntityDataIntegrityException("password needs to be string");
-        }
+        $this->password = $password;
     }
 
     /**
      * @return \DateTime
      */
-    public function getInsertDate()
+    public function getInsertDate(): DateTime
     {
         return $this->insertDate;
     }
@@ -178,22 +162,15 @@ class User
     /**
      * @param \DateTime $insertDate
      */
-    public function setInsertDate($insertDate)
+    public function setInsertDate(DateTime $insertDate)
     {
-        if (isset($insertDate)) {
-            if ($insertDate instanceof \DateTime)
-                $this->insertDate = $insertDate;
-            else
-                throw new EntityDataIntegrityException("insetrDate needs to be DateTime");
-        } else {
-            throw new EntityDataIntegrityException("insartDate should not be null");
-        }
+        $this->insertDate = $insertDate;
     }
 
     /**
      * @return \DateTime
      */
-    public function getUpdateDate()
+    public function getUpdateDate(): ?DateTime
     {
         return $this->updateDate;
     }
@@ -201,18 +178,14 @@ class User
     /**
      * @param \DateTime $updateDate
      */
-    public function setUpdateDate($updateDate)
+    public function setUpdateDate(?DateTime $updateDate)
     {
-        if ($updateDate instanceof \DateTime || $updateDate == null) {
-            $this->updateDate = $updateDate;
-        } else {
-            throw new EntityDataIntegrityException("updateDate needs to be DateTime or null");
-        }
+        $this->updateDate = $updateDate;
     }
     /**
      * @return string
      */
-    public function getPicture()
+    public function getPicture(): ?string
     {
         return $this->picture;
     }
@@ -220,13 +193,9 @@ class User
     /**
      * @param string $picture
      */
-    public function setPicture($picture)
+    public function setPicture(?string $picture)
     {
-        if (is_string($picture) || $picture == null) {
-            $this->picture = $picture;
-        } else {
-            throw new EntityDataIntegrityException("picture needs to be string");
-        }
+        $this->picture = $picture;
     }
 
     public function processPicture($picture)
@@ -268,6 +237,7 @@ class User
             $classInstance->{$key} = $value;
         return $classInstance;
     }
+
     public function jsonSerialize()
     {
         return [
