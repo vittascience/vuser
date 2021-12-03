@@ -1037,26 +1037,17 @@ class ControllerUser extends Controller
 
                 if (ConnectionManager::getSharedInstance()->checkConnected()) return ["success" => true];
 
-                $credentials = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
+                $reponseLogin = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
 
-                if ($credentials !== false) {
-                    $_SESSION["id"] = $credentials[0];
-                    $_SESSION["token"] = $credentials[1];
+                if (!array_key_exists('success', $reponseLogin)) {
+                    $_SESSION["id"] = $reponseLogin[0];
+                    $_SESSION["token"] = $reponseLogin[1];
                     return ["success" => true];
                 } else {
-                    return ["success" => false];
-                }
-                /* if (!empty($mail) && !empty($password)) {
-                    $credentials = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
-                    if ($credentials !== false) {
-                        $_SESSION["id"] = $credentials[0];
-                        $_SESSION["token"] = $credentials[1];
-                        return ["success" => true];
-                    } else {
-                        return ["success" => false];
+                    if ($reponseLogin["success"] == false) {
+                        return $reponseLogin;
                     }
-                    return ["success" => false];
-                } */
+                }  
             },
             'register' => function () {
 
