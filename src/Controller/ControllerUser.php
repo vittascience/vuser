@@ -764,7 +764,7 @@ class ControllerUser extends Controller
 
                 $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $pseudo));
                 foreach ($pseudoUsed as $p) {
-                    $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p));
+                    $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p, 'classroom' => $classroom));
                     if ($pseudoUsedInClassroom) {
                         return false;
                     }
@@ -1038,7 +1038,6 @@ class ControllerUser extends Controller
                 if (ConnectionManager::getSharedInstance()->checkConnected()) return ["success" => true];
 
                 $reponseLogin = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
-
                 if (!array_key_exists('success', $reponseLogin)) {
                     $_SESSION["id"] = $reponseLogin[0];
                     $_SESSION["token"] = $reponseLogin[1];
@@ -1047,7 +1046,7 @@ class ControllerUser extends Controller
                     if ($reponseLogin["success"] == false) {
                         return $reponseLogin;
                     }
-                }  
+                }
             },
             'register' => function () {
 
