@@ -974,6 +974,8 @@ class ControllerUser extends Controller
                         ->getClassroom()
                         ->getId();
 
+                    $classroom = $this->entityManager->getRepository(Classroom::class)->findOneBy(["id" => $userClassroomId]);
+
                     // retrieve the classroom teacher id from classroom_users_link_classroom table
                     $classroomTeacherId = $this->entityManager
                         ->getRepository(ClassroomLinkUser::class)
@@ -998,7 +1000,7 @@ class ControllerUser extends Controller
                     }
                     $emailReceiver = $teacherEmail;
                     $replyToMail = 'no-reply@gmail.com';
-                    $replyToName = $userFound->getFirstname() . ' ' . $userFound->getSurname();
+                    $replyToName = $userFound->getFirstname() . ' ' . $userFound->getSurname() . ' - ' . $$classroom->getName();
 
                     /////////////////////////////////////
                     // PREPARE EMAIL TO BE SENT
@@ -1012,7 +1014,7 @@ class ControllerUser extends Controller
 
                     $body = "
                         <br>
-                        <p>from : $replyToName</p>
+                        <p>from : $replyToName - </p>
                         <p>$message</p>
                         <br>
                     ";
