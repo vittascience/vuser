@@ -1000,7 +1000,7 @@ class ControllerUser extends Controller
                     }
                     $emailReceiver = $teacherEmail;
                     $replyToMail = 'no-reply@gmail.com';
-                    $replyToName = $userFound->getFirstname() . ' ' . $userFound->getSurname() . ' - ' . $classroom->getName();
+                    $replyToName = '[From : ' . $userFound->getFirstname() . ' ' . $userFound->getSurname() . ' - Class : ' . $classroom->getName().']';
 
                     /////////////////////////////////////
                     // PREPARE EMAIL TO BE SENT
@@ -1014,7 +1014,7 @@ class ControllerUser extends Controller
 
                     $body = "
                         <br>
-                        <p>from : $replyToName - </p>
+                        <p>$replyToName</p>
                         <p>$message</p>
                         <br>
                     ";
