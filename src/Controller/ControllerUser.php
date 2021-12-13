@@ -764,7 +764,7 @@ class ControllerUser extends Controller
 
                 $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $pseudo));
                 foreach ($pseudoUsed as $p) {
-                    $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p));
+                    $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p, 'classroom' => $classroom));
                     if ($pseudoUsedInClassroom) {
                         return false;
                     }
@@ -974,6 +974,8 @@ class ControllerUser extends Controller
                         ->getClassroom()
                         ->getId();
 
+                    $classroom = $this->entityManager->getRepository(Classroom::class)->findOneBy(["id" => $userClassroomId]);
+
                     // retrieve the classroom teacher id from classroom_users_link_classroom table
                     $classroomTeacherId = $this->entityManager
                         ->getRepository(ClassroomLinkUser::class)
@@ -998,7 +1000,7 @@ class ControllerUser extends Controller
                     }
                     $emailReceiver = $teacherEmail;
                     $replyToMail = 'no-reply@gmail.com';
-                    $replyToName = $userFound->getFirstname() . ' ' . $userFound->getSurname();
+                    $replyToName = '[From : ' . $userFound->getFirstname() . ' ' . $userFound->getSurname() . ' -- Classroom : ' . $classroom->getName().']';
 
                     /////////////////////////////////////
                     // PREPARE EMAIL TO BE SENT
@@ -1012,7 +1014,7 @@ class ControllerUser extends Controller
 
                     $body = "
                         <br>
-                        <p>from : $replyToName</p>
+                        <p>$replyToName</p>
                         <p>$message</p>
                         <br>
                     ";
@@ -1040,26 +1042,16 @@ class ControllerUser extends Controller
 
                 if (ConnectionManager::getSharedInstance()->checkConnected()) return ["success" => true];
 
-                $credentials = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
-
-                if ($credentials !== false) {
-                    $_SESSION["id"] = $credentials[0];
-                    $_SESSION["token"] = $credentials[1];
+                $reponseLogin = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
+                if (!array_key_exists('success', $reponseLogin)) {
+                    $_SESSION["id"] = $reponseLogin[0];
+                    $_SESSION["token"] = $reponseLogin[1];
                     return ["success" => true];
                 } else {
-                    return ["success" => false];
-                }
-                /* if (!empty($mail) && !empty($password)) {
-                    $credentials = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
-                    if ($credentials !== false) {
-                        $_SESSION["id"] = $credentials[0];
-                        $_SESSION["token"] = $credentials[1];
-                        return ["success" => true];
-                    } else {
-                        return ["success" => false];
+                    if ($reponseLogin["success"] == false) {
+                        return $reponseLogin;
                     }
-                    return ["success" => false];
-                } */
+                }
             },
             'register' => function () {
 
