@@ -519,7 +519,7 @@ class ControllerUser extends Controller
                     // the teacher is not registered yet
                     // create a hashed password
                     //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
-                    $hashedPassword = password_hash('Test1234!', PASSWORD_BCRYPT);
+                    $hashedPassword = password_hash(passwordGenerator(), PASSWORD_BCRYPT);
 
                     // create the user to be saved in users table
                     $user = new User();
@@ -1815,8 +1815,7 @@ class ControllerUser extends Controller
         if (!$garUserExists) {
             // the student is not registerd yet
             // create a hashed password
-            //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
-            $hashedPassword = password_hash('Test1234!', PASSWORD_BCRYPT);
+            $hashedPassword = password_hash(passwordGenerator(), PASSWORD_BCRYPT);
 
             // create the user to be saved in users table
             $user = new User();
