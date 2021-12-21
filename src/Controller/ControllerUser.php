@@ -645,6 +645,71 @@ class ControllerUser extends Controller
                     'classroomsCreated' => true
                 );
             },
+            'save_gar_employee_as_teacher' => function(){
+                
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // bind and sanitize incoming data
+                $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) : '';
+                $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) : '';
+                $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) : '';
+                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
+                $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) : '';
+                $fakeRegularEmail = $this->generateFakeEmailWithPrefix("gar.employee");
+
+               
+                // get the teacher by its ido(opaque identifier)
+                $garUserExists = $this->entityManager
+                    ->getRepository('User\Entity\ClassroomUser')
+                    ->findOneBy(array("garId" => $ido));
+                
+                if($garUserExists){
+                    return array(
+                        'userId' => $garUserExists->getId()->getId()
+                    );
+                }
+
+                // the teacher is not registered yet
+                // create a hashed password
+                $hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
+
+                // create the user to be saved in users table
+                $user = new User();
+                $user->setFirstname($pre);
+                $user->setSurname($nom);
+                $user->setPseudo("$pre $nom");
+                $user->setPassword($hashedPassword);
+
+                // save the user 
+                $this->entityManager->persist($user);
+                $this->entityManager->flush();
+
+                // create a classroomUser to be saved in user_classroom_users
+                $classroomUser = new ClassroomUser($user);
+                $classroomUser->setGarId($ido);
+                $classroomUser->setSchoolId($uai);
+                $classroomUser->setIsTeacher(true);
+                $classroomUser->setMailTeacher($pmel);
+                $this->entityManager->persist($classroomUser);
+                $this->entityManager->flush();
+
+                 // create a regular user to be saved in user_regulars table and persist it
+                $regularUser = new Regular($user, $fakeRegularEmail);
+                $regularUser->setActive(true);
+                $this->entityManager->persist($regularUser);
+                $this->entityManager->flush();
+
+                // create a premiumUser to be stored in user_premium table and persist it
+                $userPremium = new UserPremium($user);
+                $this->entityManager->persist($userPremium);
+                $this->entityManager->flush();
+                
+                return array(
+                    'userId' => $user->getId()
+                );
+                
+            },
             'linkSystem' => function () {
                 /**
                  * Limiting learner number @THOMAS MODIF
@@ -1741,6 +1806,30 @@ class ControllerUser extends Controller
 
         return $newPassword;
     }
+
+    /**
+     * generate fake email for gar users
+     * as the email is optional but mandatory for saving a Regular user
+     *
+     * @param string $prefix
+     * @return string
+     */
+    private function generateFakeEmailWithPrefix($prefix){
+        
+        // generate the new password and check if a record exists in db with these credentials
+        do {
+           $email = $prefix.'.'.passwordGenerator()."@gmail.com";
+           $emailExists = $this->entityManager
+               ->getRepository(Regular::class)
+               ->findOneBy(array(
+                   'email' => $email
+               ));
+       }
+       // continue as long as the passwords match and a record exists in db
+       while ($emailExists);
+
+       return $email;
+   }
 }
 function passwordGenerator()
 {
