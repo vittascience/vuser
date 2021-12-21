@@ -710,6 +710,72 @@ class ControllerUser extends Controller
                 );
                 
             },
+            'save_gar_employee_classroom' => function(){
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // bind and sanitize incoming data
+                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
+                $userId = isset($_POST['userId']) ? intval($_POST['userId']) : 0;
+                
+                // get the user from db
+                $teacher = $this->entityManager->getRepository(User::class)->find($userId);
+
+                // get the classroom for the current teacher
+                $classroomExist = $this->entityManager
+                    ->getRepository(ClassroomLinkUser::class)
+                    ->findOneBy(array(
+                        'user' => $teacher,
+                        'rights' => 2
+                    ));
+                
+                // the classroom exists in db return it
+                if($classroomExist){
+                    return array(
+                        'classroomId' => $classroomExist->getClassroom()->getId(),
+                        'classroomLink' => $classroomExist->getClassroom()->getLink(),
+                    );
+                }
+
+                // the classroom does not exists
+                // get demoStudent from .env file
+                $demoStudent = !empty($this->envVariables['VS_DEMOSTUDENT'])
+                    ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['VS_DEMOSTUDENT']))))
+                    : 'demostudent';
+
+                // create the classroom to save 
+                $classroom = new Classroom("Ma classe");
+                $classroom->setUai($uai);
+                $this->entityManager->persist($classroom);
+                $this->entityManager->flush();
+
+                // add the teacher to the classroom with teacher rights=2
+                $classroomLinkUser = new ClassroomLinkUser($teacher, $classroom, 2);
+                $this->entityManager->persist($classroomLinkUser);
+                $this->entityManager->flush();
+
+                // create default demoStudent user (required for the dashboard to work properly)
+                $password = passwordGenerator();
+                $user = new User();
+                $user->setFirstname("élève");
+                $user->setSurname("modèl");
+                $user->setPseudo($demoStudent);
+                $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
+
+                // persist and save demoStudent user in users table
+                $this->entityManager->persist($user);
+                $this->entityManager->flush();
+
+                // add the demoStudent user to the classroom with students rights=0 (classroom_users_link_classrooms table)
+                $classroomLinkUser = new ClassroomLinkUser($user, $classroom, 0);
+                $this->entityManager->persist($classroomLinkUser);
+                $this->entityManager->flush();
+
+                return array(
+                    'classroomId' => $classroomLinkUser->getClassroom()->getId(),
+                    'classroomLink' => $classroomLinkUser->getClassroom()->getLink(),
+                );            
+            },
             'linkSystem' => function () {
                 /**
                  * Limiting learner number @THOMAS MODIF
