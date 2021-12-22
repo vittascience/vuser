@@ -520,6 +520,7 @@ class ControllerUser extends Controller
                     // create a hashed password
                     //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
                     $hashedPassword = password_hash(passwordGenerator(), PASSWORD_BCRYPT);
+                    $fakeRegularEmail = $this->generateFakeEmailWithPrefix("gar.teacher");
 
                     // create the user to be saved in users table
                     $user = new User();
@@ -546,7 +547,7 @@ class ControllerUser extends Controller
                     $this->entityManager->flush();
 
                     // create a regular user to be saved in user_regulars table and persist it
-                    $regularUser = new Regular($user, $pmel = '');
+                    $regularUser = new Regular($user, $fakeRegularEmail);
                     $regularUser->setActive(true);
                     $this->entityManager->persist($regularUser);
                     $this->entityManager->flush();
