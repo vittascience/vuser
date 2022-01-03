@@ -1654,6 +1654,69 @@ class ControllerUser extends Controller
                     return ["success" => false, "errors" => $errorMessages];
                 }
             },
+            'register_lti13_user' => function(){
+
+                // sanitize incoming data
+                $issuer = !empty($_POST['issuer']) ? htmlspecialchars(strip_tags(trim($_POST['issuer']))) : '' ;
+                $ltiCourseId = !empty($_POST['course_id']) ? intval($_POST['course_id']) : 0;
+                $ltiUserId = !empty($_POST['user_id']) ? intval($_POST['user_id']) : 0 ;
+                $isTeacher = !empty($_POST['is_teacher']) ? boolval($_POST['is_teacher']) : false;
+
+                // create empty $errors array, validate data and file $errors if any
+                $errors = [];
+                if(empty($issuer)) $errors['issuerInvalid'] = true;
+                if(empty($ltiCourseId)) $errors['courseIdInvalid'] = true;
+                if(empty($ltiUserId)) $errors['userIdInvalid'] = true;
+                if(!is_bool($isTeacher)) $errors['isTeacherInvalid'] = true;
+                
+                // some errors found, return them
+                if(!empty($errors)) return array('errors' => $errors);
+
+               
+                // get the ltiTool using the issuer
+                $ltiTool = $this->entityManager
+                ->getRepository(LtiTool::class)
+                ->findOneBy(array('issuer' => $issuer));
+             
+                $ltiUserExists = $this->entityManager
+                    ->getRepository(LtiUser::class)
+                    ->findOneBy(array(
+                        'ltiTool' => $ltiTool,
+                        'ltiUserId' => $ltiUserId
+                    ));
+               
+                // the lti user exists, return its id
+                if($ltiUserExists){
+                    return array('userId' => $ltiUserExists->getUser()->getId());
+                }
+
+                // lti user does not exists
+                // create the user
+                $password = passwordGenerator();
+                $user = new User();
+                $user->setFirstname("lti_user_firstname");
+                $user->setSurname("lti_user_surname");
+                $user->setPseudo("lti_user_pseudo");
+                $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
+                $user->setInsertDate(new \DateTime());
+                $user->setUpdateDate(new \DateTime());
+                $this->entityManager->persist($user);
+                $this->entityManager->flush();
+
+                // create the ltiUser
+                $ltiUser = new LtiUser;
+                $ltiUser->setLtiTool($ltiTool)
+                        ->setUser($user)
+                        ->setLtiUserId($ltiUserId)
+                        ->setLtiCourseId($ltiCourseId)
+                        ->setIsTeacher($isTeacher);
+                
+                $this->entityManager->persist($ltiUser);
+                $this->entityManager->flush();
+
+               
+                return array('userId' => $ltiUser->getUser()->getId());
+            }
             /* 'get_all' => function () {
                 *
                  * @Naser
