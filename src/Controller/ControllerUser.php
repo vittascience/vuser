@@ -10,12 +10,13 @@ use Utils\Mailer;
 use Dotenv\Dotenv;
 use DAO\RegularDAO;
 use User\Entity\User;
-use User\Entity\Regular;
+use User\Entity\LtiUser;
+
 
 /**
  * @ THOMAS MODIF 1 line just below
  */
-
+use User\Entity\Regular;
 use User\Entity\Teacher;
 use Aiken\i18next\i18next;
 use User\Entity\UserPremium;
