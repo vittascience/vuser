@@ -507,7 +507,7 @@ class ControllerUser extends Controller
 
                         array_push($classroomNames, [
                             "name" => $garUserClassroom->getClassroom()->getName(),
-                            "group" => $garUserClassroom->getClassroom()->getGroupe(),
+                            "garCode" => $garUserClassroom->getClassroom()->getGarCode(),
                             "studentCount" => $classroomStudentCount,
                             "classroomLink" => $garUserClassroom->getClassroom()->getLink(),
                         ]);
@@ -583,14 +583,16 @@ class ControllerUser extends Controller
 
                 for ($i = 0; $i < count($decodedData->classroomsToCreate); $i++) {
 
+                    list($incomingClassroomCode, $incomingClassroomName) = explode('##',$decodedData->classroomsToCreate[$i]->classroom);
                     // bind and sanitize each classroom and related group
-                    $classroomName = htmlspecialchars(strip_tags(trim($decodedData->classroomsToCreate[$i]->classroom)));
-                    $relatedGroup = htmlspecialchars(strip_tags(trim($decodedData->classroomsToCreate[$i]->relatedGroup)));
+                    $classroomName = htmlspecialchars(strip_tags(trim($incomingClassroomName)));
+                    $classroomCode = htmlspecialchars(strip_tags(trim($incomingClassroomCode)));
+
 
                     // get the classroom and group from classrooms and classroom_users_link_classrooms joined tables
                     $classroomExists = $this->entityManager
                         ->getRepository(ClassroomLinkUser::class)
-                        ->getTeacherClassroomBy($teacherId, $classroomName, $uai, $relatedGroup);
+                        ->getTeacherClassroomBy($teacherId, $classroomName, $uai, $classroomCode); 
 
 
                     // the classroom already exists, we do nothing
@@ -610,7 +612,7 @@ class ControllerUser extends Controller
 
                         // create the classroom
                         $classroom = new Classroom($classroomName);
-                        $classroom->setGroupe($relatedGroup);
+                        $classroom->setGarCode($classroomCode);
                         $classroom->setUai($uai);
                         $this->entityManager->persist($classroom);
                         $this->entityManager->flush();
