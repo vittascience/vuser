@@ -366,39 +366,68 @@ class ControllerUser extends Controller
 
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
-
+                
+                $incomingClassrooms = $_POST['classrooms'];
+                $classroomsToFind = [];
                 // bind and sanitize incoming data
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
-                $div = isset($_POST['div']) ? htmlspecialchars(strip_tags(trim($_POST['div']))) : '';
 
-                // get the student classroom
-                $classroomParts = explode('##', $div);
-                $userClassroom = $classroomParts[0];
-
-                // retrieve the user classrooms, there can be either 1 or several classrooms(1classroom is a set of classroom+groupe)
-                $classrooms = $this->entityManager
-                    ->getRepository(ClassroomLinkUser::class)
-                    ->getStudentClassroomsAndRelatedTeacher($userClassroom, $uai);
-
-
-                // initiate an empty array to fill with the student classrooms+groups
-                $classroomsFound = [];
-                foreach ($classrooms as $classroom) {
-
-                    array_push($classroomsFound, array(
-                        'id' => $classroom['id'],
-                        'name' => $classroom['name'],
-                        'groupe' => $classroom['groupe'],
-                        'teacher' => $classroom['teacher'],
-                        'rights' => $classroom['rights']
-                    ));
+                foreach($incomingClassrooms as $incomingClassroom){
+                    list($incomingClassroomGarCode, $incomingClassroomName) = explode('##',$incomingClassroom);
+                    $classroomCode = htmlspecialchars(strip_tags(trim($incomingClassroomGarCode)));
+                    $classroomName = htmlspecialchars(strip_tags(trim($incomingClassroomName)));
+                    if(!empty($classroomName) && !empty($classroomCode)){
+                        array_push($classroomsToFind, array(
+                            'name' => $classroomName,
+                            'garCode' => $incomingClassroomGarCode,
+                        ));
+                    }
                 }
 
-                return array(
-                    'classrooms' => $classroomsFound
-                );
+                $classroomsCreated = [];
+                $classroomsNotCreated = [];
+                foreach( $classroomsToFind  as $classroomToFind){
+                    $classroomFound = $this->entityManager->getRepository(Classroom::class)->findOneBy(array(
+                        'name' => $classroomToFind['name'],
+                        'garCode' => $classroomToFind['garCode'],
+                        'uai' => $uai
+                    ));
+
+                    if($classroomFound){
+                       
+                       $teacher = $this->entityManager
+                                   ->getRepository(ClassroomLinkUser::class)
+                                   ->findOneBy(array(
+                                       'classroom' => $classroomFound,
+                                       'rights' => 2
+                                   ))
+                                   ->getUser()
+                                   ->getPseudo();
+                   
+                       array_push($classroomsCreated, array(
+                           'id' => $classroomFound->getId(),
+                           'name' => $classroomFound->getName(),
+                           'garCode' => $classroomFound->getGarCode(),
+                           'classroomLink' => $classroomFound->getLink(),
+                           'teacher' => $teacher
+                       ));
+                    } else {
+                       array_push($classroomsNotCreated, array(
+                           'name' => $classroomToFind['name'],
+                           'garCode' => $classroomToFind['garCode']
+                       ));
+                    }
+                  /*   echo "<pre>".print_r($classroomToFind['name'],true);
+                    echo "<pre>".print_r($classroomToFind['garCode'],true); */
+                }
+                
+                return array('classrooms'=> array(
+                    'created' => $classroomsCreated,
+                    'notCreated' => $classroomsNotCreated
+                ));            
             },
             'register_and_add_gar_student_to_classroom' => function () {
+
                 // enable cors
                 if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
 
@@ -413,16 +442,19 @@ class ControllerUser extends Controller
                 $sanitizedData->nom = isset($incomingData->nom) ? htmlspecialchars(strip_tags(trim($incomingData->nom))) : '';
                 $sanitizedData->ido = isset($incomingData->ido) ? htmlspecialchars(strip_tags(trim($incomingData->ido))) : '';
                 $sanitizedData->uai = isset($incomingData->uai) ? htmlspecialchars(strip_tags(trim($incomingData->uai))) : '';
-                $sanitizedData->div = isset($incomingData->div)
-                    ? explode('##', htmlspecialchars(strip_tags(trim($incomingData->div))))[0]
+                $sanitizedData->classroomName = isset($incomingData->classroomName)
+                    ? htmlspecialchars(strip_tags(trim($incomingData->classroomName)))
                     : '';
                 $sanitizedData->classroomId = isset($incomingData->classroomId) ? intval($incomingData->classroomId) : 0;
-                $sanitizedData->classroomGroup = isset($incomingData->classroomGroup) ? htmlspecialchars(strip_tags(trim($incomingData->classroomGroup))) : '';
-                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->div}-{$sanitizedData->classroomGroup}";
-
+                $sanitizedData->classroomGarCode = isset($incomingData->classroomGarCode) 
+                    ? htmlspecialchars(strip_tags(trim($incomingData->classroomGarCode))) 
+                    : '';
+                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->classroomName}-{$sanitizedData->classroomGarCode}";
+                
                 // get the student
                 $studentRegistered = $this->registerGarStudentIfNeeded($sanitizedData);
 
+                
                 if ($studentRegistered) {
 
                     // get the classroom
