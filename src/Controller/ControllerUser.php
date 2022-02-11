@@ -1744,8 +1744,11 @@ class ControllerUser extends Controller
                 $ltiUser->setLtiTool($ltiTool)
                         ->setUser($user)
                         ->setLtiUserId($ltiUserId)
-                        ->setLtiCourseId($ltiCourseId)
                         ->setIsTeacher($isTeacher);
+
+                if($ltiCourseId){
+                    $ltiUser->setLtiCourseId($ltiCourseId);
+                }
                 
                 $this->entityManager->persist($ltiUser);
                 $this->entityManager->flush();
