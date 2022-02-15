@@ -4,7 +4,7 @@ namespace User\Tests;
 
 use User\Entity\User;
 use User\Entity\LtiUser;
-use Lti13\Entity\LtiTool;
+use Lti13\Entity\LtiConsumer;
 use PHPUnit\Framework\TestCase;
 use Utils\Exceptions\EntityDataIntegrityException;
 
@@ -69,41 +69,41 @@ class LtiUserTest extends TestCase{
         $this->assertSame($providedUserObjectValue, $this->ltiUser->getUser());
     }
 
-    public function testGetLtiToolIsNullByDefault(){
-        $this->assertNull($this->ltiUser->getLtiTool());
+    public function testGetLtiConsumerIsNullByDefault(){
+        $this->assertNull($this->ltiUser->getLtiConsumer());
     }
 
-    public function testGetLtiToolReturnAnInstanceOfLtiToolClass(){
-        $ltiTool = new LtiTool;
+    public function testGetLtiConsumerReturnAnInstanceOfLtiToolClass(){
+        $ltiConsumer = new LtiConsumer;
 
         // create the closure to access and set the private property instead of reflection class
-        $fakeSetLtiToolClosure = function() use ($ltiTool) {
-            return $this->ltiTool = $ltiTool;
+        $fakeSetLtiConsumerClosure = function() use ($ltiConsumer) {
+            return $this->ltiConsumer = $ltiConsumer;
         };
 
         // bind the closure to the object
-        $executeFakeSetLtiTool = \Closure::bind($fakeSetLtiToolClosure,$this->ltiUser, LtiUser::class);
+        $executeFakeSetLtiConsumer = \Closure::bind($fakeSetLtiConsumerClosure,$this->ltiUser, LtiUser::class);
 
         // run the closure
-        $executeFakeSetLtiTool();
+        $executeFakeSetLtiConsumer();
 
-        $this->assertInstanceOf(LtiTool::class, $this->ltiUser->getLtiTool());
+        $this->assertInstanceOf(LtiConsumer::class, $this->ltiUser->getLtiConsumer());
     }
 
     /** @dataProvider provideNonObjectValues */
     public function testSetLtiToolRejectNonLtiToolObjectValue($providedValue){
         $this->expectException(EntityDataIntegrityException::class);
-        $this->ltiUser->setLtiTool($providedValue);
+        $this->ltiUser->setLtiConsumer($providedValue);
     }
 
     /** @dataProvider provideLtiToolObjectValues */
-    public function testSetLtiToolAcceptsLtiToolObjectValue($providedLtiToolObjectValue){
-        $this->assertNull($this->ltiUser->getLtiTool());
+    public function testSetLtiConsumerAcceptsLtiToolObjectValue($providedLtiToolObjectValue){
+        $this->assertNull($this->ltiUser->getLtiConsumer());
         
-        $this->ltiUser->setLtiTool($providedLtiToolObjectValue);
+        $this->ltiUser->setLtiConsumer($providedLtiToolObjectValue);
 
-        $this->assertInstanceOf(LtiTool::class, $this->ltiUser->getLtiTool());
-        $this->assertEquals($providedLtiToolObjectValue, $this->ltiUser->getLtiTool());
+        $this->assertInstanceOf(LtiConsumer::class, $this->ltiUser->getLtiConsumer());
+        $this->assertEquals($providedLtiToolObjectValue, $this->ltiUser->getLtiConsumer());
     }
 
     public function testGetLtiUserIdIsNullByDefault(){
@@ -201,17 +201,17 @@ class LtiUserTest extends TestCase{
      * dataProvider for testSetLtiToolAcceptsLtiToolObjectValue
      */
     public function provideLtiToolObjectValues(){
-        $ltiTool1 = new LtiTool;
-        $ltiTool1->setIssuer('fake issuer 1');
-        $ltiTool2 = new LtiTool;
-        $ltiTool2->setIssuer('fake issuer 2');
-        $ltiTool3 = new LtiTool;
-        $ltiTool3->setIssuer('fake issuer 3');
+        $ltiConsumer1 = new LtiConsumer;
+        $ltiConsumer1->setIssuer('fake issuer 1');
+        $ltiConsumer2 = new LtiConsumer;
+        $ltiConsumer2->setIssuer('fake issuer 2');
+        $ltiConsumer3 = new LtiConsumer;
+        $ltiConsumer3->setIssuer('fake issuer 3');
 
         return array(
-            array($ltiTool1),
-            array($ltiTool2),
-            array($ltiTool3),
+            array($ltiConsumer1),
+            array($ltiConsumer2),
+            array($ltiConsumer3),
         );
     }
 

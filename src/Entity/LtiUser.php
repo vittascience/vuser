@@ -2,9 +2,8 @@
 
 namespace User\Entity;
 
-use Lti13\Entity\LtiTool;
+use Lti13\Entity\LtiConsumer;
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\ORM\Mapping\Entity;
 use Utils\Exceptions\EntityDataIntegrityException;
 
 /**
@@ -29,12 +28,12 @@ class LtiUser{
     private $user;
 
     /**
-     * @ORM\ManyToOne(targetEntity="Lti13\Entity\LtiTool")
-     * @ORM\JoinColumn(name="tool_id", referencedColumnName="id", onDelete="CASCADE")
+     * @ORM\ManyToOne(targetEntity="Lti13\Entity\LtiConsumer")
+     * @ORM\JoinColumn(name="consumer_id", referencedColumnName="id", onDelete="CASCADE")
      *
-     * @var LtiTool
+     * @var LtiConsumer
      */
-    private $ltiTool;
+    private $ltiConsumer;
 
     /**
      * @ORM\Column(name="lti_user_id", type="integer",length=11, nullable=false)
@@ -95,26 +94,26 @@ class LtiUser{
     /**
      * Get the value of ltiTool
      *
-     * @return  LtiTool
+     * @return  LtiConsumer
      */ 
-    public function getLtiTool()
+    public function getLtiConsumer()
     {
-        return $this->ltiTool;
+        return $this->ltiConsumer;
     }
 
     /**
      * Set the value of ltiTool
      *
-     * @param  LtiTool  $ltiTool
+     * @param  LtiConsumer  $ltiConsumer
      *
      * @return  self
      */ 
-    public function setLtiTool($ltiTool)
+    public function setLtiConsumer($ltiConsumer)
     {
-        if(!($ltiTool instanceof LtiTool)){
-            throw new EntityDataIntegrityException("The lti tool has to be an instance of LtiTool class");
+        if(!($ltiConsumer instanceof LtiConsumer)){
+            throw new EntityDataIntegrityException("The lti consumer has to be an instance of LtiTool class");
         }
-        $this->ltiTool = $ltiTool;
+        $this->ltiConsumer = $ltiConsumer;
 
         return $this;
     }
