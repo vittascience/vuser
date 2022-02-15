@@ -11,7 +11,7 @@ use Dotenv\Dotenv;
 use DAO\RegularDAO;
 use User\Entity\User;
 use User\Entity\LtiUser;
-use Lti13\Entity\LtiTool;
+use Lti13\Entity\LtiConsumer;
 
 
 /**
