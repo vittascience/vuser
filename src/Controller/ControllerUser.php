@@ -1694,14 +1694,13 @@ class ControllerUser extends Controller
 
                 // sanitize incoming data
                 $issuer = !empty($_POST['issuer']) ? htmlspecialchars(strip_tags(trim($_POST['issuer']))) : '' ;
-                $ltiCourseId = !empty($_POST['course_id']) ? intval($_POST['course_id']) : 0;
+                $ltiCourseId = !empty($_POST['course_id']) ? intval($_POST['course_id']) : null;
                 $ltiUserId = !empty($_POST['user_id']) ? intval($_POST['user_id']) : 0 ;
                 $isTeacher = !empty($_POST['is_teacher']) ? boolval($_POST['is_teacher']) : false;
 
                 // create empty $errors array, validate data and file $errors if any
                 $errors = [];
                 if(empty($issuer)) $errors['issuerInvalid'] = true;
-                if(empty($ltiCourseId)) $errors['courseIdInvalid'] = true;
                 if(empty($ltiUserId)) $errors['userIdInvalid'] = true;
                 if(!is_bool($isTeacher)) $errors['isTeacherInvalid'] = true;
                 
@@ -1710,22 +1709,23 @@ class ControllerUser extends Controller
 
                
                 // get the ltiTool using the issuer
-                $ltiTool = $this->entityManager
-                ->getRepository(LtiTool::class)
+                $ltiConsumer = $this->entityManager
+                ->getRepository(LtiConsumer::class)
                 ->findOneBy(array('issuer' => $issuer));
-             
+            
                 $ltiUserExists = $this->entityManager
                     ->getRepository(LtiUser::class)
                     ->findOneBy(array(
-                        'ltiTool' => $ltiTool,
+                        'ltiConsumer' => $ltiConsumer,
                         'ltiUserId' => $ltiUserId
                     ));
-               
+                
                 // the lti user exists, return its id
                 if($ltiUserExists){
                     return array('userId' => $ltiUserExists->getUser()->getId());
                 }
 
+               
                 // lti user does not exists
                 // create the user
                 $password = passwordGenerator();
@@ -1741,7 +1741,7 @@ class ControllerUser extends Controller
 
                 // create the ltiUser
                 $ltiUser = new LtiUser;
-                $ltiUser->setLtiTool($ltiTool)
+                $ltiUser->setLtiConsumer($ltiConsumer)
                         ->setUser($user)
                         ->setLtiUserId($ltiUserId)
                         ->setIsTeacher($isTeacher);
