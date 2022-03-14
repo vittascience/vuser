@@ -802,6 +802,17 @@ class ControllerUser extends Controller
 
                 $this->entityManager->flush();
 
+                // get retro attributed activities if any
+                $classroomRetroAttributedActivities = $this->entityManager
+                    ->getRepository(ActivityLinkClassroom::class)
+                    ->getRetroAttributedActivitiesByClassroom($classroom);
+                
+                // some retro attributed activities found, add them to the student
+                if($classroomRetroAttributedActivities){
+                    $this->entityManager->getRepository(ActivityLinkUser::class)
+                    ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities,$user);
+                }
+                
                 // TODO DISABLE CLASSROOM ACTIVITIES ATTRIBUTION TO NEW STUDENTS
                 /* $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
                     ->findBy(array("classroom" => $classroom));
