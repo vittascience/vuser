@@ -296,6 +296,19 @@ class ControllerUser extends Controller
                 // current logged user is not the classroom teacher, return an error
                 if (!$teacherOfClassroom) return array('errorType' => 'userIsNotClassroomTeacher');
 
+                // get all the student activities if any
+                $studentActivities = $this->entityManager
+                    ->getRepository(ActivityLinkUser::class)
+                    ->findBy(array('user'=> $student));
+                
+                // some student activities found, remove them from classroom_activities_link_classroom_users
+                if($studentActivities){
+                    foreach($studentActivities as $studentActivity){
+                        $this->entityManager->remove($studentActivity);
+                        $this->entityManager->flush();
+                    }
+                }
+                
                 // the logged user has enough 'rights', remove the student record from classroom_users_link_classrooms table
                 $this->entityManager->remove($studentClassroom);
 
