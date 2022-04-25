@@ -983,6 +983,17 @@ class ControllerUser extends Controller
 
                 $this->entityManager->flush();
 
+                // get retro attributed activities if any
+                $classroomRetroAttributedActivities = $this->entityManager
+                    ->getRepository(ActivityLinkClassroom::class)
+                    ->getRetroAttributedActivitiesByClassroom($classroom);
+                
+                // some retro attributed activities found, add them to the student
+                if($classroomRetroAttributedActivities){
+                    $this->entityManager->getRepository(ActivityLinkUser::class)
+                    ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities,$user);
+                }
+
                 // TODO DISABLE CLASSROOM ACTIVITIES ATTRIBUTION TO NEW STUDENTS
                 /* $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
                     ->findBy(array("classroom" => $classroom));
@@ -1393,12 +1404,16 @@ class ControllerUser extends Controller
                     ? strip_tags(trim($_POST['email']))
                     : $regularUserToUpdate->getEmail();
 
+                // new password when the user wants to update it
                 $password = isset($_POST['password']) ? strip_tags(trim($_POST['password'])) : null;
+                // get currently registered password from the user
+                $currentPassword = !empty($_POST['current_password']) ? strip_tags(trim($_POST['current_password'])): null;
 
 
                 // create empty $errors array and fill it with errors if any and $emailSend if necessary
                 $errors = [];
                 $emailSent = null;
+                if(empty($currentPassword)) $errors['currentPasswordInvalid'] = true;
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['emailInvalid'] = true;
                 if (!empty($password) && strlen($password) < 7) $errors['passwordInvalid'] = true;
                 if ($email !== $tmpOldEmail) {
@@ -1421,6 +1436,15 @@ class ControllerUser extends Controller
 
                 // some errors have been found, return them to the user
                 if (!empty($errors)) {
+                    return array(
+                        'isUserUpdated' => false,
+                        "errors" => $errors
+                    );
+                }
+
+                // no update allowed if the current password do not match with stored password hash
+                if(!password_verify($currentPassword, $userToUpdate->getPassword())){
+                    $errors['currentPasswordDoesNotMatch'] =true;
                     return array(
                         'isUserUpdated' => false,
                         "errors" => $errors
