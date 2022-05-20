@@ -656,9 +656,11 @@ class ControllerUser extends Controller
 
 
                         // create the classroom
+                        $uniqueLink = $this->generateUniqueClassroomLink();
                         $classroom = new Classroom($classroomName);
                         $classroom->setGarCode($classroomCode);
                         $classroom->setUai($uai);
+                        $classroom->setLink($uniqueLink);;
                         $this->entityManager->persist($classroom);
                         $this->entityManager->flush();
                         $classroom->getId();
@@ -2035,6 +2037,23 @@ class ControllerUser extends Controller
 
        return $email;
    }
+    private function generateUniqueClassroomLink(){
+        $alphaNums = "abcdefghijklmnopqrstuvwxyz0123456789";
+        do{
+            $link = "";
+            
+            for ($i = 0; $i < 5; $i++) {
+                $link .= substr($alphaNums, rand(0, 35), 1);
+            }
+
+            $classroomByLinkFound = $this->entityManager
+                ->getRepository(Classroom::class)
+                ->findOneByLink($link);
+        }
+        while($classroomByLinkFound);
+
+        return $link;
+    }
 }
 function passwordGenerator()
 {
