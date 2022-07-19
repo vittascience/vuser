@@ -660,7 +660,7 @@ class ControllerUser extends Controller
                         $classroom = new Classroom($classroomName);
                         $classroom->setGarCode($classroomCode);
                         $classroom->setUai($uai);
-                        $classroom->setLink($uniqueLink);;
+                        $classroom->setLink($uniqueLink);
                         $this->entityManager->persist($classroom);
                         $this->entityManager->flush();
                         $classroom->getId();
@@ -796,8 +796,10 @@ class ControllerUser extends Controller
                     : 'demostudent';
 
                 // create the classroom to save 
+                $uniqueLink = $this->generateUniqueClassroomLink();
                 $classroom = new Classroom("Ma classe");
                 $classroom->setUai($uai);
+                $classroom->setLink($uniqueLink);
                 $this->entityManager->persist($classroom);
                 $this->entityManager->flush();
 
