@@ -25,6 +25,13 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
      * @var string
      */
     private $garId;
+
+    /**
+     * @ORM\Column(name="canope_id", type="string", length=255, nullable=true)
+     * @var string
+     */
+    private $canopeId;
+    
     /**
      * @ORM\Column(name="school_id", type="string", length=8, nullable=true)
      * @var string
@@ -71,6 +78,34 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         } else {
             throw new EntityDataIntegrityException("garId needs to be string or null ");
         }
+    }
+
+    /**
+     * Get the value of canopeId
+     *
+     * @return  string
+     */ 
+    public function getCanopeId()
+    {
+        return $this->canopeId;
+    }
+
+    /**
+     * Set the value of canopeId
+     *
+     * @param  string  $canopeId
+     *
+     * @return  self
+     */ 
+    public function setCanopeId($canopeId)
+    {
+        // the $canopeId is not a string and not an int (meaning an object or array) OR is empty
+        if((!is_string($canopeId) && !is_numeric($canopeId)) || !$canopeId){
+            throw new EntityDataIntegrityException("Invalid Value provided for the canope user id");
+        }
+        $this->canopeId = $canopeId;
+
+        return $this;
     }
 
     /**
