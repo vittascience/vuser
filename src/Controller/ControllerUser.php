@@ -1736,7 +1736,7 @@ class ControllerUser extends Controller
                 // sanitize incoming data
                 $issuer = !empty($_POST['issuer']) ? htmlspecialchars(strip_tags(trim($_POST['issuer']))) : '' ;
                 $ltiCourseId = !empty($_POST['course_id']) ? intval($_POST['course_id']) : null;
-                $ltiUserId = !empty($_POST['user_id']) ? intval($_POST['user_id']) : 0 ;
+                $ltiUserId = !empty($_POST['user_id']) ? trim($_POST['user_id']) : 0 ;
                 $isTeacher = !empty($_POST['is_teacher']) ? boolval($_POST['is_teacher']) : false;
 
                 // create empty $errors array, validate data and file $errors if any
