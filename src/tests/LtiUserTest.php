@@ -116,7 +116,7 @@ class LtiUserTest extends TestCase{
         $this->ltiUser->setLtiUserId($falsyValueProvided);
     }
 
-    /** @dataProvider provideValidLtiUserOrCourseIds */
+    /** @dataProvider provideValidLtiUserIds */
     public function testSetLtiUserAcceptsValidId($providedValue){
         $this->assertNull($this->ltiUser->getLtiUserId());
 
@@ -135,7 +135,7 @@ class LtiUserTest extends TestCase{
         $this->ltiUser->setLtiCourseId($providedNonValidValue);
     }
 
-    /** @dataProvider provideValidLtiUserOrCourseIds */
+    /** @dataProvider provideValidLtiCourseIds */
     public function testSetCourseIdAcceptsValidId($providedValue){
         $this->assertNull($this->ltiUser->getLtiCourseId());
 
@@ -228,14 +228,26 @@ class LtiUserTest extends TestCase{
     }
 
     /** dataProvider for 
-     * => testSetLtiUserAcceptsValidId
      * => testSetCourseIdAcceptsValidId
      */
-    public function provideValidLtiUserOrCourseIds(){
+    public function provideValidLtiCourseIds(){
         return array(
             array(1),
             array(10),
             array('10'),
+            array('1')
+        );
+    }
+
+    /** dataProvider for 
+     * => testSetLtiUserAcceptsValidId
+     */
+    public function provideValidLtiUserIds(){
+        return array(
+            array('John Doe'),
+            array('info@test.com'),
+            array('9be5e9b3-e455-4455-a01e-4c17d7e835b2'),
+            array('2d9b11af81e14f0dac828f59a1467ccd'),
             array('1')
         );
     }

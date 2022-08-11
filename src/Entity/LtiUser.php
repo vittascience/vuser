@@ -36,7 +36,7 @@ class LtiUser{
     private $ltiConsumer;
 
     /**
-     * @ORM\Column(name="lti_user_id", type="integer",length=11, nullable=false)
+     * @ORM\Column(name="lti_user_id",type="string",length=255,  nullable=false)
      *
      * @var integer
      */
@@ -137,9 +137,9 @@ class LtiUser{
      */ 
     public function setLtiUserId($ltiUserId)
     {
-        // the $ltiUserId is not a string and not an int (meaning an object or array) OR is empty
-        if((!is_string($ltiUserId) && !is_numeric($ltiUserId)) || !$ltiUserId){
-            throw new EntityDataIntegrityException("Invalid Value provided for the lti user id");
+       // the $ltiUserId is not a string (meaning an object or array) OR is empty
+       if(!is_string($ltiUserId) || !$ltiUserId){
+        throw new EntityDataIntegrityException("Invalid Value provided for the lti user id");
         }
         $this->ltiUserId = $ltiUserId;
 
