@@ -490,6 +490,18 @@ class ControllerUser extends Controller
                         $this->entityManager->flush();
                     }
 
+                    // get retro attributed activities if any
+                    $classroomRetroAttributedActivities = $this->entityManager
+                        ->getRepository(ActivityLinkClassroom::class)
+                        ->getRetroAttributedActivitiesByClassroom($classroom);
+                
+                    // some retro attributed activities found, add them to the student
+                    if($classroomRetroAttributedActivities){
+                        $this->entityManager->getRepository(ActivityLinkUser::class)
+                            ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities,$studentRegistered->getId());
+                    }
+
+                    
                     // prepare the student data to be saved in $_SESSION
                     $sessionUserId = intval($studentRegistered->getId()->getId());
                     $connectionToken = bin2hex(random_bytes(32));
