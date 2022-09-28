@@ -467,12 +467,44 @@ class ControllerUser extends Controller
                 // get the student
                 $studentRegistered = $this->registerGarStudentIfNeeded($sanitizedData);
 
-                
-                if ($studentRegistered) {
+                // get the classroom
+                $classroom = $this->entityManager->getRepository(Classroom::class)->find($sanitizedData->classroomId);
 
-                    // get the classroom
-                    $classroom = $this->entityManager->getRepository(Classroom::class)->find($sanitizedData->classroomId);
 
+                if($studentRegistered instanceof User){
+
+                    // check if the current user is already registered as being part of this classroom
+                    $studentExistsInClassroom = $this->entityManager
+                        ->getRepository(ClassroomLinkUser::class)
+                        ->getStudentAndClassroomByIds(
+                            $studentRegistered->getId(),
+                            $sanitizedData->classroomId
+                        );
+                    
+                    if (!$studentExistsInClassroom) { 
+                        // the student not found in the classroom, add it to classroom_users_link_classrooms table
+                        $linkStudentToItsClassroom = new ClassroomLinkUser($studentRegistered, $classroom);
+                        $linkStudentToItsClassroom->setRights(0);
+                        $this->entityManager->persist($linkStudentToItsClassroom);
+                        $this->entityManager->flush();                            
+                    }
+                    
+                    // get retro attributed activities if any
+                    $classroomRetroAttributedActivities = $this->entityManager
+                       ->getRepository(ActivityLinkClassroom::class)
+                       ->getRetroAttributedActivitiesByClassroom($classroom);
+                    // dd($classroomRetroAttributedActivities);
+
+                    // some retro attributed activities found, add them to the student
+                    if($classroomRetroAttributedActivities){
+                        $this->entityManager->getRepository(ActivityLinkUser::class)
+                            ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities,$studentRegistered); 
+                    }
+
+                    $sessionUserId = intval($studentRegistered->getId());
+                }
+
+                if($studentRegistered instanceof ClassroomUser){
 
                     // check if the current user is already registered as being part of this classroom
                     $studentExistsInClassroom = $this->entityManager
@@ -481,7 +513,7 @@ class ControllerUser extends Controller
                             $studentRegistered->getId()->getId(),
                             $sanitizedData->classroomId
                         );
-
+                    
                     if (!$studentExistsInClassroom) {
                         // the student not found in the classroom, add it to classroom_users_link_classrooms table
                         $linkStudentToItsClassroom = new ClassroomLinkUser($studentRegistered->getId(), $classroom);
@@ -490,37 +522,26 @@ class ControllerUser extends Controller
                         $this->entityManager->flush();
                     }
 
-                    // get retro attributed activities if any
-                    $classroomRetroAttributedActivities = $this->entityManager
-                        ->getRepository(ActivityLinkClassroom::class)
-                        ->getRetroAttributedActivitiesByClassroom($classroom);
-                
-                    // some retro attributed activities found, add them to the student
-                    if($classroomRetroAttributedActivities){
-                        $this->entityManager->getRepository(ActivityLinkUser::class)
-                            ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities,$studentRegistered->getId());
-                    }
-
-                    
-                    // prepare the student data to be saved in $_SESSION
                     $sessionUserId = intval($studentRegistered->getId()->getId());
-                    $connectionToken = bin2hex(random_bytes(32));
-
-                    // save the connection token in db
-                    $res = DatabaseManager::getSharedInstance()
-                        ->exec(
-                            "INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)",
-                            [$connectionToken, $sessionUserId]
-                        );
-
-                    // the token is saved in db, set session and redirect the student to its dashboard
-                    $_SESSION["id"] = $sessionUserId;
-                    $_SESSION['token'] =  $connectionToken;
-
-                    $userAddedToClassroom = $res === true ? true : false;
-
-                    return array('userAddedToClassroom' => $userAddedToClassroom);
                 }
+
+                $connectionToken = bin2hex(random_bytes(32));
+
+                // save the connection token in db
+                $res = DatabaseManager::getSharedInstance()
+                    ->exec(
+                        "INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)",
+                        [$connectionToken, $sessionUserId]
+                    );
+
+                // the token is saved in db, set session and redirect the student to its dashboard
+                $_SESSION["id"] = $sessionUserId;
+                $_SESSION['token'] =  $connectionToken;
+
+                $userAddedToClassroom = $res === true ? true : false;
+
+                return array('userAddedToClassroom' => $userAddedToClassroom);
+
             },
             'save_gar_teacher' => function () {
 
@@ -1997,7 +2018,7 @@ class ControllerUser extends Controller
             // persist the classroomUser for later flush
             $this->entityManager->persist($classroomUser);
             $this->entityManager->flush();
-            return $classroomUser;
+            return $user;
         } else return $garUserExists;
     }
 
