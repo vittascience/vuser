@@ -43,7 +43,7 @@ class LtiUser{
     private $ltiUserId;
 
     /**
-     * @ORM\Column(name="lti_course_id",type="integer", length=11, nullable=true)
+     * @ORM\Column(name="lti_course_id",type="string", length=255, nullable=true)
      */
     private $ltiCourseId;
 
@@ -165,7 +165,7 @@ class LtiUser{
      */ 
     public function setLtiCourseId($ltiCourseId)
     {
-        if( (!is_string($ltiCourseId) && !is_numeric($ltiCourseId)) || !$ltiCourseId ){
+        if( !is_string($ltiCourseId)  || !$ltiCourseId ){
             throw new EntityDataIntegrityException("Invalid value provided for lti course id");
         }
         $this->ltiCourseId = $ltiCourseId;
