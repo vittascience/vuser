@@ -1774,9 +1774,9 @@ class ControllerUser extends Controller
 
                 // create empty $errors array, validate data and file $errors if any
                 $errors = [];
-                if(empty($issuer)) $errors['issuerInvalid'] = true;
-                if(empty($ltiUserId)) $errors['userIdInvalid'] = true;
-                if(!is_bool($isTeacher)) $errors['isTeacherInvalid'] = true;
+                if(empty($issuer)) array_push($errors, array('errorType'=> 'issuerInvalid' ));
+                if(empty($ltiUserId)) array_push($errors, array('errorType'=> 'userIdInvalid' )); 
+                if(!is_bool($isTeacher)) array_push($errors, array('errorType'=> 'isTeacherInvalid' )); 
                 
                 // some errors found, return them
                 if(!empty($errors)) return array('errors' => $errors);
