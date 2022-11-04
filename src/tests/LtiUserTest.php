@@ -232,8 +232,8 @@ class LtiUserTest extends TestCase{
      */
     public function provideValidLtiCourseIds(){
         return array(
-            array(1),
-            array(10),
+            array('9be5e9b3-e455-4455-a01e-4c17d7e835b2'),
+            array('2d9b11af81e14f0dac828f59a1467ccd'),
             array('10'),
             array('1')
         );
