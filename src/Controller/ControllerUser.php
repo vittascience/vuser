@@ -1768,15 +1768,15 @@ class ControllerUser extends Controller
 
                 // sanitize incoming data
                 $issuer = !empty($_POST['issuer']) ? htmlspecialchars(strip_tags(trim($_POST['issuer']))) : '' ;
-                $ltiCourseId = !empty($_POST['course_id']) ? intval($_POST['course_id']) : null;
-                $ltiUserId = !empty($_POST['user_id']) ? trim($_POST['user_id']) : 0 ;
+                $ltiCourseId = !empty($_POST['course_id']) ? htmlspecialchars(strip_tags(trim($_POST['course_id']))) : null;
+                $ltiUserId = !empty($_POST['user_id']) ? htmlspecialchars(strip_tags(trim($_POST['user_id']))) : null ;
                 $isTeacher = !empty($_POST['is_teacher']) ? boolval($_POST['is_teacher']) : false;
 
                 // create empty $errors array, validate data and file $errors if any
                 $errors = [];
-                if(empty($issuer)) $errors['issuerInvalid'] = true;
-                if(empty($ltiUserId)) $errors['userIdInvalid'] = true;
-                if(!is_bool($isTeacher)) $errors['isTeacherInvalid'] = true;
+                if(empty($issuer)) array_push($errors, array('errorType'=> 'issuerInvalid' ));
+                if(empty($ltiUserId)) array_push($errors, array('errorType'=> 'userIdInvalid' )); 
+                if(!is_bool($isTeacher)) array_push($errors, array('errorType'=> 'isTeacherInvalid' )); 
                 
                 // some errors found, return them
                 if(!empty($errors)) return array('errors' => $errors);
