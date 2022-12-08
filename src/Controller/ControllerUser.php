@@ -37,7 +37,7 @@ class ControllerUser extends Controller
     public $URL = "";
     public function __construct($entityManager, $user, $url = null)
     {
-        // Load env variables 
+        // Load env variables
         $dotenv = Dotenv::createImmutable(__DIR__ . "/../../../../../");
         $dotenv->load();
         $this->URL = isset($url) ? $url : $_ENV['VS_HOST'];
@@ -113,7 +113,7 @@ class ControllerUser extends Controller
                 // get the current user from user_regulars table
                 $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
                 if ($userIsRegular) {
-                    // return an error if a record was found as only students are allowed here 
+                    // return an error if a record was found as only students are allowed here
                     return ["errorType" => "RegularUserNotAllowed"];
                 }
 
@@ -152,18 +152,18 @@ class ControllerUser extends Controller
                 // get the current user from user_regulars table
                 $userIsRegular = $this->entityManager->getRepository(Regular::class)->find($id);
                 if ($userIsRegular) {
-                    // a record was found,return an error as only students are allowed here 
+                    // a record was found,return an error as only students are allowed here
                     return ["errorType" => "RegularUserNotAllowed"];
                 }
 
                 // get the student data from users table
                 $student = $this->entityManager->getRepository(User::class)->find($id);
                 if (!$student) {
-                    // no record found,return an error as only existing students are allowed here 
+                    // no record found,return an error as only existing students are allowed here
                     return ["errorType" => "UserNotExists"];
                 } else {
                     // the student was found
-                    // set its current password as $oldPassword to check against the $newPassword  
+                    // set its current password as $oldPassword to check against the $newPassword
                     $oldPassword = $student->getPassword();
 
                     // generate a new password
@@ -300,7 +300,7 @@ class ControllerUser extends Controller
                 $studentActivities = $this->entityManager
                     ->getRepository(ActivityLinkUser::class)
                     ->findBy(array('user'=> $student));
-                
+
                 // some student activities found, remove them from classroom_activities_link_classroom_users
                 if($studentActivities){
                     foreach($studentActivities as $studentActivity){
@@ -308,7 +308,7 @@ class ControllerUser extends Controller
                         $this->entityManager->flush();
                     }
                 }
-                
+
                 // the logged user has enough 'rights', remove the student record from classroom_users_link_classrooms table
                 $this->entityManager->remove($studentClassroom);
 
@@ -322,7 +322,7 @@ class ControllerUser extends Controller
             'get_one_by_pseudo_and_password' => function ($data) {
                 /**
                  * This method is used by the non logged students to login into a classroom
-                 * => /classroom/login.php?link=$CharLink => sign in 
+                 * => /classroom/login.php?link=$CharLink => sign in
                  */
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
@@ -379,11 +379,12 @@ class ControllerUser extends Controller
 
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
-                
+
                 $incomingClassrooms = $_POST['classrooms'];
                 $classroomsToFind = [];
                 // bind and sanitize incoming data
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
+
 
                 foreach($incomingClassrooms as $incomingClassroom){
                     list($incomingClassroomGarCode, $incomingClassroomName) = explode('##',$incomingClassroom);
@@ -400,30 +401,32 @@ class ControllerUser extends Controller
                 $classroomsCreated = [];
                 $classroomsNotCreated = [];
                 foreach( $classroomsToFind  as $classroomToFind){
-                    $classroomFound = $this->entityManager->getRepository(Classroom::class)->findOneBy(array(
+                    $classroomsFound = $this->entityManager->getRepository(Classroom::class)->findBy(array(
                         'name' => $classroomToFind['name'],
                         'garCode' => $classroomToFind['garCode'],
                         'uai' => $uai
                     ));
 
-                    if($classroomFound){
-                       
-                       $teacher = $this->entityManager
-                                   ->getRepository(ClassroomLinkUser::class)
-                                   ->findOneBy(array(
-                                       'classroom' => $classroomFound,
-                                       'rights' => 2
-                                   ))
-                                   ->getUser()
-                                   ->getPseudo();
-                   
-                       array_push($classroomsCreated, array(
-                           'id' => $classroomFound->getId(),
-                           'name' => $classroomFound->getName(),
-                           'garCode' => $classroomFound->getGarCode(),
-                           'classroomLink' => $classroomFound->getLink(),
-                           'teacher' => $teacher
-                       ));
+                    if($classroomsFound){
+                        foreach($classroomsFound as $classroomFound) {
+                            $teacher = $this->entityManager
+                                ->getRepository(ClassroomLinkUser::class)
+                                ->findOneBy(array(
+                                    'classroom' => $classroomFound,
+                                    'rights' => 2
+                                ))
+                                ->getUser()
+                                ->getPseudo();
+
+                            array_push($classroomsCreated, array(
+                                'id' => $classroomFound->getId(),
+                                'name' => $classroomFound->getName(),
+                                'garCode' => $classroomFound->getGarCode(),
+                                'classroomLink' => $classroomFound->getLink(),
+                                'teacher' => $teacher
+                            ));
+                        }
+
                     } else {
                        array_push($classroomsNotCreated, array(
                            'name' => $classroomToFind['name'],
@@ -433,11 +436,11 @@ class ControllerUser extends Controller
                   /*   echo "<pre>".print_r($classroomToFind['name'],true);
                     echo "<pre>".print_r($classroomToFind['garCode'],true); */
                 }
-                
+
                 return array('classrooms'=> array(
                     'created' => $classroomsCreated,
                     'notCreated' => $classroomsNotCreated
-                ));            
+                ));
             },
             'register_and_add_gar_student_to_classroom' => function () {
 
@@ -459,11 +462,11 @@ class ControllerUser extends Controller
                     ? htmlspecialchars(strip_tags(trim($incomingData->classroomName)))
                     : '';
                 $sanitizedData->classroomId = isset($incomingData->classroomId) ? intval($incomingData->classroomId) : 0;
-                $sanitizedData->classroomGarCode = isset($incomingData->classroomGarCode) 
-                    ? htmlspecialchars(strip_tags(trim($incomingData->classroomGarCode))) 
+                $sanitizedData->classroomGarCode = isset($incomingData->classroomGarCode)
+                    ? htmlspecialchars(strip_tags(trim($incomingData->classroomGarCode)))
                     : '';
                 $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->classroomName}-{$sanitizedData->classroomGarCode}";
-                
+
                 // get the student
                 $studentRegistered = $this->registerGarStudentIfNeeded($sanitizedData);
 
@@ -480,15 +483,15 @@ class ControllerUser extends Controller
                             $studentRegistered->getId(),
                             $sanitizedData->classroomId
                         );
-                    
-                    if (!$studentExistsInClassroom) { 
+
+                    if (!$studentExistsInClassroom) {
                         // the student not found in the classroom, add it to classroom_users_link_classrooms table
                         $linkStudentToItsClassroom = new ClassroomLinkUser($studentRegistered, $classroom);
                         $linkStudentToItsClassroom->setRights(0);
                         $this->entityManager->persist($linkStudentToItsClassroom);
-                        $this->entityManager->flush();                            
+                        $this->entityManager->flush();
                     }
-                    
+
                     // get retro attributed activities if any
                     $classroomRetroAttributedActivities = $this->entityManager
                        ->getRepository(ActivityLinkClassroom::class)
@@ -498,7 +501,7 @@ class ControllerUser extends Controller
                     // some retro attributed activities found, add them to the student
                     if($classroomRetroAttributedActivities){
                         $this->entityManager->getRepository(ActivityLinkUser::class)
-                            ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities,$studentRegistered); 
+                            ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities,$studentRegistered);
                     }
 
                     $sessionUserId = intval($studentRegistered->getId());
@@ -513,7 +516,7 @@ class ControllerUser extends Controller
                             $studentRegistered->getId()->getId(),
                             $sanitizedData->classroomId
                         );
-                    
+
                     if (!$studentExistsInClassroom) {
                         // the student not found in the classroom, add it to classroom_users_link_classrooms table
                         $linkStudentToItsClassroom = new ClassroomLinkUser($studentRegistered->getId(), $classroom);
@@ -609,11 +612,11 @@ class ControllerUser extends Controller
                     $user->setPseudo("$pre $nom");
                     $user->setPassword($hashedPassword);
 
-                    // save the user 
+                    // save the user
                     $this->entityManager->persist($user);
                     $this->entityManager->flush();
 
-                    // retrieve the lastInsertId to use for the next query 
+                    // retrieve the lastInsertId to use for the next query
                     // this value is only available after a flush()
                     //$user->setId($user->getId());
 
@@ -670,7 +673,7 @@ class ControllerUser extends Controller
                     // get the classroom and group from classrooms and classroom_users_link_classrooms joined tables
                     $classroomExists = $this->entityManager
                         ->getRepository(ClassroomLinkUser::class)
-                        ->getTeacherClassroomBy($teacherId, $classroomName, $uai, $classroomCode); 
+                        ->getTeacherClassroomBy($teacherId, $classroomName, $uai, $classroomCode);
 
 
                     // the classroom already exists, we do nothing
@@ -731,7 +734,7 @@ class ControllerUser extends Controller
                 );
             },
             'save_gar_employee_as_teacher' => function(){
-                
+
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
@@ -743,12 +746,12 @@ class ControllerUser extends Controller
                 $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) : '';
                 $fakeRegularEmail = $this->generateFakeEmailWithPrefix("gar.employee");
 
-               
+
                 // get the teacher by its ido(opaque identifier)
                 $garUserExists = $this->entityManager
                     ->getRepository('User\Entity\ClassroomUser')
                     ->findOneBy(array("garId" => $ido));
-                
+
                 if($garUserExists){
                     return array(
                         'userId' => $garUserExists->getId()->getId()
@@ -766,7 +769,7 @@ class ControllerUser extends Controller
                 $user->setPseudo("$pre $nom");
                 $user->setPassword($hashedPassword);
 
-                // save the user 
+                // save the user
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
 
@@ -789,11 +792,11 @@ class ControllerUser extends Controller
                 $userPremium = new UserPremium($user);
                 $this->entityManager->persist($userPremium);
                 $this->entityManager->flush();
-                
+
                 return array(
                     'userId' => $user->getId()
                 );
-                
+
             },
             'save_gar_employee_classroom' => function(){
                 // accept only POST request
@@ -802,7 +805,7 @@ class ControllerUser extends Controller
                 // bind and sanitize incoming data
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
                 $userId = isset($_POST['userId']) ? intval($_POST['userId']) : 0;
-                
+
                 // get the user from db
                 $teacher = $this->entityManager->getRepository(User::class)->find($userId);
 
@@ -813,7 +816,7 @@ class ControllerUser extends Controller
                         'user' => $teacher,
                         'rights' => 2
                     ));
-                
+
                 // the classroom exists in db return it
                 if($classroomExist){
                     return array(
@@ -828,7 +831,7 @@ class ControllerUser extends Controller
                     ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['VS_DEMOSTUDENT']))))
                     : 'demostudent';
 
-                // create the classroom to save 
+                // create the classroom to save
                 $uniqueLink = $this->generateUniqueClassroomLink();
                 $classroom = new Classroom("Ma classe");
                 $classroom->setUai($uai);
@@ -861,7 +864,7 @@ class ControllerUser extends Controller
                 return array(
                     'classroomId' => $classroomLinkUser->getClassroom()->getId(),
                     'classroomLink' => $classroomLinkUser->getClassroom()->getLink(),
-                );            
+                );
             },
             'linkSystem' => function () {
                 /**
@@ -875,7 +878,7 @@ class ControllerUser extends Controller
                 $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
                 $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
 
-                // return an error when the pseudo is missing               
+                // return an error when the pseudo is missing
                 if (empty($pseudo)) {
                     return array(
                         'isUsersAdded' => false,
@@ -886,7 +889,7 @@ class ControllerUser extends Controller
                 // retrieve the classroom by its link
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findOneBy(array("link" => $classroomLink));
 
-                // if the current classroom is Blocked by the teacher 
+                // if the current classroom is Blocked by the teacher
                 if ($classroom->getIsBlocked() === true) {
                     // disallow students to join
                     return [
@@ -1024,7 +1027,7 @@ class ControllerUser extends Controller
                 $classroomRetroAttributedActivities = $this->entityManager
                     ->getRepository(ActivityLinkClassroom::class)
                     ->getRetroAttributedActivitiesByClassroom($classroom);
-                
+
                 // some retro attributed activities found, add them to the student
                 if($classroomRetroAttributedActivities){
                     $this->entityManager->getRepository(ActivityLinkUser::class)
@@ -1058,7 +1061,7 @@ class ControllerUser extends Controller
                 $user->classroomUser = $classroomUser;
                 $user->pin = $password;
 
-                // set/save the token,user and pin in session 
+                // set/save the token,user and pin in session
                 $token = bin2hex(random_bytes(32));
                 DatabaseManager::getSharedInstance()
                     ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
@@ -1313,7 +1316,7 @@ class ControllerUser extends Controller
                     ->getRepository('User\Entity\Regular')
                     ->findOneBy(array('email' => $email));
 
-                // the email already exists in db,set emailExists error 
+                // the email already exists in db,set emailExists error
                 if ($emailAlreadyExists) $errors['emailExists'] = true;
 
                 // some errors were found, return them to the user
@@ -1339,7 +1342,7 @@ class ControllerUser extends Controller
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
 
-                // retrieve the lastInsertId to use for the next query 
+                // retrieve the lastInsertId to use for the next query
                 // this value is only available after a flush()
                 //$user->setId($user->getId());
 
@@ -1360,7 +1363,7 @@ class ControllerUser extends Controller
                     ? htmlspecialchars(strip_tags(trim($_COOKIE['lng'])))
                     : 'fr';
 
-                // create the confirmation account link and set the email template to be used      
+                // create the confirmation account link and set the email template to be used
                 $accountConfirmationLink = "{$this->URL}/classroom/confirm_account.php?token=$confirmationToken";
                 $emailTtemplateBody = $userLang . "_confirm_account";
 
@@ -1466,7 +1469,7 @@ class ControllerUser extends Controller
                         $confirmationToken = time() . "-" . bin2hex($email);
                         $regularUserToUpdate->setConfirmToken($confirmationToken);
 
-                        // set the flag to true for sending email later 
+                        // set the flag to true for sending email later
                         $emailUpdatedRequested = true;
                     }
                 }
@@ -1488,7 +1491,7 @@ class ControllerUser extends Controller
                     );
                 }
 
-                // no errors, update the fields value 
+                // no errors, update the fields value
                 if (!empty($firstname)) $userToUpdate->setFirstname($firstname);
                 if (!empty($surname)) $userToUpdate->setSurname($surname);
                 if (!empty($pseudo)) $userToUpdate->setPseudo($pseudo);
@@ -1578,7 +1581,7 @@ class ControllerUser extends Controller
 
                     return !empty($url) ? $url : "/index.php";
 
-                    /* else 
+                    /* else
                     {
                         $res = $manager->deleteToken($sessionUserId, $sessionToken);
                         if ($res) {
@@ -1775,31 +1778,31 @@ class ControllerUser extends Controller
                 // create empty $errors array, validate data and file $errors if any
                 $errors = [];
                 if(empty($issuer)) array_push($errors, array('errorType'=> 'issuerInvalid' ));
-                if(empty($ltiUserId)) array_push($errors, array('errorType'=> 'userIdInvalid' )); 
-                if(!is_bool($isTeacher)) array_push($errors, array('errorType'=> 'isTeacherInvalid' )); 
-                
+                if(empty($ltiUserId)) array_push($errors, array('errorType'=> 'userIdInvalid' ));
+                if(!is_bool($isTeacher)) array_push($errors, array('errorType'=> 'isTeacherInvalid' ));
+
                 // some errors found, return them
                 if(!empty($errors)) return array('errors' => $errors);
 
-               
+
                 // get the ltiTool using the issuer
                 $ltiConsumer = $this->entityManager
                 ->getRepository(LtiConsumer::class)
                 ->findOneBy(array('issuer' => $issuer));
-            
+
                 $ltiUserExists = $this->entityManager
                     ->getRepository(LtiUser::class)
                     ->findOneBy(array(
                         'ltiConsumer' => $ltiConsumer,
                         'ltiUserId' => $ltiUserId
                     ));
-                
+
                 // the lti user exists, return its id
                 if($ltiUserExists){
                     return array('userId' => $ltiUserExists->getUser()->getId());
                 }
 
-               
+
                 // lti user does not exists
                 // create the user
                 $password = passwordGenerator();
@@ -1823,11 +1826,11 @@ class ControllerUser extends Controller
                 if($ltiCourseId){
                     $ltiUser->setLtiCourseId($ltiCourseId);
                 }
-                
+
                 $this->entityManager->persist($ltiUser);
                 $this->entityManager->flush();
 
-               
+
                 return array('userId' => $ltiUser->getUser()->getId());
             }
             /* 'get_all' => function () {
@@ -1836,7 +1839,7 @@ class ControllerUser extends Controller
                  * @NoApiCallFound NO RECORD FOUND FOR /routing/Routing.php?controller=user&action=get_all in the search
                  * @ToBeRemoved
                  * last check => September 2021
-                 
+
                 return $this->entityManager->getRepository('User\Entity\User')->findAll();
             }, */
             /*'garSystem' => function () {
@@ -1880,7 +1883,7 @@ class ControllerUser extends Controller
                         $body .= "<p style=\" font-family:'Open Sans'; \">Vous vous êtes connecté à l'application Vittascience via le GAR.</p>";
                         $body .= "<p style=\" font-family:'Open Sans'; \">Si jamais vous souhaitez vous connecter sans passer par le GAR, voici votre mot de passe provisoire :<bold>" . $password . "</bold>.";
 
-                        Mailer::sendMail("support@vittascience.com", $subject, $body, $body); 
+                        Mailer::sendMail("support@vittascience.com", $subject, $body, $body);
                         } else {
                             $classroomUser->setIsTeacher(false);
                             $classroomUser->setMailTeacher(NULL);
@@ -2001,11 +2004,11 @@ class ControllerUser extends Controller
             $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
             $user->setPassword($hashedPassword);
 
-            // save the user 
+            // save the user
             $this->entityManager->persist($user);
             $this->entityManager->flush();
 
-            // retrieve the lastInsertId to use for the next query 
+            // retrieve the lastInsertId to use for the next query
             // this value is only available after a flush()
             //$user->setId($user->getId());
 
@@ -2024,7 +2027,7 @@ class ControllerUser extends Controller
 
     /**
      * generateUpdatedPassword
-     * 
+     *
      * @param  string $pseudo
      * @param  string $oldPassword
      * @return string generate a new password different for the old one
@@ -2057,7 +2060,7 @@ class ControllerUser extends Controller
      * @return string
      */
     private function generateFakeEmailWithPrefix($prefix){
-        
+
         // generate the new password and check if a record exists in db with these credentials
         do {
            $email = $prefix.'.'.passwordGenerator()."@gmail.com";
@@ -2076,7 +2079,7 @@ class ControllerUser extends Controller
         $alphaNums = "abcdefghijklmnopqrstuvwxyz0123456789";
         do{
             $link = "";
-            
+
             for ($i = 0; $i < 5; $i++) {
                 $link .= substr($alphaNums, rand(0, 35), 1);
             }
