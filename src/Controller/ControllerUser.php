@@ -385,7 +385,6 @@ class ControllerUser extends Controller
                 // bind and sanitize incoming data
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
 
-
                 foreach($incomingClassrooms as $incomingClassroom){
                     list($incomingClassroomGarCode, $incomingClassroomName) = explode('##',$incomingClassroom);
                     $classroomCode = htmlspecialchars(strip_tags(trim($incomingClassroomGarCode)));
@@ -415,15 +414,15 @@ class ControllerUser extends Controller
                                     'classroom' => $classroomFound,
                                     'rights' => 2
                                 ))
-                                ->getUser()
-                                ->getPseudo();
+                                ->getUser();
 
                             array_push($classroomsCreated, array(
                                 'id' => $classroomFound->getId(),
                                 'name' => $classroomFound->getName(),
                                 'garCode' => $classroomFound->getGarCode(),
                                 'classroomLink' => $classroomFound->getLink(),
-                                'teacher' => $teacher
+                                'teacher' => $teacher->getPseudo(),
+                                'teacherId' => $teacher->getId()
                             ));
                         }
 
@@ -465,7 +464,8 @@ class ControllerUser extends Controller
                 $sanitizedData->classroomGarCode = isset($incomingData->classroomGarCode)
                     ? htmlspecialchars(strip_tags(trim($incomingData->classroomGarCode)))
                     : '';
-                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->classroomName}-{$sanitizedData->classroomGarCode}";
+                $sanitizedData->classroomTeacherId = isset($incomingData->classroomTeacherId) ? intval($incomingData->classroomTeacherId) : 0;
+                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->classroomName}-{$sanitizedData->classroomGarCode}-{$sanitizedData->classroomTeacherId}";
 
                 // get the student
                 $studentRegistered = $this->registerGarStudentIfNeeded($sanitizedData);
@@ -2003,6 +2003,7 @@ class ControllerUser extends Controller
             $user->setSurname($sanitizedData->nom);
             $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
             $user->setPassword($hashedPassword);
+            $user->setInsertDate(new \DateTime('now'));
 
             // save the user
             $this->entityManager->persist($user);
