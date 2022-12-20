@@ -2003,6 +2003,7 @@ class ControllerUser extends Controller
             $user->setSurname($sanitizedData->nom);
             $user->setPseudo("{$sanitizedData->pre} {$sanitizedData->nom}");
             $user->setPassword($hashedPassword);
+            $user->setInsertDate(new \DateTime('now'));
 
             // save the user
             $this->entityManager->persist($user);
