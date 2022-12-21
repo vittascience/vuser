@@ -401,32 +401,30 @@ class ControllerUser extends Controller
                 $classroomsCreated = [];
                 $classroomsNotCreated = [];
                 foreach( $classroomsToFind  as $classroomToFind){
-                    $classroomsFound = $this->entityManager->getRepository(Classroom::class)->findBy(array(
+                    $classroomFound = $this->entityManager->getRepository(Classroom::class)->findOneBy(array(
                         'name' => $classroomToFind['name'],
                         'garCode' => $classroomToFind['garCode'],
                         'uai' => $uai
                     ));
 
-                    if($classroomsFound){
-                        foreach($classroomsFound as $classroomFound) {
-                            $teacher = $this->entityManager
-                                ->getRepository(ClassroomLinkUser::class)
-                                ->findOneBy(array(
-                                    'classroom' => $classroomFound,
-                                    'rights' => 2
-                                ))
-                                ->getUser()
-                                ->getPseudo();
-
-                            array_push($classroomsCreated, array(
-                                'id' => $classroomFound->getId(),
-                                'name' => $classroomFound->getName(),
-                                'garCode' => $classroomFound->getGarCode(),
-                                'classroomLink' => $classroomFound->getLink(),
-                                'teacher' => $teacher
-                            ));
-                        }
-
+                    if($classroomFound){
+                       
+                       $teacher = $this->entityManager
+                                   ->getRepository(ClassroomLinkUser::class)
+                                   ->findOneBy(array(
+                                       'classroom' => $classroomFound,
+                                       'rights' => 2
+                                   ))
+                                   ->getUser()
+                                   ->getPseudo();
+                   
+                       array_push($classroomsCreated, array(
+                           'id' => $classroomFound->getId(),
+                           'name' => $classroomFound->getName(),
+                           'garCode' => $classroomFound->getGarCode(),
+                           'classroomLink' => $classroomFound->getLink(),
+                           'teacher' => $teacher
+                       ));
                     } else {
                        array_push($classroomsNotCreated, array(
                            'name' => $classroomToFind['name'],
