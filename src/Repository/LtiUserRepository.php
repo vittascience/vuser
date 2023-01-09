@@ -97,6 +97,26 @@ class LtiUserRepository extends EntityRepository{
         return $activeTeachersId;
     }
 
+    public function getAverageTimeSpentByTeachersAndPerConsumer($consumer, $data){
+        $formattedMonth = sprintf('%02d',$data->month);
+        $connectionDate = "{$data->year}-$formattedMonth";
+       
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent,COUNT(DISTINCT(lu.user)) AS activeTeachersCount')
+                        ->from(LtiUserConnection::class,'luc')
+                        ->leftJoin(LtiUser::class,'lu','WITH','luc.user=lu.user')
+                        ->andWhere('lu.isTeacher=1')
+                        ->andWhere('lu.ltiConsumer= :consumer')
+                        ->andWhere('luc.connectionDate LIKE :connectionDate')
+                        ->setParameter('consumer',$consumer)
+                        ->setParameter('connectionDate',"$connectionDate%")
+                        ->getQuery()
+                        ->getResult();
+       
+        $averageTimeSpentByActiveTeachers = $result[0]['timeSpent']/$result[0]['activeTeachersCount'];
+        return $averageTimeSpentByActiveTeachers;
+    }
+
     public function getStudentsIdByConsumer($consumer){
        
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
@@ -183,5 +203,25 @@ class LtiUserRepository extends EntityRepository{
             array_push($activeTeachersId,$result->getUser()->getId());
         }
         return $activeTeachersId;
+    }
+
+    public function getAverageTimeSpentByStudentsAndPerConsumer($consumer, $data){
+        $formattedMonth = sprintf('%02d',$data->month);
+        $connectionDate = "{$data->year}-$formattedMonth";
+       
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent,COUNT(DISTINCT(lu.user)) AS activeStudentsCount')
+                        ->from(LtiUserConnection::class,'luc')
+                        ->leftJoin(LtiUser::class,'lu','WITH','luc.user=lu.user')
+                        ->andWhere('lu.isTeacher=0')
+                        ->andWhere('lu.ltiConsumer= :consumer')
+                        ->andWhere('luc.connectionDate LIKE :connectionDate')
+                        ->setParameter('consumer',$consumer)
+                        ->setParameter('connectionDate',"$connectionDate%")
+                        ->getQuery()
+                        ->getResult();
+       
+        $averageTimeSpentByActiveStudents = $result[0]['timeSpent']/$result[0]['activeStudentsCount'];
+        return $averageTimeSpentByActiveStudents;
     }
 }
