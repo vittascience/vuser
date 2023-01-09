@@ -2,11 +2,13 @@
 
 namespace User\Repository;
 
-use Doctrine\ORM\EntityRepository;
-use User\Entity\LtiUser;
 use User\Entity\User;
+use User\Entity\LtiUser;
+use Doctrine\ORM\EntityRepository;
+use User\Entity\LtiUserConnection;
 
 class LtiUserRepository extends EntityRepository{
+    
     public function getTeachersIdByConsumer($consumer){
        
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
@@ -24,6 +26,77 @@ class LtiUserRepository extends EntityRepository{
         return $results;
     }
 
+    public function getActiveTeachersIdByConsumer($consumer, $data){
+        $formattedMonth = sprintf('%02d',$data->month);
+        $connectionDate = "{$data->year}-$formattedMonth";
+       
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $results = $queryBuilder->select('luc')
+                        ->from(LtiUserConnection::class,'luc')
+                        ->leftJoin(LtiUser::class,'lu','WITH','luc.user=lu.user')
+                        ->andWhere('lu.isTeacher=1')
+                        ->andWhere('lu.ltiConsumer= :consumer')
+                        ->andWhere('luc.connectionDate LIKE :connectionDate')
+                        ->setParameter('consumer',$consumer)
+                        ->setParameter('connectionDate',"$connectionDate%")
+                        ->groupBy('lu.user')
+                        ->getQuery()
+                        ->getResult();
+        $activeTeachersId = [];
+        foreach($results as $result){
+            
+            array_push($activeTeachersId,$result->getUser()->getId());
+        }
+        return $activeTeachersId;
+    }
+
+    public function getNewTeachersIdByConsumer($consumer,$data){
+        $formattedMonth = sprintf('%02d',$data->month);
+        $insertDate = "{$data->year}-$formattedMonth";
+       
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $results = $queryBuilder->select('lu')
+                        ->from(LtiUser::class,'lu')
+                        ->leftJoin(User::class,'u','WITH','lu.user=u.id')
+                        ->andWhere('lu.isTeacher=1')
+                        ->andWhere('lu.ltiConsumer= :consumer')
+                        ->andWhere('u.insertDate LIKE :insertDate')
+                        ->setParameter('consumer',$consumer)
+                        ->setParameter('insertDate',"$insertDate%")
+                        ->getQuery()
+                        ->getResult();
+        $newTeachersId = [];
+       
+        foreach($results as $result){
+            
+            array_push($newTeachersId,$result->getUser()->getId());
+        }
+        return $newTeachersId;
+    }
+
+    public function getTeachersConnectionsByConsumer($consumer, $data){
+        $formattedMonth = sprintf('%02d',$data->month);
+        $connectionDate = "{$data->year}-$formattedMonth";
+       
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $results = $queryBuilder->select('luc')
+                        ->from(LtiUserConnection::class,'luc')
+                        ->leftJoin(LtiUser::class,'lu','WITH','luc.user=lu.user')
+                        ->andWhere('lu.isTeacher=1')
+                        ->andWhere('lu.ltiConsumer= :consumer')
+                        ->andWhere('luc.connectionDate LIKE :connectionDate')
+                        ->setParameter('consumer',$consumer)
+                        ->setParameter('connectionDate',"$connectionDate%")
+                        ->getQuery()
+                        ->getResult();
+        $activeTeachersId = [];
+        foreach($results as $result){
+            
+            array_push($activeTeachersId,$result->getUser()->getId());
+        }
+        return $activeTeachersId;
+    }
+
     public function getStudentsIdByConsumer($consumer){
        
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
@@ -39,5 +112,76 @@ class LtiUserRepository extends EntityRepository{
             array_push($studentsId, $result->getUser()->getId());
         }
         return $results;
+    }
+
+    public function getActiveStudentsIdByConsumer($consumer, $data){
+        $formattedMonth = sprintf('%02d',$data->month);
+        $connectionDate = "{$data->year}-$formattedMonth";
+       
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $results = $queryBuilder->select('luc')
+                        ->from(LtiUserConnection::class,'luc')
+                        ->leftJoin(LtiUser::class,'lu','WITH','luc.user=lu.user')
+                        ->andWhere('lu.isTeacher=0')
+                        ->andWhere('lu.ltiConsumer= :consumer')
+                        ->andWhere('luc.connectionDate LIKE :connectionDate')
+                        ->setParameter('consumer',$consumer)
+                        ->setParameter('connectionDate',"$connectionDate%")
+                        ->groupBy('lu.user')
+                        ->getQuery()
+                        ->getResult();
+        $activeTeachersId = [];
+        foreach($results as $result){
+            
+            array_push($activeTeachersId,$result->getUser()->getId());
+        }
+        return $activeTeachersId;
+    }
+
+    public function getNewStudentsIdByConsumer($consumer,$data){
+        $formattedMonth = sprintf('%02d',$data->month);
+        $insertDate = "{$data->year}-$formattedMonth";
+       
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $results = $queryBuilder->select('lu')
+                        ->from(LtiUser::class,'lu')
+                        ->leftJoin(User::class,'u','WITH','lu.user=u.id')
+                        ->andWhere('lu.isTeacher=0')
+                        ->andWhere('lu.ltiConsumer= :consumer')
+                        ->andWhere('u.insertDate LIKE :insertDate')
+                        ->setParameter('consumer',$consumer)
+                        ->setParameter('insertDate',"$insertDate%")
+                        ->getQuery()
+                        ->getResult();
+        $newTeachersId = [];
+       
+        foreach($results as $result){
+            
+            array_push($newTeachersId,$result->getUser()->getId());
+        }
+        return $newTeachersId;
+    }
+
+    public function getStudentsConnectionsByConsumer($consumer, $data){
+        $formattedMonth = sprintf('%02d',$data->month);
+        $connectionDate = "{$data->year}-$formattedMonth";
+       
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $results = $queryBuilder->select('luc')
+                        ->from(LtiUserConnection::class,'luc')
+                        ->leftJoin(LtiUser::class,'lu','WITH','luc.user=lu.user')
+                        ->andWhere('lu.isTeacher=0')
+                        ->andWhere('lu.ltiConsumer= :consumer')
+                        ->andWhere('luc.connectionDate LIKE :connectionDate')
+                        ->setParameter('consumer',$consumer)
+                        ->setParameter('connectionDate',"$connectionDate%")
+                        ->getQuery()
+                        ->getResult();
+        $activeTeachersId = [];
+        foreach($results as $result){
+            
+            array_push($activeTeachersId,$result->getUser()->getId());
+        }
+        return $activeTeachersId;
     }
 }
