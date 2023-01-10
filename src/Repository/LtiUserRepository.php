@@ -118,7 +118,7 @@ class LtiUserRepository extends EntityRepository
             ->setParameter('connectionDate', "$connectionDate%")
             ->getQuery()
             ->getResult();
-            
+
         if ($result[0]['activeTeachersCount'] == 0) $averageTimeSpentByActiveTeachers = 0;
         else $averageTimeSpentByActiveTeachers = $result[0]['timeSpent'] / $result[0]['activeTeachersCount'];
 
@@ -234,7 +234,8 @@ class LtiUserRepository extends EntityRepository
             ->getQuery()
             ->getResult();
 
-        $averageTimeSpentByActiveStudents = $result[0]['timeSpent'] / $result[0]['activeStudentsCount'];
+        if ($result[0]['activeStudentsCount'] == 0) $averageTimeSpentByActiveStudents = 0;
+        else $averageTimeSpentByActiveStudents = $result[0]['timeSpent'] / $result[0]['activeStudentsCount'];
         return $averageTimeSpentByActiveStudents;
     }
 }
