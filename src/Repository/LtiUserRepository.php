@@ -4,6 +4,7 @@ namespace User\Repository;
 
 use User\Entity\User;
 use User\Entity\LtiUser;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityRepository;
 use User\Entity\LtiUserConnection;
 
@@ -237,5 +238,42 @@ class LtiUserRepository extends EntityRepository
         if ($result[0]['activeStudentsCount'] == 0) $averageTimeSpentByActiveStudents = 0;
         else $averageTimeSpentByActiveStudents = $result[0]['timeSpent'] / $result[0]['activeStudentsCount'];
         return $averageTimeSpentByActiveStudents;
+    }
+
+    public function getLastMonthConnectionsByConsumer($consumer, $data)
+    {
+       
+        $formattedMonth = sprintf('%02d', $data->month);
+        $connectionDate = "{$data->year}-$formattedMonth";
+
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $results = $queryBuilder->select('luc')
+            ->from(LtiUserConnection::class, 'luc')
+            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->andWhere('lu.ltiConsumer= :consumer')
+            ->andWhere('luc.connectionDate LIKE :connectionDate')
+            ->setParameter('consumer', $consumer)
+            ->setParameter('connectionDate', "$connectionDate%")
+            ->getQuery()
+            ->getResult();
+           
+        $connectionsId = [];
+        foreach ($results as $result) {
+            array_push($connectionsId, $result->getId());
+        }
+        
+        return $connectionsId;
+    }
+    public function deleteConnectionsEntries($connectionsIds){
+        if($connectionsIds){
+            $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+            $queryBuilder->delete(LtiUserConnection::class,'luc')
+            ->andWhere('luc.id IN (:idsArray)')
+            ->setParameter('idsArray',$connectionsIds)
+            ->getQuery()
+            ->execute();
+         
+            return;
+       }
     }
 }
