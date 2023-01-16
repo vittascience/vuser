@@ -4,7 +4,6 @@ namespace User\Repository;
 
 use User\Entity\User;
 use User\Entity\LtiUser;
-use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityRepository;
 use User\Entity\LtiUserConnection;
 
