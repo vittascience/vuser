@@ -4,6 +4,7 @@ namespace User\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use User\Entity\User;
+use Doctrine\ORM\Query\Expr\Join;
 
 class UserRepository extends EntityRepository
 {
