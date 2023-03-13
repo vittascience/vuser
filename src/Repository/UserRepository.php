@@ -18,4 +18,15 @@ class UserRepository extends EntityRepository
             ->getQuery();
         return $query->getResult();
     }
+
+    public function getNewsLetterMembers() {
+        $query = $this->getEntityManager()
+            ->createQueryBuilder()
+            ->select("r.id, r.email, u.firstname, u.lastname")
+            ->from(Regular::class, 'r')
+            ->innerJoin(User::class, 'u', Join::WITH, 'r.user = u.id')
+            ->where('u.newsletter = 1')
+            ->getQuery();
+        return $query->getResult();
+    }
 }
