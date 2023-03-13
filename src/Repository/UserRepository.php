@@ -25,8 +25,8 @@ class UserRepository extends EntityRepository
         $query = $this->getEntityManager()
             ->createQueryBuilder()
             ->select("r.id, r.email, u.firstname, u.lastname")
-            ->from(Regular::class, 'r')
-            ->innerJoin(User::class, 'u', Join::WITH, 'r.user = u.id')
+            ->from(User::class, 'u')
+            ->innerJoin(Regular::class, 'r', Join::WITH, 'u.id = r.user')
             ->where('u.newsletter = 1')
             ->getQuery();
         return $query->getResult();
