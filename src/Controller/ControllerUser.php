@@ -707,8 +707,8 @@ class ControllerUser extends Controller
                         // create default demoStudent user (required for the dashboard to work properly)
                         $password = passwordGenerator();
                         $user = new User();
-                        $user->setFirstname("élève");
-                        $user->setSurname("modèl");
+                        $user->setFirstname("links-élève");
+                        $user->setSurname("links-modèl");
                         $user->setPseudo($demoStudent);
                         $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
 
