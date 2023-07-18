@@ -385,7 +385,6 @@ class ControllerUser extends Controller
                 // bind and sanitize incoming data
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
 
-
                 foreach($incomingClassrooms as $incomingClassroom){
                     list($incomingClassroomGarCode, $incomingClassroomName) = explode('##',$incomingClassroom);
                     $classroomCode = htmlspecialchars(strip_tags(trim($incomingClassroomGarCode)));
@@ -407,24 +406,26 @@ class ControllerUser extends Controller
                         'uai' => $uai
                     ));
 
-                    if($classroomFound){
-                       
-                       $teacher = $this->entityManager
-                                   ->getRepository(ClassroomLinkUser::class)
-                                   ->findOneBy(array(
-                                       'classroom' => $classroomFound,
-                                       'rights' => 2
-                                   ))
-                                   ->getUser()
-                                   ->getPseudo();
-                   
-                       array_push($classroomsCreated, array(
-                           'id' => $classroomFound->getId(),
-                           'name' => $classroomFound->getName(),
-                           'garCode' => $classroomFound->getGarCode(),
-                           'classroomLink' => $classroomFound->getLink(),
-                           'teacher' => $teacher
-                       ));
+                    if($classroomsFound){
+                        foreach($classroomsFound as $classroomFound) {
+                            $teacher = $this->entityManager
+                                ->getRepository(ClassroomLinkUser::class)
+                                ->findOneBy(array(
+                                    'classroom' => $classroomFound,
+                                    'rights' => 2
+                                ))
+                                ->getUser();
+
+                            array_push($classroomsCreated, array(
+                                'id' => $classroomFound->getId(),
+                                'name' => $classroomFound->getName(),
+                                'garCode' => $classroomFound->getGarCode(),
+                                'classroomLink' => $classroomFound->getLink(),
+                                'teacher' => $teacher->getPseudo(),
+                                'teacherId' => $teacher->getId()
+                            ));
+                        }
+
                     } else {
                        array_push($classroomsNotCreated, array(
                            'name' => $classroomToFind['name'],
@@ -463,7 +464,8 @@ class ControllerUser extends Controller
                 $sanitizedData->classroomGarCode = isset($incomingData->classroomGarCode)
                     ? htmlspecialchars(strip_tags(trim($incomingData->classroomGarCode)))
                     : '';
-                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->classroomName}-{$sanitizedData->classroomGarCode}";
+                $sanitizedData->classroomTeacherId = isset($incomingData->classroomTeacherId) ? intval($incomingData->classroomTeacherId) : 0;
+                $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->classroomName}-{$sanitizedData->classroomGarCode}-{$sanitizedData->classroomTeacherId}";
 
                 // get the student
                 $studentRegistered = $this->registerGarStudentIfNeeded($sanitizedData);
