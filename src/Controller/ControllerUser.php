@@ -11,25 +11,25 @@ use Dotenv\Dotenv;
 use DAO\RegularDAO;
 use User\Entity\User;
 use User\Entity\LtiUser;
-use Lti13\Entity\LtiConsumer;
+use User\Entity\Regular;
 
 
 /**
  * @ THOMAS MODIF 1 line just below
  */
-
-use User\Entity\Regular;
 use User\Entity\Teacher;
 use Aiken\i18next\i18next;
 use User\Entity\UserPremium;
 use Utils\ConnectionManager;
 use Database\DataBaseManager;
+use Lti13\Entity\LtiConsumer;
 use User\Entity\ClassroomUser;
 use Classroom\Entity\Classroom;
-use Classroom\Entity\ActivityLinkUser;
 use Classroom\Entity\Applications;
+use Classroom\Entity\ActivityLinkUser;
 use Classroom\Entity\ClassroomLinkUser;
 use Classroom\Entity\ActivityLinkClassroom;
+use User\Entity\ClassroomUserConnectionLog;
 
 
 
@@ -541,6 +541,8 @@ class ControllerUser extends Controller
                 $_SESSION["id"] = $sessionUserId;
                 $_SESSION['token'] =  $connectionToken;
 
+                $this->saveGarUserConnection($sanitizedData->customIdo);
+
                 $userAddedToClassroom = $res === true ? true : false;
 
                 return array('userAddedToClassroom' => $userAddedToClassroom);
@@ -592,6 +594,8 @@ class ControllerUser extends Controller
                             "classroomLink" => $garUserClassroom->getClassroom()->getLink(),
                         ]);
                     }
+                    
+                    $this->saveGarUserConnection($garUserExists->getGarId());
 
                     return array(
                         'userId' => $garUserExists->getId()->getId(),
@@ -600,7 +604,6 @@ class ControllerUser extends Controller
                 } else {
                     // the teacher is not registered yet
                     // create a hashed password
-                    //$hashedPassword = password_hash(passwordGenerator(),PASSWORD_BCRYPT);
                     $hashedPassword = password_hash(passwordGenerator(), PASSWORD_BCRYPT);
                     $fakeRegularEmail = $this->generateFakeEmailWithPrefix("gar.teacher");
 
@@ -614,10 +617,6 @@ class ControllerUser extends Controller
                     // save the user
                     $this->entityManager->persist($user);
                     $this->entityManager->flush();
-
-                    // retrieve the lastInsertId to use for the next query
-                    // this value is only available after a flush()
-                    //$user->setId($user->getId());
 
                     // create a classroomUser to be saved in user_classroom_users
                     $classroomUser = new ClassroomUser($user);
@@ -638,6 +637,8 @@ class ControllerUser extends Controller
                     $userPremium = new UserPremium($user);
                     $this->entityManager->persist($userPremium);
                     $this->entityManager->flush();
+                    
+                    $this->saveGarUserConnection($classroomUser->getGarId());
 
                     return array(
                         'userId' => $user->getId()
@@ -752,6 +753,7 @@ class ControllerUser extends Controller
                     ->findOneBy(array("garId" => $ido));
 
                 if ($garUserExists) {
+                    $this->saveGarUserConnection($garUserExists->getGarId());
                     return array(
                         'userId' => $garUserExists->getId()->getId()
                     );
@@ -791,6 +793,8 @@ class ControllerUser extends Controller
                 $userPremium = new UserPremium($user);
                 $this->entityManager->persist($userPremium);
                 $this->entityManager->flush();
+
+                $this->saveGarUserConnection($classroomUser->getGarId());
 
                 return array(
                     'userId' => $user->getId()
@@ -998,9 +1002,6 @@ class ControllerUser extends Controller
                 $user->setPseudo($pseudo);
                 $password = passwordGenerator();
                 $user->setPassword($password);
-                $lastQuestion = $this->entityManager->getRepository('User\Entity\User')->findOneBy([], ['id' => 'desc']);
-                // $user->setId($lastQuestion->getId() + 1);
-                // persist in doctrine memory and save it with the flush()
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
 
@@ -1031,30 +1032,6 @@ class ControllerUser extends Controller
                     $this->entityManager->getRepository(ActivityLinkUser::class)
                         ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities, $user);
                 }
-
-                // TODO DISABLE CLASSROOM ACTIVITIES ATTRIBUTION TO NEW STUDENTS
-                /* $activitiesLinkClassroom = $this->entityManager->getRepository('Classroom\Entity\ActivityLinkClassroom')
-                    ->findBy(array("classroom" => $classroom));
-
-                //add all activities linked with the classroom to the learner
-                foreach ($activitiesLinkClassroom as $a) {
-                    $activityLinkUser = new ActivityLinkUser(
-                        $a->getActivity(),
-                        $user,
-                        $a->getDateBegin(),
-                        $a->getDateEnd(),
-                        $a->getEvaluation(),
-                        $a->getAutocorrection(),
-                        null,
-                        $a->getIntroduction(),
-                        $a->getReference()
-                    );
-                    $this->entityManager->persist($activityLinkUser);
-                }
-
-                $this->entityManager->flush(); */
-                // END TODO
-
 
                 $user->classroomUser = $classroomUser;
                 $user->pin = $password;
@@ -1951,6 +1928,17 @@ class ControllerUser extends Controller
         } while ($classroomByLinkFound);
 
         return $link;
+    }
+    private function saveGarUserConnection($garId)
+    {
+        $classroomUser = $this->entityManager->getRepository(ClassroomUser::class)->findOneBy(array('garId' => $garId));
+
+        $connection = new ClassroomUserConnectionLog;
+        $connection->setUser($classroomUser->getId())
+            ->setGarId($classroomUser->getGarId())
+            ->setConnectionDate(new \DateTime());
+        $this->entityManager->persist($connection);
+        $this->entityManager->flush();
     }
 }
 function passwordGenerator()
