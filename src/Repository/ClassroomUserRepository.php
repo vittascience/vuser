@@ -12,8 +12,9 @@ class ClassroomUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
 
         $results = $queryBuilder->select('cu')
-            ->from(ClassroomUser::class)
-            ->where('cu.garId IS NOT NULL AND cu.schoolId IS NOT NULL');
+            ->from(ClassroomUser::class,'cu')
+            ->where('cu.garId IS NOT NULL AND cu.schoolId IS NOT NULL')->getQuery()
+            ->getResult();
         
         return $results;
     }
