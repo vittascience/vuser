@@ -7,7 +7,7 @@ use Utils\Exceptions\EntityDataIntegrityException;
 use User\Entity\User;
 
 /**
- * @ORM\Entity(repositoryClass="User\Repository\UserRepository")
+ * @ORM\Entity(repositoryClass="User\Repository\ClassroomUserRepository")
  * @ORM\Table(name="user_classroom_users")
  */
 class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
