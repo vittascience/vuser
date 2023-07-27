@@ -18,4 +18,15 @@ class ClassroomUserRepository extends EntityRepository
         
         return $results;
     }
+    public function getGarTeachers()
+    {
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+
+        $results = $queryBuilder->select('cu')
+            ->from(ClassroomUser::class,'cu')
+            ->where('cu.garId IS NOT NULL AND cu.schoolId IS NOT NULL AND cu.isTeacher=1')->getQuery()
+            ->getResult();
+        
+        return $results;
+    }
 }
