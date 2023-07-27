@@ -2,7 +2,10 @@
 
 namespace User\Repository;
 
+use User\Entity\User;
+use User\Entity\ClassroomUser;
 use Doctrine\ORM\EntityRepository;
+use User\Entity\ClassroomUserConnectionLog;
 
 class ClassroomUserConnectionLogRepository extends EntityRepository
 {
