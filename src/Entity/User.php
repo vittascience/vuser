@@ -79,6 +79,12 @@ class User
      */
     private $picture = NULL;
 
+     /**
+     * @ORM\Column(name="totp_secret", type="string", length=250, nullable=true)
+     * @var string
+     */
+    private $totp_secret = NULL;
+
     /**
      * @param int $id
      */
@@ -237,6 +243,22 @@ class User
             return false;
 
         return $finalFileName;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTotpSecret(): ?string
+    {
+        return $this->totp_secret;
+    }
+
+    /**
+     * @param string $picture
+     */
+    public function setTotpSecret(?string $totp_secret)
+    {
+        $this->totp_secret = $totp_secret;
     }
 
     public static function jsonDeserialize($json)
