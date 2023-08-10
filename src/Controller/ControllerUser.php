@@ -1241,6 +1241,7 @@ class ControllerUser extends Controller
 
                 $mail = !empty($_POST['mail']) ? htmlspecialchars(strip_tags(trim($_POST['mail']))) : '';
                 $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
+                $totp_code = !empty($_POST['totp_code']) ? htmlspecialchars(strip_tags(trim($_POST['totp_code']))) : '';
 
                 if (empty($mail) || empty($password)) return array(
                     'success' => false,
@@ -1249,7 +1250,7 @@ class ControllerUser extends Controller
 
                 if (ConnectionManager::getSharedInstance()->checkConnected()) return ["success" => true];
 
-                $reponseLogin = ConnectionManager::getSharedInstance()->checkLogin($mail, $password);
+                $reponseLogin = ConnectionManager::getSharedInstance()->checkLogin($mail, $password, $totp_code);
                 if (!array_key_exists('success', $reponseLogin)) {
                     $_SESSION["id"] = $reponseLogin[0];
                     $_SESSION["token"] = $reponseLogin[1];
