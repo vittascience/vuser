@@ -85,6 +85,13 @@ class User
      */
     private $totp_secret = NULL;
 
+
+    public function __construct()
+    {
+        $today = new \DateTime();
+        $this->setInsertDate($today);
+    }
+
     /**
      * @param int $id
      */
@@ -171,7 +178,7 @@ class User
     /**
      * @return \DateTime
      */
-    public function getInsertDate(): DateTime
+    public function getInsertDate(): ?DateTime
     {
         return $this->insertDate;
     }
@@ -179,7 +186,7 @@ class User
     /**
      * @param \DateTime $insertDate
      */
-    public function setInsertDate(DateTime $insertDate)
+    public function setInsertDate(?DateTime $insertDate)
     {
         $this->insertDate = $insertDate;
     }
