@@ -331,7 +331,7 @@ class Regular
         $this->privateFlag = $privateFlag;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): mixed
     {
         $array = [
             "bio" => $this->getBio(),
