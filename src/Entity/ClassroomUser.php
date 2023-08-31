@@ -7,7 +7,7 @@ use Utils\Exceptions\EntityDataIntegrityException;
 use User\Entity\User;
 
 /**
- * @ORM\Entity(repositoryClass="User\Repository\UserRepository")
+ * @ORM\Entity(repositoryClass="User\Repository\ClassroomUserRepository")
  * @ORM\Table(name="user_classroom_users")
  */
 class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
@@ -21,10 +21,17 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
     private $id = null;
 
     /**
-     * @ORM\Column(name="gar_id", type="string", length=128, nullable=true)
+     * @ORM\Column(name="gar_id", type="string", length=255, nullable=true)
      * @var string
      */
     private $garId;
+
+    /**
+     * @ORM\Column(name="canope_id", type="string", length=255, nullable=true)
+     * @var string
+     */
+    private $canopeId;
+    
     /**
      * @ORM\Column(name="school_id", type="string", length=8, nullable=true)
      * @var string
@@ -63,14 +70,42 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
     public function setGarId($garId)
     {
         if (is_string($garId) || $garId == NULL) {
-            if ((strlen($garId) == 0 || strlen($garId) == 128)) {
+            if ((strlen($garId) == 0 || strlen($garId) < 255)) {
                 $this->garId = $garId;
             } else {
-                throw new EntityDataIntegrityException("garId needs to have a lenght null or equal to 128");
+                throw new EntityDataIntegrityException("garId needs to have a lenght null or less than 255 characters");
             }
         } else {
             throw new EntityDataIntegrityException("garId needs to be string or null ");
         }
+    }
+
+    /**
+     * Get the value of canopeId
+     *
+     * @return  string
+     */ 
+    public function getCanopeId()
+    {
+        return $this->canopeId;
+    }
+
+    /**
+     * Set the value of canopeId
+     *
+     * @param  string  $canopeId
+     *
+     * @return  self
+     */ 
+    public function setCanopeId($canopeId)
+    {
+        // the $canopeId is not a string and not an int (meaning an object or array) OR is empty
+        if((!is_string($canopeId) && !is_numeric($canopeId)) || !$canopeId){
+            throw new EntityDataIntegrityException("Invalid Value provided for the canope user id");
+        }
+        $this->canopeId = $canopeId;
+
+        return $this;
     }
 
     /**
