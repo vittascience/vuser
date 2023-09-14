@@ -278,7 +278,7 @@ class User
         return $classInstance;
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize()
     {
         return [
             'id' => $this->getId(),

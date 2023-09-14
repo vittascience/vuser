@@ -114,7 +114,7 @@ class Teacher
         $this->grade = $grade;
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize()
     {
         return [
             'user' => $this->getUser(),
