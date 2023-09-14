@@ -185,7 +185,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         }
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize()
     {
         $id = $this->getId();
         if ($id != null) {
