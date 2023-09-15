@@ -1824,8 +1824,23 @@ class ControllerUser extends Controller
                     'maxStudents' => 0,
                     'dateBegin' => 0,
                     'dateEnd' => 0,
-                    'premiumm' => false
+                    'premiumm' => false,
+                    'totalClassrooms' => 0,
+                    'totalStudents' => 0,
                 ];
+
+                // get user's classroom
+                $classrooms = $this->entityManager->getRepository(ClassroomLinkUser::class)->findBy(['user' => $_SESSION['id'], 'rights' => 2]);
+                if ($classrooms) {
+                    foreach ($classrooms as $classroom) {
+                        $restrictionsArray['totalClassrooms'] += 1;
+                        $students = $this->entityManager->getRepository(ClassroomLinkUser::class)->findBy(['classroom' => $classroom->getClassroom()]);
+                        if ($students) {
+                            $restrictionsArray['totalStudents'] += count($students);
+                            $restrictionsArray['totalStudents'] -= 1;
+                        }
+                    }
+                }
 
 
                 $checkPremium = $this->entityManager->getRepository(UserPremium::class)->findOneBy(['user' => $_SESSION['id']]);
