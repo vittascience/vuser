@@ -163,7 +163,7 @@ class LtiUserTest extends TestCase{
     }
 
     /** dataProvider for testGetIdReturnIds */
-    public function provideFakeIds(){
+    public static function provideFakeIds(){
         return array(
             array(1),
             array(5),
@@ -172,7 +172,7 @@ class LtiUserTest extends TestCase{
     }
 
     /** dataProvider for testSetRejectNonObjectValues */
-    public function provideNonObjectValues(){
+    public static function provideNonObjectValues(){
         return array(
             array('1'),
             array(1),
@@ -181,7 +181,7 @@ class LtiUserTest extends TestCase{
     }
 
     /** dataProvider for testSetUserAcceptsUserObject */
-    public function provideUserObjectValues(){
+    public static function provideUserObjectValues(){
         // set random value just to not get empty user object
         $user1 = new User;
         $user1->setFirstname('some firstname 1');
@@ -200,7 +200,7 @@ class LtiUserTest extends TestCase{
     /**
      * dataProvider for testSetLtiToolAcceptsLtiToolObjectValue
      */
-    public function provideLtiToolObjectValues(){
+    public static function provideLtiToolObjectValues(){
         $ltiConsumer1 = new LtiConsumer;
         $ltiConsumer1->setIssuer('fake issuer 1');
         $ltiConsumer2 = new LtiConsumer;
@@ -216,7 +216,7 @@ class LtiUserTest extends TestCase{
     }
 
     /** dataProvider for testSetLtiUserIdCanNotBeNull */
-    public function provideInvalidValues(){
+    public static function provideInvalidValues(){
         $someObject = new \stdClass();
         return array(
             array(null),
@@ -230,7 +230,7 @@ class LtiUserTest extends TestCase{
     /** dataProvider for 
      * => testSetCourseIdAcceptsValidId
      */
-    public function provideValidLtiCourseIds(){
+    public static function provideValidLtiCourseIds(){
         return array(
             array('9be5e9b3-e455-4455-a01e-4c17d7e835b2'),
             array('2d9b11af81e14f0dac828f59a1467ccd'),
@@ -242,7 +242,7 @@ class LtiUserTest extends TestCase{
     /** dataProvider for 
      * => testSetLtiUserAcceptsValidId
      */
-    public function provideValidLtiUserIds(){
+    public static function provideValidLtiUserIds(){
         return array(
             array('John Doe'),
             array('info@test.com'),
@@ -252,7 +252,7 @@ class LtiUserTest extends TestCase{
         );
     }
 
-    public function provideInvalidBooleanValues(){
+    public static function provideInvalidBooleanValues(){
         $someObject = new \stdClass();
         return array(
             array(null),
@@ -263,7 +263,7 @@ class LtiUserTest extends TestCase{
     }
 
     /** dataProvider for testSetIsTeacherAcceptsValidBooleanValue */
-    public function provideValidBooleanValues(){
+    public static function provideValidBooleanValues(){
         return array(
             array(true),
             array(false)
