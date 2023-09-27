@@ -1815,7 +1815,7 @@ class ControllerUser extends Controller
                 return array('userId' => $ltiUser->getUser()->getId());
             },
             'get_user_restriction' => function () {
-                return UtilsTrait::getUserRestriction();
+                return UtilsTrait::getUserRestrictions($this->entityManager);
             }
         );
     }

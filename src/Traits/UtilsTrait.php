@@ -10,7 +10,7 @@ use Classroom\Entity\UsersRestrictions;
 
 trait UtilsTrait {
 
-    public function getUserRestrictions() {
+    public function getUserRestrictions($entityManager) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
         if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
@@ -26,11 +26,11 @@ trait UtilsTrait {
         ];
 
         // get user's classroom
-        $classrooms = $this->entityManager->getRepository(ClassroomLinkUser::class)->findBy(['user' => $_SESSION['id'], 'rights' => 2]);
+        $classrooms = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['user' => $_SESSION['id'], 'rights' => 2]);
         if ($classrooms) {
             foreach ($classrooms as $classroom) {
                 $restrictionsArray['totalClassrooms'] += 1;
-                $students = $this->entityManager->getRepository(ClassroomLinkUser::class)->findBy(['classroom' => $classroom->getClassroom()]);
+                $students = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['classroom' => $classroom->getClassroom()]);
                 if ($students) {
                     $restrictionsArray['totalStudents'] += count($students);
                     $restrictionsArray['totalStudents'] -= 1;
@@ -39,14 +39,14 @@ trait UtilsTrait {
         }
 
 
-        $checkPremium = $this->entityManager->getRepository(UserPremium::class)->findOneBy(['user' => $_SESSION['id']]);
+        $checkPremium = $entityManager->getRepository(UserPremium::class)->findOneBy(['user' => $_SESSION['id']]);
         if ($checkPremium) {
             $restrictionsArray['premium'] = true;
         }
         // get default restrictions
-        $userDefaultRestrictions = $this->entityManager->getRepository(Restrictions::class)->findOneBy(['name' => "userDefaultRestrictions"]);
-        $groupDefaultRestrictions = $this->entityManager->getRepository(Restrictions::class)->findOneBy(['name' => "groupDefaultRestrictions"]);
-        $userGroups = $this->entityManager->getRepository(UsersLinkGroups::class)->findOneBy(['user' => $_SESSION['id']]);
+        $userDefaultRestrictions = $entityManager->getRepository(Restrictions::class)->findOneBy(['name' => "userDefaultRestrictions"]);
+        $groupDefaultRestrictions = $entityManager->getRepository(Restrictions::class)->findOneBy(['name' => "groupDefaultRestrictions"]);
+        $userGroups = $entityManager->getRepository(UsersLinkGroups::class)->findOneBy(['user' => $_SESSION['id']]);
         
         $usersRestrictionAmount = (array)json_decode($userDefaultRestrictions->getRestrictions());
         $restrictionsArray['maxClassrooms'] = $usersRestrictionAmount['maxClassrooms'];
@@ -66,7 +66,7 @@ trait UtilsTrait {
             }
 
 
-            $group = $this->entityManager->getRepository(Groups::class)->findOneBy(['id' => $userGroups->getGroup()]);
+            $group = $entityManager->getRepository(Groups::class)->findOneBy(['id' => $userGroups->getGroup()]);
             if ($group->getDateEnd() > new \DateTime('now') || $group->getDateEnd() == null) {
                 $restrictionsArray['dateBegin'] = $group->getDateBegin();
                 $restrictionsArray['dateEnd'] = $group->getDateEnd();
@@ -82,7 +82,7 @@ trait UtilsTrait {
         }
 
         // GET USER RESTRICTIONS
-        $userRestrictions = $this->entityManager->getRepository(UsersRestrictions::class)->findOneBy(['user' => $_SESSION['id']]);
+        $userRestrictions = $entityManager->getRepository(UsersRestrictions::class)->findOneBy(['user' => $_SESSION['id']]);
         if ($userRestrictions) {
             if ($userRestrictions->getDateEnd() > new \DateTime('now') || $userRestrictions->getDateEnd() == null) {
                 $restrictionsArray['dateBegin'] = $userRestrictions->getDateBegin();
