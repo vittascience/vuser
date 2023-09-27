@@ -10,9 +10,7 @@ use Classroom\Entity\UsersRestrictions;
 
 trait UtilsTrait {
 
-    public function getUserRestrictions($entityManager) {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
-
+    public static function getUserRestrictions($entityManager) {
         if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
 
         $restrictionsArray = [

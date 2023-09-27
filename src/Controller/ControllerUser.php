@@ -1815,6 +1815,7 @@ class ControllerUser extends Controller
                 return array('userId' => $ltiUser->getUser()->getId());
             },
             'get_user_restriction' => function () {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
                 return UtilsTrait::getUserRestrictions($this->entityManager);
             }
         );
