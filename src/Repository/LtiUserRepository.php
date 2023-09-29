@@ -34,7 +34,7 @@ class LtiUserRepository extends EntityRepository
         $connectionDate = "{$data->year}-$formattedMonth";
 
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
-        $results = $queryBuilder->select('luc')
+        $results = $queryBuilder->select('IDENTITY(luc.user)')
             ->from(LtiUserConnection::class, 'luc')
             ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=1')
@@ -42,15 +42,10 @@ class LtiUserRepository extends EntityRepository
             ->andWhere('luc.connectionDate LIKE :connectionDate')
             ->setParameter('consumer', $consumer)
             ->setParameter('connectionDate', "$connectionDate%")
-            ->groupBy('lu.user')
+            ->groupBy('luc.user')
             ->getQuery()
             ->getResult();
-        $activeTeachersId = [];
-        foreach ($results as $result) {
-
-            array_push($activeTeachersId, $result->getUser()->getId());
-        }
-        return $activeTeachersId;
+        return $results;
     }
 
     public function getNewTeachersIdByConsumer($consumer, $data)
@@ -149,7 +144,7 @@ class LtiUserRepository extends EntityRepository
         $connectionDate = "{$data->year}-$formattedMonth";
 
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
-        $results = $queryBuilder->select('luc')
+        $results = $queryBuilder->select('IDENTITY(luc.user)')
             ->from(LtiUserConnection::class, 'luc')
             ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=0')
@@ -157,15 +152,11 @@ class LtiUserRepository extends EntityRepository
             ->andWhere('luc.connectionDate LIKE :connectionDate')
             ->setParameter('consumer', $consumer)
             ->setParameter('connectionDate', "$connectionDate%")
-            ->groupBy('lu.user')
+            ->groupBy('luc.user')
             ->getQuery()
             ->getResult();
-        $activeTeachersId = [];
-        foreach ($results as $result) {
-
-            array_push($activeTeachersId, $result->getUser()->getId());
-        }
-        return $activeTeachersId;
+        return $results;
+        
     }
 
     public function getNewStudentsIdByConsumer($consumer, $data)
