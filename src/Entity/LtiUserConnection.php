@@ -34,6 +34,11 @@ class LtiUserConnection{
      */
     private $connectionDuration;
 
+    /**
+     * @ORM\Column(name="interface", type="string",length=255, nullable=true)
+     */
+    private $interface;
+
 
     /**
      * Get the value of id
@@ -99,6 +104,26 @@ class LtiUserConnection{
     public function setConnectionDuration($connectionDuration)
     {
         $this->connectionDuration = $connectionDuration;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of interface
+     */ 
+    public function getInterface()
+    {
+        return $this->interface;
+    }
+
+    /**
+     * Set the value of interface
+     *
+     * @return  self
+     */ 
+    public function setInterface($interface)
+    {
+        $this->interface = $interface;
 
         return $this;
     }
