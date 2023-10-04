@@ -21,6 +21,7 @@ trait UtilsTrait {
             'premium' => false, // user_premium table
             'totalClassrooms' => 0,
             'totalStudents' => 0,
+            'type' => 'free'
         ];
 
         // get user's classroom
@@ -40,6 +41,7 @@ trait UtilsTrait {
         $checkPremium = $entityManager->getRepository(UserPremium::class)->findOneBy(['user' => $_SESSION['id']]);
         if ($checkPremium) {
             $restrictionsArray['premium'] = true;
+            $restrictionsArray['type'] = 'LegacyPersonalPremium';
         }
         // get default restrictions
         $userDefaultRestrictions = $entityManager->getRepository(Restrictions::class)->findOneBy(['name' => "userDefaultRestrictions"]);
@@ -71,10 +73,12 @@ trait UtilsTrait {
 
                 if ($restrictionsArray['maxStudents'] < $group->getmaxStudentsPerTeachers()) {
                     $restrictionsArray['maxStudents'] = $group->getmaxStudentsPerTeachers();
+                    $restrictionsArray['type'] = 'GroupPremium';
                 }
 
                 if ($restrictionsArray['maxClassrooms'] < $group->getmaxClassroomsPerTeachers()) {
                     $restrictionsArray['maxClassrooms'] = $group->getmaxClassroomsPerTeachers();
+                    $restrictionsArray['type'] = 'GroupPremium';
                 }
             }
         }
@@ -88,10 +92,12 @@ trait UtilsTrait {
 
                 if ($restrictionsArray['maxStudents'] < $userRestrictions->getMaxStudents()) {
                     $restrictionsArray['maxStudents'] = $userRestrictions->getMaxStudents();
+                    $restrictionsArray['type'] = 'PersonalPremium';
                 }
 
                 if ($restrictionsArray['maxClassrooms'] < $userRestrictions->getMaxClassrooms()) {
                     $restrictionsArray['maxClassrooms'] = $userRestrictions->getMaxClassrooms();
+                    $restrictionsArray['type'] = 'PersonalPremium';
                 }
             }
         }
