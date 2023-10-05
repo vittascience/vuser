@@ -71,12 +71,12 @@ trait UtilsTrait {
                 $restrictionsArray['dateBegin'] = $group->getDateBegin();
                 $restrictionsArray['dateEnd'] = $group->getDateEnd();
 
-                if ($restrictionsArray['maxStudents'] < $group->getmaxStudentsPerTeachers()) {
+                if (($restrictionsArray['maxStudents'] < $group->getmaxStudentsPerTeachers() && $restrictionsArray['maxStudents'] != -1) || $group->getmaxStudentsPerTeachers() == -1) {
                     $restrictionsArray['maxStudents'] = $group->getmaxStudentsPerTeachers();
                     $restrictionsArray['type'] = 'GroupPremium';
                 }
 
-                if ($restrictionsArray['maxClassrooms'] < $group->getmaxClassroomsPerTeachers()) {
+                if ($restrictionsArray['maxClassrooms'] < $group->getmaxClassroomsPerTeachers() && $restrictionsArray['maxClassrooms'] != -1 || $group->getmaxClassroomsPerTeachers() == -1) {
                     $restrictionsArray['maxClassrooms'] = $group->getmaxClassroomsPerTeachers();
                     $restrictionsArray['type'] = 'GroupPremium';
                 }
@@ -90,12 +90,12 @@ trait UtilsTrait {
                 $restrictionsArray['dateBegin'] = $userRestrictions->getDateBegin();
                 $restrictionsArray['dateEnd'] = $userRestrictions->getDateEnd();
 
-                if ($restrictionsArray['maxStudents'] < $userRestrictions->getMaxStudents()) {
+                if ($restrictionsArray['maxStudents'] < $userRestrictions->getMaxStudents() && $restrictionsArray['maxStudents'] != -1 || $userRestrictions->getMaxStudents() == -1) {
                     $restrictionsArray['maxStudents'] = $userRestrictions->getMaxStudents();
                     $restrictionsArray['type'] = 'PersonalPremium';
                 }
 
-                if ($restrictionsArray['maxClassrooms'] < $userRestrictions->getMaxClassrooms()) {
+                if ($restrictionsArray['maxClassrooms'] < $userRestrictions->getMaxClassrooms() && $restrictionsArray['maxClassrooms'] != -1 || $userRestrictions->getMaxClassrooms() == -1) {
                     $restrictionsArray['maxClassrooms'] = $userRestrictions->getMaxClassrooms();
                     $restrictionsArray['type'] = 'PersonalPremium';
                 }
