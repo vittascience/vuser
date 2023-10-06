@@ -156,7 +156,6 @@ class LtiUserRepository extends EntityRepository
             ->getQuery()
             ->getResult();
         return $results;
-        
     }
 
     public function getNewStudentsIdByConsumer($consumer, $data)
@@ -232,7 +231,7 @@ class LtiUserRepository extends EntityRepository
 
     public function getLastMonthConnectionsByConsumer($consumer, $data)
     {
-       
+
         $formattedMonth = sprintf('%02d', $data->month);
         $connectionDate = "{$data->year}-$formattedMonth";
 
@@ -246,49 +245,37 @@ class LtiUserRepository extends EntityRepository
             ->setParameter('connectionDate', "$connectionDate%")
             ->getQuery()
             ->getResult();
-           
+
         $connectionsId = [];
         foreach ($results as $result) {
             array_push($connectionsId, $result->getId());
         }
-        
+
         return $connectionsId;
     }
-    public function deleteConnectionsEntries($connectionsIds){
-        if($connectionsIds){
+    public function deleteConnectionsEntries($connectionsIds)
+    {
+        if ($connectionsIds) {
             $queryBuilder = $this->getEntityManager()->createQueryBuilder();
-            $queryBuilder->delete(LtiUserConnection::class,'luc')
-            ->andWhere('luc.id IN (:idsArray)')
-            ->setParameter('idsArray',$connectionsIds)
-            ->getQuery()
-            ->execute();
-         
+            $queryBuilder->delete(LtiUserConnection::class, 'luc')
+                ->andWhere('luc.id IN (:idsArray)')
+                ->setParameter('idsArray', $connectionsIds)
+                ->getQuery()
+                ->execute();
+
             return;
-       }
+        }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    public function getInterfacesByConsumer($consumer,$data){
+    public function getInterfacesByConsumer($consumer, $data)
+    {
         $formattedMonth = sprintf('%02d', $data->month);
         $connectionDate = "{$data->year}-$formattedMonth";
 
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('luc.interface')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class,'lu','WITH','lu.user=luc.user')
+            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'lu.user=luc.user')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
             ->setParameter('consumer', $consumer)
@@ -296,36 +283,35 @@ class LtiUserRepository extends EntityRepository
             ->groupBy('luc.interface')
             ->getQuery()
             ->getResult();
-        
+
         return $results;
     }
 
 
     public function getTeachersIdByConsumerAndInterface($consumer, $data)
     {
-       
+
         $formattedMonth = sprintf('%02d', $data->month);
         $connectionDate = "{$data->year}-$formattedMonth";
 
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('IDENTITY(luc.user)')
-            ->from(LtiUserConnection::class,'luc')
-            ->leftJoin(LtiUser::class, 'lu','WITH','lu.user=luc.user')
+            ->from(LtiUserConnection::class, 'luc')
+            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'lu.user=luc.user')
             ->andWhere('lu.isTeacher=1')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
-            ->andWhere('luc.interface= :interface')        
+            ->andWhere('luc.interface= :interface')
             ->setParameters(array(
-                'consumer'=> $consumer,
-                'connectionDate'=> "$connectionDate%",
-                'interface'=> $data->interface
+                'consumer' => $consumer,
+                'connectionDate' => "$connectionDate%",
+                'interface' => $data->interface
             ))
             ->groupBy('luc.user')
             ->getQuery()
             ->getResult();
-      
+
         return $results;
-       
     }
 
     public function getTeachersConnectionsByConsumerAndInterface($consumer, $data)
@@ -351,9 +337,29 @@ class LtiUserRepository extends EntityRepository
         return $results;
     }
 
-    public function getAverageTimeSpentByTeachersPerConsumerAndInterface()
+    public function getAverageTimeSpentByTeachersPerConsumerAndInterface($consumer, $data)
     {
-       
+        $formattedMonth = sprintf('%02d', $data->month);
+        $connectionDate = "{$data->year}-$formattedMonth";
+
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent,COUNT(DISTINCT(lu.user)) AS teachersCount')
+            ->from(LtiUserConnection::class, 'luc')
+            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->andWhere('lu.isTeacher=1')
+            ->andWhere('lu.ltiConsumer= :consumer')
+            ->andWhere('luc.connectionDate LIKE :connectionDate')
+            ->andWhere('luc.interface LIKE :interface')
+            ->setParameter('consumer', $consumer)
+            ->setParameter('connectionDate', "$connectionDate%")
+            ->setParameter('interface', $data->interface)
+            ->getQuery()
+            ->getResult();
+
+        if ($result[0]['teachersCount'] == 0) $averageTimeSpentByTeachers = 0;
+        else $averageTimeSpentByTeachers = $result[0]['timeSpent'] / $result[0]['teachersCount'];
+
+        return $averageTimeSpentByTeachers;
     }
 
     public function getStudentsIdByConsumerAndInterface($consumer, $data)
@@ -364,21 +370,21 @@ class LtiUserRepository extends EntityRepository
 
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('IDENTITY(luc.user)')
-            ->from(LtiUserConnection::class,'luc')
-            ->leftJoin(LtiUser::class, 'lu','WITH','lu.user=luc.user')
+            ->from(LtiUserConnection::class, 'luc')
+            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'lu.user=luc.user')
             ->andWhere('lu.isTeacher=0')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
             ->andWhere('luc.interface= :interface')
             ->setParameters(array(
-                'consumer'=> $consumer,
-                'connectionDate'=> "$connectionDate%",
-                'interface'=> $data->interface
+                'consumer' => $consumer,
+                'connectionDate' => "$connectionDate%",
+                'interface' => $data->interface
             ))
             ->groupBy('luc.user')
             ->getQuery()
             ->getResult();
-        
+
         return $results;
     }
 
@@ -404,8 +410,28 @@ class LtiUserRepository extends EntityRepository
         return $results;
     }
 
-    public function getAverageTimeSpentByStudentsPerConsumerAndInterface()
+    public function getAverageTimeSpentByStudentsPerConsumerAndInterface($consumer, $data)
     {
-       
+        $formattedMonth = sprintf('%02d', $data->month);
+        $connectionDate = "{$data->year}-$formattedMonth";
+
+        $queryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent,COUNT(DISTINCT(lu.user)) AS studentsCount')
+            ->from(LtiUserConnection::class, 'luc')
+            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->andWhere('lu.isTeacher=0')
+            ->andWhere('lu.ltiConsumer= :consumer')
+            ->andWhere('luc.connectionDate LIKE :connectionDate')
+            ->andWhere('luc.interface LIKE :interface')
+            ->setParameter('consumer', $consumer)
+            ->setParameter('connectionDate', "$connectionDate%")
+            ->setParameter('interface', $data->interface)
+            ->getQuery()
+            ->getResult();
+
+        if ($result[0]['studentsCount'] == 0) $averageTimeSpentByStudents = 0;
+        else $averageTimeSpentByStudents = $result[0]['timeSpent'] / $result[0]['studentsCount'];
+
+        return $averageTimeSpentByStudents;
     }
 }
