@@ -103,7 +103,7 @@ class LtiUserRepository extends EntityRepository
         $connectionDate = "{$data->year}-$formattedMonth";
 
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
-        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent,COUNT(DISTINCT(lu.user)) AS activeTeachersCount')
+        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent, COUNT(luc) AS connectionsNumber')
             ->from(LtiUserConnection::class, 'luc')
             ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=1')
@@ -114,8 +114,7 @@ class LtiUserRepository extends EntityRepository
             ->getQuery()
             ->getResult();
 
-        if ($result[0]['activeTeachersCount'] == 0) $averageTimeSpentByActiveTeachers = 0;
-        else $averageTimeSpentByActiveTeachers = $result[0]['timeSpent'] / $result[0]['activeTeachersCount'];
+        $averageTimeSpentByActiveTeachers = $result[0]['connectionsNumber'] === 0 ? 0 : $result[0]['timeSpent'] / $result[0]['connectionsNumber'];
 
         return $averageTimeSpentByActiveTeachers;
     }
@@ -213,7 +212,7 @@ class LtiUserRepository extends EntityRepository
         $connectionDate = "{$data->year}-$formattedMonth";
 
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
-        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent,COUNT(DISTINCT(lu.user)) AS activeStudentsCount')
+        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent, COUNT(luc) AS connectionsNumber')
             ->from(LtiUserConnection::class, 'luc')
             ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=0')
@@ -224,8 +223,7 @@ class LtiUserRepository extends EntityRepository
             ->getQuery()
             ->getResult();
 
-        if ($result[0]['activeStudentsCount'] == 0) $averageTimeSpentByActiveStudents = 0;
-        else $averageTimeSpentByActiveStudents = $result[0]['timeSpent'] / $result[0]['activeStudentsCount'];
+        $averageTimeSpentByActiveStudents = $result[0]['connectionsNumber'] === 0 ? 0 : $result[0]['timeSpent'] / $result[0]['connectionsNumber'];
         return $averageTimeSpentByActiveStudents;
     }
 
@@ -343,7 +341,7 @@ class LtiUserRepository extends EntityRepository
         $connectionDate = "{$data->year}-$formattedMonth";
 
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
-        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent,COUNT(DISTINCT(lu.user)) AS teachersCount')
+        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent, COUNT(luc) AS connectionsNumber')
             ->from(LtiUserConnection::class, 'luc')
             ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=1')
@@ -355,9 +353,8 @@ class LtiUserRepository extends EntityRepository
             ->setParameter('interface', $data->interface)
             ->getQuery()
             ->getResult();
-
-        if ($result[0]['teachersCount'] == 0) $averageTimeSpentByTeachers = 0;
-        else $averageTimeSpentByTeachers = $result[0]['timeSpent'] / $result[0]['teachersCount'];
+        
+        $averageTimeSpentByTeachers = $result[0]['connectionsNumber'] === 0 ? 0 : $result[0]['timeSpent'] / $result[0]['connectionsNumber'];
 
         return $averageTimeSpentByTeachers;
     }
@@ -416,7 +413,7 @@ class LtiUserRepository extends EntityRepository
         $connectionDate = "{$data->year}-$formattedMonth";
 
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
-        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent,COUNT(DISTINCT(lu.user)) AS studentsCount')
+        $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent, COUNT(luc) AS connectionsNumber')
             ->from(LtiUserConnection::class, 'luc')
             ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=0')
@@ -429,8 +426,7 @@ class LtiUserRepository extends EntityRepository
             ->getQuery()
             ->getResult();
 
-        if ($result[0]['studentsCount'] == 0) $averageTimeSpentByStudents = 0;
-        else $averageTimeSpentByStudents = $result[0]['timeSpent'] / $result[0]['studentsCount'];
+            $averageTimeSpentByStudents = $result[0]['connectionsNumber'] === 0 ? 0 : $result[0]['timeSpent'] / $result[0]['connectionsNumber'];
 
         return $averageTimeSpentByStudents;
     }
