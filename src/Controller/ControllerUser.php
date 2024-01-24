@@ -1115,7 +1115,7 @@ class ControllerUser extends Controller
 
                     $body = "
                         <br>
-                        <p>from : $replyToName</p>
+                        <p>from : $replyToName - $replyToMail</p>
                         <p>$message</p>
                         <br>
                     ";
@@ -1254,9 +1254,15 @@ class ControllerUser extends Controller
                 );
 
                 if (ConnectionManager::getSharedInstance()->checkConnected()) return ["success" => true];
+        
+                $regularUser = $this->entityManager
+                    ->getRepository(Regular::class)
+                    ->findOneBy(array('email' => $mail));
 
                 $reponseLogin = ConnectionManager::getSharedInstance()->checkLogin($mail, $password, $totp_code);
                 if (!array_key_exists('success', $reponseLogin)) {
+
+
                     $_SESSION["id"] = $reponseLogin[0];
                     $_SESSION["token"] = $reponseLogin[1];
                     return ["success" => true];
