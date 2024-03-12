@@ -35,11 +35,13 @@ use Classroom\Entity\ClassroomLinkUser;
 use Classroom\Entity\UsersRestrictions;
 use Classroom\Entity\ActivityLinkClassroom;
 use User\Entity\ClassroomUserConnectionLog;
-
+use Classroom\Traits\UtilsTrait as ClassroomUtilsTrait;
 
 
 class ControllerUser extends Controller
 {
+    use UtilsTrait;
+    use ClassroomUtilsTrait;
     public $URL = "";
     public function __construct($entityManager, $user, $url = null)
     {
@@ -914,10 +916,9 @@ class ControllerUser extends Controller
                 $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
                 $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
 
+                
                 // get demoStudent from .env file
-                $demoStudent = !empty($this->envVariables['VS_DEMOSTUDENT'])
-                    ? htmlspecialchars(strip_tags(trim(strtolower($this->envVariables['VS_DEMOSTUDENT']))))
-                    : 'demostudent';
+                $demoStudent = $this->manageDemoStudentPseudo();
 
                 $classrooms = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
                     ->findBy(array("user" => $currentUserId));
