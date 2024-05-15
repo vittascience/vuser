@@ -7,7 +7,7 @@ use User\Entity\User;
 
 /**
  * @ORM\Entity(repositoryClass="User\Repository\ConnectionTokenRepository")
- * @ORM\Table(name="connection_token")
+ * @ORM\Table(name="connection_tokens")
  */
 class ConnectionToken 
 {
