@@ -6,68 +6,38 @@ use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use User\Entity\User;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\ClassroomUserConnectionLogRepository")
- * @ORM\Table(name="user_classroom_user_connection_logs")
- */
+#[ORM\Entity(repositoryClass: "User\Repository\ClassroomUserConnectionLogRepository")]
+#[ORM\Table(name: "user_classroom_user_connection_logs")]
 class ClassroomUserConnectionLog  {
 
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue(strategy="AUTO")
-     * @ORM\Column(name="id", type="integer")
-     * @var integer
-     */
-    private $id;
+    #[ORM\Id]
+    #[ORM\GeneratedValue(strategy: "AUTO")]
+    #[ORM\Column(name: "id", type: "integer")]
+    private int $id;
 
-    /**
-     * @ORM\OneToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="user_id", referencedColumnName="id", onDelete="CASCADE")
-     * @var User
-     */
-    private $user;
+    #[ORM\OneToOne(targetEntity: "User\Entity\User")]
+    #[ORM\JoinColumn(name: "user_id", referencedColumnName: "id", onDelete: "CASCADE")]
+    private User $user;
     
-     /**
-     * @ORM\Column(name="gar_id", type="string", length=255, nullable=true)
-     * @var string
-     */
-    private $garId;
+    #[ORM\Column(name: "gar_id", type: "string", length: 255, nullable: true)]
+    private ?string $garId;
 
-     /**
-     * @ORM\Column(name="connection_date", type="datetime",options={"default": "CURRENT_TIMESTAMP"})
-     */
-    private $connectionDate;
+    #[ORM\Column(name: "connection_date", type: "datetime", options: ["default" => "CURRENT_TIMESTAMP"])]
+    private \DateTime $connectionDate;
 
-    /**
-     * Get the value of id
-     *
-     * @return  integer
-     */ 
-    public function getId()
+    public function getId(): int
     {
         return $this->id;
     }
 
-    /**
-     * Get the value of user
-     *
-     * @return  User
-     */ 
-    public function getUser()
+    public function getUser(): User
     {
         return $this->user;
     }
 
-    /**
-     * Set the value of user
-     *
-     * @param  User  $user
-     *
-     * @return  self
-     */ 
-    public function setUser(User $user)
+    public function setUser(User $user): self
     {
-        if(!( $user instanceof User)){
+        if (!($user instanceof User)) {
             throw new EntityDataIntegrityException("The user has to be an instance of User class");
         }
         $this->user = $user;
@@ -75,58 +45,38 @@ class ClassroomUserConnectionLog  {
         return $this;
     }
 
-    /**
-     * Get the value of garId
-     *
-     * @return  string
-     */ 
-    public function getGarId()
+    public function getGarId(): ?string
     {
         return $this->garId;
     }
 
-    /**
-     * Set the value of garId
-     *
-     * @param  string  $garId
-     *
-     * @return  self
-     */ 
-    public function setGarId($garId)
+    public function setGarId(?string $garId): self
     {
-        if (is_string($garId) || $garId == NULL) {
-            if ((strlen($garId) == 0 || strlen($garId) < 255)) {
+        if (is_string($garId) || $garId === null) {
+            if (strlen($garId) === 0 || strlen($garId) < 255) {
                 $this->garId = $garId;
             } else {
-                throw new EntityDataIntegrityException("garId needs to have a lenght null or less than 255 characters");
+                throw new EntityDataIntegrityException("garId needs to have a length null or less than 255 characters");
             }
         } else {
-            throw new EntityDataIntegrityException("garId needs to be string or null ");
+            throw new EntityDataIntegrityException("garId needs to be string or null");
         }
         return $this;
     }
 
-    /**
-     * Get the value of connectionDate
-     */ 
-    public function getConnectionDate()
+    public function getConnectionDate(): \DateTime
     {
         return $this->connectionDate;
     }
 
-    /**
-     * Set the value of connectionDate
-     *
-     * @return  self
-     */ 
-    public function setConnectionDate($connectionDate)
+    public function setConnectionDate(\DateTime $connectionDate): self
     {
         $this->connectionDate = $connectionDate;
 
         return $this;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return [
             'id' => $this->getId(),
@@ -135,6 +85,4 @@ class ClassroomUserConnectionLog  {
             'connectionDate' => $this->getConnectionDate()
         ];
     }
-
-    
 }

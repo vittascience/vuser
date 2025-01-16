@@ -6,47 +6,29 @@ use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use User\Entity\User;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\ClassroomUserRepository")
- * @ORM\Table(name="user_classroom_users")
- */
+#[ORM\Entity(repositoryClass: "User\Repository\ClassroomUserRepository")]
+#[ORM\Table(name: "user_classroom_users")]
 class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
 {
-    /**
-     * @ORM\Id
-     * @ORM\ManyToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="user", referencedColumnName="id", onDelete="CASCADE")
-     * @var User
-     */
-    private $id = null;
+    #[ORM\Id]
+    #[ORM\ManyToOne(targetEntity: "User\Entity\User")]
+    #[ORM\JoinColumn(name: "user", referencedColumnName: "id", onDelete: "CASCADE")]
+    private ?User $id = null;
 
-    /**
-     * @ORM\Column(name="gar_id", type="string", length=255, nullable=true)
-     * @var string
-     */
-    private $garId;
+    #[ORM\Column(name: "gar_id", type: "string", length: 255, nullable: true)]
+    private ?string $garId = null;
 
-    /**
-     * @ORM\Column(name="canope_id", type="string", length=255, nullable=true)
-     * @var string
-     */
-    private $canopeId;
-    
-    /**
-     * @ORM\Column(name="school_id", type="string", length=8, nullable=true)
-     * @var string
-     */
-    private $schoolId;
-    /**
-     * @ORM\Column(name="is_teacher", type="boolean", nullable=true)
-     * @var string
-     */
-    private $isTeacher = false;
-    /**
-     * @ORM\Column(name="mail_teacher", type="string", length=255, nullable=true)
-     * @var string
-     */
-    private $mailTeacher;
+    #[ORM\Column(name: "canope_id", type: "string", length: 255, nullable: true)]
+    private ?string $canopeId = null;
+
+    #[ORM\Column(name: "school_id", type: "string", length: 8, nullable: true)]
+    private ?string $schoolId = null;
+
+    #[ORM\Column(name: "is_teacher", type: "boolean", nullable: true)]
+    private bool $isTeacher = false;
+
+    #[ORM\Column(name: "mail_teacher", type: "string", length: 255, nullable: true)]
+    private ?string $mailTeacher = null;
 
     public function __construct(User $user, $garId = NULL, $schoolId = NULL, $isTeacher = false, $mailTeacher = NULL)
     {
@@ -57,50 +39,32 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         $this->setMailTeacher($mailTeacher);
     }
 
-    /**
-     * @return string
-     */
-    public function getGarId()
+    public function getGarId(): ?string
     {
         return $this->garId;
     }
-    /**
-     * @param string $garId
-     */
-    public function setGarId($garId)
+
+    public function setGarId(?string $garId): void
     {
         if (is_string($garId) || $garId == NULL) {
             if ((strlen($garId) == 0 || strlen($garId) < 255)) {
                 $this->garId = $garId;
             } else {
-                throw new EntityDataIntegrityException("garId needs to have a lenght null or less than 255 characters");
+                throw new EntityDataIntegrityException("garId needs to have a length null or less than 255 characters");
             }
         } else {
             throw new EntityDataIntegrityException("garId needs to be string or null ");
         }
     }
 
-    /**
-     * Get the value of canopeId
-     *
-     * @return  string
-     */ 
-    public function getCanopeId()
+    public function getCanopeId(): ?string
     {
         return $this->canopeId;
     }
 
-    /**
-     * Set the value of canopeId
-     *
-     * @param  string  $canopeId
-     *
-     * @return  self
-     */ 
-    public function setCanopeId($canopeId)
+    public function setCanopeId(?string $canopeId): self
     {
-        // the $canopeId is not a string and not an int (meaning an object or array) OR is empty
-        if((!is_string($canopeId) && !is_numeric($canopeId)) || !$canopeId){
+        if ((!is_string($canopeId) && !is_numeric($canopeId)) || !$canopeId) {
             throw new EntityDataIntegrityException("Invalid Value provided for the canope user id");
         }
         $this->canopeId = $canopeId;
@@ -108,75 +72,54 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         return $this;
     }
 
-    /**
-     * @return User
-     */
-    public function getId()
+    public function getId(): ?User
     {
         return $this->id;
     }
 
-    /**
-     * @param User $id
-     */
-    public function setId($id)
+    public function setId(User $id): void
     {
-
         $this->id = $id;
     }
 
-    /**
-     * @return string
-     */
-    public function getSchoolId()
+    public function getSchoolId(): ?string
     {
         return $this->schoolId;
     }
-    /**
-     * @param string $schoolId
-     */
-    public function setSchoolId($schoolId)
+
+    public function setSchoolId(?string $schoolId): void
     {
         if (is_string($schoolId) || $schoolId == NULL) {
             if ((strlen($schoolId) == 0 || strlen($schoolId) == 8)) {
                 $this->schoolId = $schoolId;
             } else {
-                throw new EntityDataIntegrityException("schoolId needs to have a lenght null or equal to 8");
+                throw new EntityDataIntegrityException("schoolId needs to have a length null or equal to 8");
             }
         } else {
             throw new EntityDataIntegrityException("schoolId needs to be string or null");
         }
     }
-    /**
-     * @return string
-     */
-    public function getMailTeacher()
+
+    public function getMailTeacher(): ?string
     {
         return $this->mailTeacher;
     }
-    /**
-     * @param string $mailTeacher
-     */
-    public function setMailTeacher($mailTeacher)
+
+    public function setMailTeacher(?string $mailTeacher): void
     {
         if ($mailTeacher == NULL || filter_var($mailTeacher, FILTER_VALIDATE_EMAIL) || $mailTeacher = "") {
             $this->mailTeacher = $mailTeacher;
         } else {
-            throw new EntityDataIntegrityException("invalid e-mail adresse : " . $mailTeacher);
+            throw new EntityDataIntegrityException("invalid e-mail address: " . $mailTeacher);
         }
     }
 
-    /**
-     * @return boolean
-     */
-    public function getIsTeacher()
+    public function getIsTeacher(): bool
     {
         return $this->isTeacher;
     }
-    /**
-     * @param boolean $isTeacher
-     */
-    public function setIsTeacher($isTeacher)
+
+    public function setIsTeacher(bool $isTeacher): void
     {
         if (is_bool($isTeacher)) {
             $this->isTeacher = $isTeacher;
@@ -185,7 +128,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         }
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         $id = $this->getId();
         if ($id != null) {
@@ -200,7 +143,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         ];
     }
 
-    public static function jsonDeserialize($jsonDecoded)
+    public static function jsonDeserialize($jsonDecoded): self
     {
         $classInstance = new self(new User());
         foreach ($jsonDecoded as $attributeName => $attributeValue) {

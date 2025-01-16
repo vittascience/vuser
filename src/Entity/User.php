@@ -7,84 +7,45 @@ use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use Utils\ImageManager;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\UserRepository")
- * @ORM\Table(name="users")
- */
-
+#[ORM\Entity(repositoryClass: "User\Repository\UserRepository")]
+#[ORM\Table(name: "users")]
 class User
 {
     // REG_FIRSTNAME: Only letters and digits and length of string is between 1 and 100
     const REG_NAME = "/^[a-zA-ZáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ]{1}[\w\sáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ'&@\-_.()]{0,98}[\wáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ)]{0,1}$/";
     const REG_UNIQID_13 = "/^[a-f0-9]{13}$/";
 
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="id",type="integer")
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(name: "id", type: "integer")]
     private $id;
 
-    /**
-     * @ORM\OneToMany(targetEntity="Learn\Entity\Favorite", mappedBy="user")
-     */
+    #[ORM\OneToMany(targetEntity: "Learn\Entity\Favorite", mappedBy: "user")]
     private $favorite;
 
-
-    /** 
-     * @ORM\Column(name="firstname", type="string", length=100, nullable=false)
-     * @var string
-     */
+    #[ORM\Column(name: "firstname", type: "string", length: 100, nullable: false)]
     private $firstname;
 
-
-    /** 
-     * @ORM\Column(name="pseudo", type="string", length=100, nullable=true)
-     * @var string
-     */
+    #[ORM\Column(name: "pseudo", type: "string", length: 100, nullable: true)]
     private $pseudo;
 
-
-    /**
-     * @ORM\Column(name="surname", type="string", length=100, nullable=false)
-     * @var string
-     */
+    #[ORM\Column(name: "surname", type: "string", length: 100, nullable: false)]
     private $surname;
 
-
-    /**
-     * @ORM\Column(name="password", type="string", length=255, nullable=false)
-     * @var string
-     */
+    #[ORM\Column(name: "password", type: "string", length: 255, nullable: false)]
     private $password;
 
-
-    /**
-     * @ORM\Column(name="insert_date", type="datetime", columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-     * @var \DateTime
-     */
+    #[ORM\Column(name: "insert_date", type: "datetime", columnDefinition: "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")]
     private $insertDate;
 
-
-    /**
-     * @ORM\Column(name="update_date", type="datetime", columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-     * @var \DateTime
-     */
+    #[ORM\Column(name: "update_date", type: "datetime", columnDefinition: "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")]
     private $updateDate;
 
-
-    /**
-     * @ORM\Column(name="picture", type="string", length=250, nullable=true)
-     * @var string
-     */
+    #[ORM\Column(name: "picture", type: "string", length: 250, nullable: true)]
     private $picture = NULL;
 
-     /**
-     * @ORM\Column(name="totp_secret", type="string", length=250, nullable=true)
-     * @var string
-     */
+    #[ORM\Column(name: "totp_secret", type: "string", length: 250, nullable: true)]
     private $totp_secret = NULL;
-
 
     public function __construct()
     {
@@ -92,9 +53,6 @@ class User
         $this->setInsertDate($today);
     }
 
-    /**
-     * @param int $id
-     */
     public function setId($id)
     {
         if (is_int($id) && $id > 0) {
@@ -103,120 +61,76 @@ class User
             throw new EntityDataIntegrityException("id needs to be integer and positive");
     }
 
-    /**
-     * @return int
-     */
     public function getId(): int
     {
         return $this->id;
     }
 
-    /**
-     * @return string
-     */
     public function getFirstname(): string
     {
         return $this->firstname;
     }
 
-    /**
-     * @param string $firstname
-     */
     public function setFirstname(string $firstname)
     {
         $this->firstname = $firstname;
     }
 
-    /**
-     * @return string
-     */
     public function getPseudo(): ?string
     {
         return $this->pseudo;
     }
 
-    /**
-     * @param string $pseudo
-     */
     public function setPseudo(?string $pseudo)
     {
         $this->pseudo = $pseudo;
     }
 
-    /**
-     * @return string
-     */
     public function getSurname(): string
     {
         return $this->surname;
     }
 
-    /**
-     * @param string $surname
-     */
     public function setSurname(string $surname)
     {
         $this->surname = $surname;
     }
 
-    /**
-     * @return string
-     */
     public function getPassword(): string
     {
         return $this->password;
     }
 
-    /**
-     * @param string $password
-     */
     public function setPassword(string $password)
     {
         $this->password = $password;
     }
 
-    /**
-     * @return \DateTime
-     */
     public function getInsertDate(): ?DateTime
     {
         return $this->insertDate;
     }
 
-    /**
-     * @param \DateTime $insertDate
-     */
     public function setInsertDate(?DateTime $insertDate)
     {
         $this->insertDate = $insertDate;
     }
 
-    /**
-     * @return \DateTime
-     */
     public function getUpdateDate(): ?DateTime
     {
         return $this->updateDate;
     }
 
-    /**
-     * @param \DateTime $updateDate
-     */
     public function setUpdateDate(?DateTime $updateDate)
     {
         $this->updateDate = $updateDate;
     }
-    /**
-     * @return string
-     */
+
     public function getPicture(): ?string
     {
         return $this->picture;
     }
 
-    /**
-     * @param string $picture
-     */
     public function setPicture(?string $picture)
     {
         $this->picture = $picture;
@@ -252,17 +166,11 @@ class User
         return $finalFileName;
     }
 
-    /**
-     * @return string
-     */
     public function getTotpSecret(): ?string
     {
         return $this->totp_secret;
     }
 
-    /**
-     * @param string $picture
-     */
     public function setTotpSecret(?string $totp_secret)
     {
         $this->totp_secret = $totp_secret;
