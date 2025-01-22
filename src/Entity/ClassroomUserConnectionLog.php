@@ -35,7 +35,7 @@ class ClassroomUserConnectionLog  {
         return $this->user;
     }
 
-    public function setUser(User $user): self
+    public function setUser($user): self
     {
         if (!($user instanceof User)) {
             throw new EntityDataIntegrityException("The user has to be an instance of User class");
@@ -50,7 +50,7 @@ class ClassroomUserConnectionLog  {
         return $this->garId;
     }
 
-    public function setGarId(?string $garId): self
+    public function setGarId($garId): self
     {
         if (is_string($garId) || $garId === null) {
             if (strlen($garId) === 0 || strlen($garId) < 255) {

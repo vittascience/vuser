@@ -44,7 +44,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         return $this->garId;
     }
 
-    public function setGarId(?string $garId): void
+    public function setGarId($garId): void
     {
         if (is_string($garId) || $garId == NULL) {
             if ((strlen($garId) == 0 || strlen($garId) < 255)) {
@@ -62,7 +62,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         return $this->canopeId;
     }
 
-    public function setCanopeId(?string $canopeId): self
+    public function setCanopeId($canopeId): self
     {
         if ((!is_string($canopeId) && !is_numeric($canopeId)) || !$canopeId) {
             throw new EntityDataIntegrityException("Invalid Value provided for the canope user id");

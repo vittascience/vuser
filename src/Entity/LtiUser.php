@@ -42,7 +42,7 @@ class LtiUser
         return $this->user;
     }
 
-    public function setUser(User $user): self
+    public function setUser($user): self
     {
         if (!($user instanceof User)) {
             throw new EntityDataIntegrityException("The user has to be an instance of User class");
@@ -57,7 +57,7 @@ class LtiUser
         return $this->ltiConsumer;
     }
 
-    public function setLtiConsumer(LtiConsumer $ltiConsumer): self
+    public function setLtiConsumer($ltiConsumer): self
     {
         if (!($ltiConsumer instanceof LtiConsumer)) {
             throw new EntityDataIntegrityException("The lti consumer has to be an instance of LtiTool class");
@@ -72,7 +72,7 @@ class LtiUser
         return $this->ltiUserId;
     }
 
-    public function setLtiUserId(string $ltiUserId): self
+    public function setLtiUserId($ltiUserId): self
     {
         if (!is_string($ltiUserId) || !$ltiUserId) {
             throw new EntityDataIntegrityException("Invalid Value provided for the lti user id");
@@ -87,7 +87,7 @@ class LtiUser
         return $this->ltiCourseId;
     }
 
-    public function setLtiCourseId(?string $ltiCourseId): self
+    public function setLtiCourseId($ltiCourseId): self
     {
         if (!is_string($ltiCourseId) || !$ltiCourseId) {
             throw new EntityDataIntegrityException("Invalid value provided for lti course id");
@@ -102,7 +102,7 @@ class LtiUser
         return $this->isTeacher;
     }
 
-    public function setIsTeacher(bool $isTeacher): self
+    public function setIsTeacher($isTeacher): self
     {
         if (!is_bool($isTeacher)) {
             throw new EntityDataIntegrityException("The isTeacher fields has to be a boolean value");
