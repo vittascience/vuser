@@ -77,7 +77,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         return $this->id;
     }
 
-    public function setId(User $id): void
+    public function setId($id): void
     {
         $this->id = $id;
     }
@@ -87,7 +87,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         return $this->schoolId;
     }
 
-    public function setSchoolId(?string $schoolId): void
+    public function setSchoolId($schoolId): void
     {
         if (is_string($schoolId) || $schoolId == NULL) {
             if ((strlen($schoolId) == 0 || strlen($schoolId) == 8)) {
@@ -105,7 +105,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         return $this->mailTeacher;
     }
 
-    public function setMailTeacher(?string $mailTeacher): void
+    public function setMailTeacher($mailTeacher): void
     {
         if ($mailTeacher == NULL || filter_var($mailTeacher, FILTER_VALIDATE_EMAIL) || $mailTeacher = "") {
             $this->mailTeacher = $mailTeacher;
@@ -119,7 +119,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         return $this->isTeacher;
     }
 
-    public function setIsTeacher(bool $isTeacher): void
+    public function setIsTeacher($isTeacher): void
     {
         if (is_bool($isTeacher)) {
             $this->isTeacher = $isTeacher;
