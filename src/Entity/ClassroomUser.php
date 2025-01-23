@@ -30,7 +30,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
     #[ORM\Column(name: "mail_teacher", type: "string", length: 255, nullable: true)]
     private ?string $mailTeacher = null;
 
-    public function __construct(User $user, $garId = NULL, $schoolId = NULL, $isTeacher = false, $mailTeacher = NULL)
+    public function __construct($user, $garId = NULL, $schoolId = NULL, $isTeacher = false, $mailTeacher = NULL)
     {
         $this->setId($user);
         $this->setSchoolId($schoolId);
