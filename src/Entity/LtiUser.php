@@ -5,6 +5,7 @@ namespace User\Entity;
 use Lti13\Entity\LtiConsumer;
 use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
+use User\Entity\User;
 
 #[ORM\Entity(repositoryClass: "User\Repository\LtiUserRepository")]
 #[ORM\Table(name: "user_lti_users")]
@@ -13,31 +14,36 @@ class LtiUser
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: "AUTO")]
     #[ORM\Column(name: "id", type: "integer")]
-    private int $id;
+    private ?int $id = null;
 
     #[ORM\OneToOne(targetEntity: "User\Entity\User")]
     #[ORM\JoinColumn(name: "user_id", referencedColumnName: "id", onDelete: "CASCADE")]
-    private User $user;
+    private ?User $user = null;
 
     #[ORM\ManyToOne(targetEntity: "Lti13\Entity\LtiConsumer")]
     #[ORM\JoinColumn(name: "consumer_id", referencedColumnName: "id", onDelete: "CASCADE")]
-    private LtiConsumer $ltiConsumer;
+    private ?LtiConsumer $ltiConsumer = null;
 
-    #[ORM\Column(name: "lti_user_id", type: "string", length: 255, nullable: false)]
-    private string $ltiUserId;
+    #[ORM\Column(name: "lti_user_id", type: "string", length: 255, nullable: true)]
+    private ?string $ltiUserId = null;
 
     #[ORM\Column(name: "lti_course_id", type: "string", length: 255, nullable: true)]
-    private ?string $ltiCourseId;
+    private ?string $ltiCourseId = null;
 
-    #[ORM\Column(name: "is_teacher", type: "boolean", options: ["default" => false])]
-    private bool $isTeacher;
+    #[ORM\Column(name: "is_teacher", type: "boolean", nullable: true, options: ["default" => null])]
+    private ?bool $isTeacher = null;
 
-    public function getId(): int
+    public function __construct()
+    {
+
+    }
+
+    public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getUser(): User
+    public function getUser(): ?User
     {
         return $this->user;
     }
@@ -52,29 +58,29 @@ class LtiUser
         return $this;
     }
 
-    public function getLtiConsumer(): LtiConsumer
+    public function getLtiConsumer(): ?LtiConsumer
     {
         return $this->ltiConsumer;
     }
 
     public function setLtiConsumer($ltiConsumer): self
     {
-        if (!($ltiConsumer instanceof LtiConsumer)) {
-            throw new EntityDataIntegrityException("The lti consumer has to be an instance of LtiTool class");
+        if ($ltiConsumer !== null && !($ltiConsumer instanceof LtiConsumer)) {
+            throw new EntityDataIntegrityException("The lti consumer has to be an instance of LtiConsumer class");
         }
         $this->ltiConsumer = $ltiConsumer;
 
         return $this;
     }
 
-    public function getLtiUserId(): string
+    public function getLtiUserId(): ?string
     {
         return $this->ltiUserId;
     }
 
     public function setLtiUserId($ltiUserId): self
     {
-        if (!is_string($ltiUserId) || !$ltiUserId) {
+        if ($ltiUserId === null || !is_string($ltiUserId) || empty($ltiUserId)) {
             throw new EntityDataIntegrityException("Invalid Value provided for the lti user id");
         }
         $this->ltiUserId = $ltiUserId;
@@ -89,26 +95,26 @@ class LtiUser
 
     public function setLtiCourseId($ltiCourseId): self
     {
-        if (!is_string($ltiCourseId) || !$ltiCourseId) {
+        // Si la valeur n'est pas une chaîne ou est une chaîne vide, lever une exception
+        if (!is_string($ltiCourseId) || trim($ltiCourseId) === "") {
             throw new EntityDataIntegrityException("Invalid value provided for lti course id");
         }
         $this->ltiCourseId = $ltiCourseId;
-
         return $this;
     }
 
-    public function getIsTeacher(): bool
+    public function getIsTeacher(): ?bool
     {
         return $this->isTeacher;
     }
 
     public function setIsTeacher($isTeacher): self
     {
-        if (!is_bool($isTeacher)) {
-            throw new EntityDataIntegrityException("The isTeacher fields has to be a boolean value");
+        if ($isTeacher === null || !is_bool($isTeacher)) {
+            throw new EntityDataIntegrityException("The isTeacher field has to be a boolean value");
         }
         $this->isTeacher = $isTeacher;
-
+    
         return $this;
     }
 }

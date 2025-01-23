@@ -13,7 +13,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: "User\Entity\User")]
     #[ORM\JoinColumn(name: "user", referencedColumnName: "id", onDelete: "CASCADE")]
-    private ?User $id = null;
+    private $id = null;
 
     #[ORM\Column(name: "gar_id", type: "string", length: 255, nullable: true)]
     private ?string $garId = null;
@@ -72,7 +72,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         return $this;
     }
 
-    public function getId(): ?User
+    public function getId()
     {
         return $this->id;
     }
