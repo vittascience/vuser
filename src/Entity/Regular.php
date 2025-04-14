@@ -108,8 +108,8 @@ class Regular
     private $privateFlag = false;
 
     /**
-     * @ORM\Column(name="from_sso", type="boolean", options={"default":false}, nullable=true)
-     * @var bool
+     * @ORM\Column(name="from_sso", type="string", nullable=true)
+     * @var string
      */
     private $fromSso = false;
 
@@ -338,17 +338,17 @@ class Regular
     }
 
     /**
-     * @return bool
+     * @return string
      */
-    public function isFromSso(): ?bool
+    public function isFromSso(): ?string
     {
         return $this->fromSso;
     }
 
     /**
-     * @param bool $fromSso
+     * @param string $fromSso
      */
-    public function setFromSso(?bool $fromSso)
+    public function setFromSso(?string $fromSso)
     {
         $this->fromSso = $fromSso;
     }
