@@ -107,6 +107,12 @@ class Regular
      */
     private $privateFlag = false;
 
+    /**
+     * @ORM\Column(name="from_sso", type="string", nullable=true)
+     * @var string
+     */
+    private $fromSso = false;
+
     public function __construct(User $user, $email, $bio = NULL, $telephone = NULL, $privateFlag = false, $isAdmin = false, $newMail = null, $recoveryToken = null, $active = false, $mailMessages = false, $newsletter = false, $contactFlag = false, $confirmToken = null)
     {
         $this->setUser($user);
@@ -329,6 +335,22 @@ class Regular
     public function setPrivateFlag(bool $privateFlag)
     {
         $this->privateFlag = $privateFlag;
+    }
+
+    /**
+     * @return string
+     */
+    public function isFromSso(): ?string
+    {
+        return $this->fromSso;
+    }
+
+    /**
+     * @param string $fromSso
+     */
+    public function setFromSso(?string $fromSso)
+    {
+        $this->fromSso = $fromSso;
     }
 
     public function jsonSerialize()
