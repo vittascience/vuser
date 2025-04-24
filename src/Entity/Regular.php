@@ -357,7 +357,8 @@ class Regular
     {
         $array = [
             "bio" => $this->getBio(),
-            "email" => $this->getEmail()
+            "email" => $this->getEmail(),
+            "fromSSO" => $this->isFromSso(),
         ];
         return $array;
     }
