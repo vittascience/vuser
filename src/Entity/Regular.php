@@ -111,7 +111,7 @@ class Regular
      * @ORM\Column(name="from_sso", type="string", nullable=true)
      * @var string
      */
-    private $fromSso = false;
+    private $fromSso = null;
 
     public function __construct(User $user, $email, $bio = NULL, $telephone = NULL, $privateFlag = false, $isAdmin = false, $newMail = null, $recoveryToken = null, $active = false, $mailMessages = false, $newsletter = false, $contactFlag = false, $confirmToken = null)
     {
