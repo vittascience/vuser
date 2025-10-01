@@ -1246,8 +1246,8 @@ class ControllerUser extends Controller
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
                 $mail = !empty($_POST['mail']) ? htmlspecialchars(strip_tags(trim($_POST['mail']))) : '';
-                $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
-                $totp_code = !empty($_POST['totp_code']) ? htmlspecialchars(strip_tags(trim($_POST['totp_code']))) : '';
+                $password = !empty($_POST['password']) ? $_POST['password'] : '';
+                $totp_code = !empty($_POST['totp_code']) ? $_POST['totp_code'] : '';
 
                 if (empty($mail) || empty($password)) return array(
                     'success' => false,
@@ -1283,9 +1283,8 @@ class ControllerUser extends Controller
                 $surname = isset($_POST['surname']) ? htmlspecialchars(strip_tags(trim($_POST['surname']))) : null;
                 $pseudo = isset($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : null;
                 $email = isset($_POST['email'])  ? htmlspecialchars(strip_tags(trim($_POST['email']))) : null;
-                $password = isset($_POST['password'])  ? htmlspecialchars(strip_tags(trim($_POST['password']))) : null;
-                $password_confirm = isset($_POST['password_confirm'])  ? htmlspecialchars(strip_tags(trim($_POST['password_confirm']))) : null;
-
+                $password = isset($_POST['password'])  ? $_POST['password'] : null;
+                $password_confirm = isset($_POST['password_confirm'])  ? $_POST['password_confirm'] : null;
 
                 // create empty $errors and fill it with errors if any
                 $errors = [];
