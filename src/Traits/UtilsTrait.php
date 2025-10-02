@@ -1,4 +1,5 @@
 <?php
+
 namespace User\Traits;
 
 use Classroom\Entity\Groups;
@@ -9,104 +10,152 @@ use Classroom\Entity\ClassroomLinkUser;
 use Classroom\Entity\UsersRestrictions;
 
 trait UtilsTrait {
+    public static function getUserRestrictions($entityManager, $teacherId = null) {
+        if (empty($_SESSION['id'])) {
+            return ["errorType" => "userNotRetrievedNotAuthenticated"];
+        }
 
-    public static function getUserRestrictions($entityManager) {
-        if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+        $idToCheck = $teacherId ?: $_SESSION['id'];
+        $now = new \DateTimeImmutable('now');
+
+        $betterCap = static function (int $cur, int $cand): int {
+            if ($cur === -1 || $cand === -1) return -1;
+            return max($cur, $cand);
+        };
 
         $restrictionsArray = [
-            'maxClassrooms' => 0, // > 1 = premium
-            'maxStudents' => 0, // > 50 = premium
+            'maxClassrooms' => 0,
+            'maxStudents' => 0,
             'dateBegin' => 0,
             'dateEnd' => 0,
-            'premium' => false, // user_premium table
+            'premium' => false,
             'totalClassrooms' => 0,
             'totalStudents' => 0,
-            'type' => 'free'
+            'type' => 'free',
         ];
 
-        // get user's classroom
-        $classrooms = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['user' => $_SESSION['id'], 'rights' => 2]);
-        if ($classrooms) {
-            foreach ($classrooms as $classroom) {
-                $restrictionsArray['totalClassrooms'] += 1;
-                $students = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['classroom' => $classroom->getClassroom()]);
-                if ($students) {
-                    $restrictionsArray['totalStudents'] += count($students);
-                    $restrictionsArray['totalStudents'] -= 1;
+        if ($teacherId === null) {
+            $hasTeacherLink = (bool) $entityManager->getRepository(ClassroomLinkUser::class)->findOneBy(['user' => $idToCheck, 'rights' => 2]);
+
+            if (!$hasTeacherLink) {
+                $isStudent = $entityManager->getRepository(ClassroomLinkUser::class)->findOneBy(['user' => $idToCheck, 'rights' => 0]);
+                if ($isStudent) {
+                    $classroomTeacher = $entityManager->getRepository(ClassroomLinkUser::class)->findOneBy(['classroom' => $isStudent->getClassroom(), 'rights' => 2]);
+
+                    if (!$classroomTeacher) {
+                        return ["errorType" => "studentWithoutTeacher"];
+                    }
+
+                    $teacherRestrictions = self::getUserRestrictions($entityManager, $classroomTeacher->getUser()->getId());
+                    if (isset($teacherRestrictions['errorType'])) {
+                        return $teacherRestrictions;
+                    }
+
+                    if (!empty($teacherRestrictions['premium'])) {
+                        return [
+                            'maxClassrooms' => -1,
+                            'maxStudents' => -1,
+                            'dateBegin' => $teacherRestrictions['dateBegin'],
+                            'dateEnd' => $teacherRestrictions['dateEnd'],
+                            'premium' => true,
+                            'totalClassrooms' => -1,
+                            'totalStudents' => -1,
+                            'type' => 'StudentOfPremium'
+                        ];
+                    } else {
+                        return [
+                            'maxClassrooms' => 0,
+                            'maxStudents' => 0,
+                            'dateBegin' => 0,
+                            'dateEnd' => 0,
+                            'premium' => false,
+                            'totalClassrooms' => 0,
+                            'totalStudents' => 0,
+                            'type' => 'free'
+                        ];
+                    }
                 }
             }
         }
 
+        $classrooms = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['user' => $idToCheck, 'rights' => 2]);
+        foreach ($classrooms as $classroom) {
+            $restrictionsArray['totalClassrooms']++;
+            $students = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['classroom' => $classroom->getClassroom()]);
+            if ($students) {
+                $restrictionsArray['totalStudents'] += max(0, count($students) - 1);
+            }
+        }
 
-        $checkPremium = $entityManager->getRepository(UserPremium::class)->findOneBy(['user' => $_SESSION['id']]);
+        $checkPremium = $entityManager->getRepository(UserPremium::class)
+            ->findOneBy(['user' => $idToCheck]);
         if ($checkPremium) {
             $restrictionsArray['premium'] = true;
             $restrictionsArray['type'] = 'LegacyPersonalPremium';
         }
-        // get default restrictions
+
         $userDefaultRestrictions = $entityManager->getRepository(Restrictions::class)->findOneBy(['name' => "userDefaultRestrictions"]);
-        $groupDefaultRestrictions = $entityManager->getRepository(Restrictions::class)->findOneBy(['name' => "groupDefaultRestrictions"]);
-        $userGroups = $entityManager->getRepository(UsersLinkGroups::class)->findOneBy(['user' => $_SESSION['id']]);
-        
-        $usersRestrictionAmount = (array)json_decode($userDefaultRestrictions->getRestrictions());
-        $restrictionsArray['maxClassrooms'] = $usersRestrictionAmount['maxClassrooms'];
-        $restrictionsArray['maxStudents'] = $usersRestrictionAmount['maxStudents'];
-        $restrictionsArray['dateBegin'] = -1;
-        $restrictionsArray['dateEnd'] = -1;
+        if ($userDefaultRestrictions) {
+            $usersRestrictionAmount = (array)json_decode($userDefaultRestrictions->getRestrictions(), true);
+            $restrictionsArray['maxClassrooms'] = $usersRestrictionAmount['maxClassrooms'] ?? 0;
+            $restrictionsArray['maxStudents']   = $usersRestrictionAmount['maxStudents']   ?? 0;
+            $restrictionsArray['dateBegin'] = -1;
+            $restrictionsArray['dateEnd']   = -1;
+        }
 
-        // get default MaxClassrooms restrictions
+        $userGroups = $entityManager->getRepository(UsersLinkGroups::class)->findOneBy(['user' => $idToCheck]);
         if ($userGroups) {
-            $groupsRestrictionAmount = (array)json_decode($groupDefaultRestrictions->getRestrictions());
-
-            if ($restrictionsArray['maxClassrooms'] < $groupsRestrictionAmount['maxClassroomsPerTeacher']) {
-                $restrictionsArray['maxClassrooms'] = $groupsRestrictionAmount['maxClassroomsPerTeacher'];
-            }
-            if ($restrictionsArray['maxStudents'] < $groupsRestrictionAmount['maxStudentsPerTeacher']) {
-                $restrictionsArray['maxStudents'] = $groupsRestrictionAmount['maxStudentsPerTeacher'];
-            }
-
-
             $group = $entityManager->getRepository(Groups::class)->findOneBy(['id' => $userGroups->getGroup()]);
-            if ($group->getDateEnd() > new \DateTime('now') || $group->getDateEnd() == null) {
+            if ($group && ($group->getDateEnd() === null || $group->getDateEnd() > $now)) {
+                $groupDefaultRestrictions = $entityManager->getRepository(Restrictions::class)
+                    ->findOneBy(['name' => "groupDefaultRestrictions"]);
+                if ($groupDefaultRestrictions) {
+                    $groupsRestrictionAmount = (array)json_decode($groupDefaultRestrictions->getRestrictions(), true);
+                    $restrictionsArray['maxClassrooms'] = $betterCap(
+                        $restrictionsArray['maxClassrooms'],
+                        $groupsRestrictionAmount['maxClassroomsPerTeacher'] ?? 0
+                    );
+                    $restrictionsArray['maxStudents'] = $betterCap(
+                        $restrictionsArray['maxStudents'],
+                        $groupsRestrictionAmount['maxStudentsPerTeacher'] ?? 0
+                    );
+                }
+
                 $restrictionsArray['dateBegin'] = $group->getDateBegin();
-                $restrictionsArray['dateEnd'] = $group->getDateEnd();
+                $restrictionsArray['dateEnd']   = $group->getDateEnd();
 
-                if (($restrictionsArray['maxStudents'] < $group->getmaxStudentsPerTeachers() && $restrictionsArray['maxStudents'] != -1) || $group->getmaxStudentsPerTeachers() == -1) {
-                    $restrictionsArray['maxStudents'] = $group->getmaxStudentsPerTeachers();
-                    $restrictionsArray['type'] = 'GroupPremium';
-                    $restrictionsArray['premium'] = true;
-                }
+                $restrictionsArray['maxStudents'] = $betterCap(
+                    $restrictionsArray['maxStudents'],
+                    $group->getMaxStudentsPerTeachers()
+                );
+                $restrictionsArray['maxClassrooms'] = $betterCap(
+                    $restrictionsArray['maxClassrooms'],
+                    $group->getMaxClassroomsPerTeachers()
+                );
 
-                if ($restrictionsArray['maxClassrooms'] < $group->getmaxClassroomsPerTeachers() && $restrictionsArray['maxClassrooms'] != -1 || $group->getmaxClassroomsPerTeachers() == -1) {
-                    $restrictionsArray['maxClassrooms'] = $group->getmaxClassroomsPerTeachers();
-                    $restrictionsArray['type'] = 'GroupPremium';
-                    $restrictionsArray['premium'] = true;
-                }
+                $restrictionsArray['premium'] = true;
+                $restrictionsArray['type'] = 'GroupPremium';
             }
         }
 
-        // GET USER RESTRICTIONS
-        $userRestrictions = $entityManager->getRepository(UsersRestrictions::class)->findOneBy(['user' => $_SESSION['id']]);
-        if ($userRestrictions) {
-            if ($userRestrictions->getDateEnd() > new \DateTime('now') || $userRestrictions->getDateEnd() == null) {
-                $restrictionsArray['dateBegin'] = $userRestrictions->getDateBegin();
-                $restrictionsArray['dateEnd'] = $userRestrictions->getDateEnd();
+        $userRestrictions = $entityManager->getRepository(UsersRestrictions::class)->findOneBy(['user' => $idToCheck]);
+        if ($userRestrictions && ($userRestrictions->getDateEnd() === null || $userRestrictions->getDateEnd() > $now)) {
+            $restrictionsArray['dateBegin'] = $userRestrictions->getDateBegin();
+            $restrictionsArray['dateEnd']   = $userRestrictions->getDateEnd();
 
-                if ($restrictionsArray['maxStudents'] < $userRestrictions->getMaxStudents() && $restrictionsArray['maxStudents'] != -1 || $userRestrictions->getMaxStudents() == -1) {
-                    $restrictionsArray['maxStudents'] = $userRestrictions->getMaxStudents();
-                    $restrictionsArray['type'] = 'PersonalPremium';
-                    $restrictionsArray['premium'] = true;
-                }
+            $restrictionsArray['maxStudents'] = $betterCap(
+                $restrictionsArray['maxStudents'],
+                $userRestrictions->getMaxStudents()
+            );
+            $restrictionsArray['maxClassrooms'] = $betterCap(
+                $restrictionsArray['maxClassrooms'],
+                $userRestrictions->getMaxClassrooms()
+            );
 
-                if ($restrictionsArray['maxClassrooms'] < $userRestrictions->getMaxClassrooms() && $restrictionsArray['maxClassrooms'] != -1 || $userRestrictions->getMaxClassrooms() == -1) {
-                    $restrictionsArray['maxClassrooms'] = $userRestrictions->getMaxClassrooms();
-                    $restrictionsArray['type'] = 'PersonalPremium';
-                    $restrictionsArray['premium'] = true;
-                }
-            }
+            $restrictionsArray['premium'] = true;
+            $restrictionsArray['type'] = 'PersonalPremium';
         }
 
         return $restrictionsArray;
     }
 }
-
