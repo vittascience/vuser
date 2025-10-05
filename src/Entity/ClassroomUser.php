@@ -48,13 +48,20 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
      */
     private $mailTeacher;
 
-    public function __construct(User $user, $garId = NULL, $schoolId = NULL, $isTeacher = false, $mailTeacher = NULL)
+    /**
+     * @ORM\Column(name="saml_id", type="string", length=255, nullable=true)
+     * @var string
+     */
+    private $samlId;
+
+    public function __construct(User $user, $garId = NULL, $schoolId = NULL, $isTeacher = false, $mailTeacher = NULL, $samlId = NULL)
     {
         $this->setId($user);
         $this->setSchoolId($schoolId);
         $this->setGarId($garId);
         $this->setIsTeacher($isTeacher);
         $this->setMailTeacher($mailTeacher);
+        $this->setSamlId($samlId);
     }
 
     /**
@@ -185,6 +192,29 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         }
     }
 
+    /**
+     * Get the value of samlId
+     *
+     * @return  string
+     */
+    public function getSamlId()
+    {
+        return $this->samlId;
+    }
+
+    /**
+     * Set the value of samlId
+     *
+     * @param  string  $samlId
+     *
+     * @return  self
+     */
+    public function setSamlId(?string $samlId)
+    {
+        $this->samlId = $samlId;
+        return $this;
+    }
+
     public function jsonSerialize()
     {
         $id = $this->getId();
@@ -197,6 +227,7 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
             'mailTeacher' => $this->getMailTeacher(),
             'isTeacher' => $this->getIsTeacher(),
             'id' => $id,
+            'samlId' => $this->getSamlId()
         ];
     }
 
