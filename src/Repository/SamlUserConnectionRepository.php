@@ -8,18 +8,17 @@ use User\Entity\User;
 
 class SamlUserConnectionRepository extends EntityRepository
 {
-    public function trackLogin(User $user, ?\DateTimeInterface $when = null): void
+    public function trackLogin(User $user, \DateTime $when = null): void
     {
-        $when = $when ?? new \DateTimeImmutable('now');
+        $when = $when ?: new \DateTime('now');
         [$academicYear] = SamlUserConnection::computeAcademicYear($when);
 
-        $em = $this->getEntityManager();
-        $repo = $em->getRepository(SamlUserConnection::class);
-
-        $connection = $repo->findOneBy([
+        $connection = $this->findOneBy([
             'user' => $user,
             'academicYear' => $academicYear,
         ]);
+
+        $em = $this->getEntityManager();
 
         if ($connection === null) {
             $connection = new SamlUserConnection($user, $when);
