@@ -8,27 +8,24 @@ use User\Entity\User;
 
 class SamlUserConnectionRepository extends EntityRepository
 {
-   public function trackLogin(User $user, \DateTime $when = null): void
+    public function trackLogin(User $user, ?\DateTimeInterface $when = null): void
     {
-        $when = $when ?: new \DateTime('now');
-        [$label] = SamlUserConnection::computeAcademicYear($when);
-
-        $qb = $this->getEntityManager()->createQueryBuilder('c')
-            ->where('c.user = :user')
-            ->andWhere('c.academicYear = :year')
-            ->setParameter('user', $user)
-            ->setParameter('year', $label)
-            ->setMaxResults(1);
-
-        $conn = $qb->getQuery()->getOneOrNullResult();
+        $when = $when ?? new \DateTimeImmutable('now');
+        [$academicYear] = SamlUserConnection::computeAcademicYear($when);
 
         $em = $this->getEntityManager();
+        $repo = $em->getRepository(SamlUserConnection::class);
 
-        if ($conn === null) {
-            $conn = new SamlUserConnection($user, $when);
-            $em->persist($conn);
+        $connection = $repo->findOneBy([
+            'user' => $user,
+            'academicYear' => $academicYear,
+        ]);
+
+        if ($connection === null) {
+            $connection = new SamlUserConnection($user, $when);
+            $em->persist($connection);
         } else {
-            $conn->touch($when);
+            $connection->touch($when);
         }
 
         $em->flush();
