@@ -22,11 +22,14 @@ class UserConnectionHistory
     /** @ORM\Column(type="datetime") */
     private \DateTime $timestamp;
 
-    /** @ORM\Column(type="string", length=100, nullable=true) */
+    /** @ORM\Column(type="string", length=255, nullable=true) */
     private ?string $device = null;
 
     /** @ORM\Column(type="string", length=2, nullable=true) */
     private ?string $country = null;
+
+    /** @ORM\Column(type="string", length=55, nullable=true) */
+    private ?string $ip = null;
 
     // Getters and setters (optionally typed for IDE support)
     public function getId(): int { return $this->id; }
@@ -42,5 +45,8 @@ class UserConnectionHistory
 
     public function getCountry(): ?string { return $this->country; }
     public function setCountry(?string $country): self { $this->country = $country; return $this; }
+
+    public function getIp(): ?string { return $this->ip; }
+    public function setIp(?string $ip): self { $this->ip = $ip; return $this; }
 
 }

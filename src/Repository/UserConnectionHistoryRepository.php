@@ -124,4 +124,20 @@ class UserConnectionHistoryRepository extends EntityRepository
             ->getResult();
     }
 
+    /**
+     * Get connection entries for a given IP address.
+     *
+     * @param string $ip The IP address
+     * @return UserConnectionHistory[]
+     */
+    public function getConnectionsByIp(string $ip): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.ip = :ip')
+            ->setParameter('ip', $ip)
+            ->orderBy('c.timestamp', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
 }
