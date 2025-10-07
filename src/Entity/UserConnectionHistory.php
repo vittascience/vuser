@@ -14,28 +14,33 @@ use Doctrine\ORM\Mapping as ORM;
 class UserConnectionHistory
 {
     /** @ORM\Id @ORM\GeneratedValue @ORM\Column(type="integer") */
-    private $id;
+    private int $id;
 
-    /** @ORM\Column(type="integer") */
-    private $userId;
+    /** @ORM\Column(name="user_id", type="integer") */
+    private int $userId;
 
     /** @ORM\Column(type="datetime") */
-    private $timestamp;
+    private \DateTime $timestamp;
 
     /** @ORM\Column(type="string", length=100, nullable=true) */
-    private $device;
+    private ?string $device = null;
 
     /** @ORM\Column(type="string", length=2, nullable=true) */
-    private $country;
+    private ?string $country = null;
 
-    // Getters & setters inline
-    public function getId(): ?int { return $this->id; }
-    public function getUserId(): ?int { return $this->userId; }
+    // Getters and setters (optionally typed for IDE support)
+    public function getId(): int { return $this->id; }
+
+    public function getUserId(): int { return $this->userId; }
     public function setUserId(int $userId): self { $this->userId = $userId; return $this; }
-    public function getTimestamp(): ?\DateTimeInterface { return $this->timestamp; }
-    public function setTimestamp(\DateTimeInterface $timestamp): self { $this->timestamp = $timestamp; return $this; }
+
+    public function getTimestamp(): \DateTime { return $this->timestamp; }
+    public function setTimestamp(\DateTime $timestamp): self { $this->timestamp = $timestamp; return $this; }
+
     public function getDevice(): ?string { return $this->device; }
     public function setDevice(?string $device): self { $this->device = $device; return $this; }
+
     public function getCountry(): ?string { return $this->country; }
     public function setCountry(?string $country): self { $this->country = $country; return $this; }
+
 }
