@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repository;
+namespace User\Repository;
 
 use App\Entity\UserConnectionHistory;
 use Doctrine\ORM\EntityRepository;
