@@ -1934,7 +1934,7 @@ class ControllerUser extends Controller
 
                 return ['result' => $result];
             },
-            'user-count-login' => function () {
+            'user-trigger-login' => function () {
                 if (empty($_SESSION['id'])) {
                     return ['error' => 'Utilisateur non authentifié'];
                 }
