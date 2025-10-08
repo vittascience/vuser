@@ -39,9 +39,9 @@ class UserRepository extends EntityRepository
         int $page = 1,
         int $perPage = 25,
         ?string $search = null,
-        $sort = 'id',            // string "id" ou "surname:asc,firstname:desc" ou array
-        string $dir = 'asc',     // ignoré si $sort est multi-colonnes
-        array $filters = []      // << nouveau
+        $sort = 'id',
+        string $dir = 'asc',
+        array $filters = []
     ): array {
         $page    = max(1, $page);
         $perPage = max(1, min(200, $perPage));

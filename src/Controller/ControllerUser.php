@@ -17,9 +17,10 @@ use User\Entity\Regular;
 /**
  * @ THOMAS MODIF 1 line just below
  */
+
 use User\Entity\Teacher;
-use User\Traits\UtilsTrait;
 use Aiken\i18next\i18next;
+use User\Traits\UtilsTrait;
 use Classroom\Entity\Groups;
 use User\Entity\UserPremium;
 use Utils\ConnectionManager;
@@ -31,6 +32,7 @@ use Classroom\Entity\Applications;
 use Classroom\Entity\Restrictions;
 use Classroom\Entity\UsersLinkGroups;
 use Classroom\Entity\ActivityLinkUser;
+use User\Entity\UserConnectionHistory;
 use Classroom\Entity\ClassroomLinkUser;
 use Classroom\Entity\UsersRestrictions;
 use Classroom\Entity\ActivityLinkClassroom;
@@ -601,7 +603,7 @@ class ControllerUser extends Controller
                             "classroomLink" => $garUserClassroom->getClassroom()->getLink(),
                         ]);
                     }
-                    
+
                     $this->saveGarUserConnection($garUserExists->getGarId());
 
                     return array(
@@ -644,7 +646,7 @@ class ControllerUser extends Controller
                     $userPremium = new UserPremium($user);
                     $this->entityManager->persist($userPremium);
                     $this->entityManager->flush();
-                    
+
                     $this->saveGarUserConnection($classroomUser->getGarId());
 
                     return array(
@@ -916,7 +918,7 @@ class ControllerUser extends Controller
                 $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
                 $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
 
-                
+
                 // get demoStudent from .env file
                 $demoStudent = $this->manageDemoStudentPseudo();
 
@@ -1255,7 +1257,7 @@ class ControllerUser extends Controller
                 );
 
                 if (ConnectionManager::getSharedInstance()->checkConnected()) return ["success" => true];
-        
+
                 $regularUser = $this->entityManager
                     ->getRepository(Regular::class)
                     ->findOneBy(array('email' => $mail));
@@ -1823,7 +1825,144 @@ class ControllerUser extends Controller
             'get_user_restriction' => function () {
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
                 return UtilsTrait::getUserRestrictions($this->entityManager);
-            }
+            },
+            'user-meta-search' => function () {
+
+                $input = json_decode(file_get_contents('php://input'), true) ?? [];
+
+                $rawPage   = isset($input['page']) ? $input['page'] : 1;
+                $rawNusers = isset($input['nusers']) ? $input['nusers'] : 25;
+                $rawSearch = isset($input['search']) ? $input['search'] : null;
+                $rawSort   = isset($input['sort']) ? $input['sort'] : 'id';
+                $rawDir    = isset($input['dir']) ? $input['dir'] : 'asc';
+                $rawFilter = isset($input['filter']) ? $input['filter'] : [];
+
+                $page    = max(1, (int)$rawPage);
+                $perPage = max(1, min(200, (int)$rawNusers));
+                $search  = is_string($rawSearch) ? trim($rawSearch) : null;
+                if ($search === '') {
+                    $search = null;
+                }
+
+                $sort = is_string($rawSort) ? trim($rawSort) : 'id';
+                $dir  = strtolower((string)$rawDir) === 'desc' ? 'desc' : 'asc';
+
+
+                $filters = [];
+                if (is_array($rawFilter)) {
+                    foreach ($rawFilter as $k => $v) {
+                        if (!is_string($k)) continue;
+                        if (is_string($v)) {
+                            $v = trim($v);
+                            if ($v === '') continue;
+                        }
+
+                        if ($k === 'isFromSSO' && is_string($v)) {
+                            $lv = strtolower($v);
+                            if ($lv === 'null' || $lv === 'notnull') {
+                                $filters['isFromSSO'] = $lv;
+                                continue;
+                            }
+                        }
+
+                        if (in_array($k, ['newsletter', 'is_active', 'is_admin', 'teacher'], true)) {
+                            $filters[$k] = in_array((string)$v, ['1', 'true', 'on', 'yes'], true) ? 1 : 0;
+                            continue;
+                        }
+
+                        if (preg_match('~^(email|firstname|surname|isFromSSO)~$~', $k)) {
+                            $filters[$k] = (string)$v;
+                            continue;
+                        }
+
+                        $filters[$k] = $v;
+                    }
+                }
+
+                // Fetch data from repository
+                $repo = $this->entityManager->getRepository(User::class);
+                $data = $repo->findPaginated($page, $perPage, $search, $sort, $dir, $filters);
+
+                // Return structured response
+                return [
+                    'page' => $page,
+                    'perPage' => $perPage,
+                    'search' => $search,
+                    'sort' => $sort,
+                    'dir' => $dir,
+                    'filters' => $filters,
+                    'result' => $data,
+                ];
+            },
+
+            'user-connection-meta-search' => function () {
+                $input = json_decode(file_get_contents('php://input'), true) ?? [];
+
+                $userId = isset($input['userId']) ? (int)$input['userId'] : null;
+                $limit  = isset($input['limit']) ? max(1, (int)$input['limit']) : 20;
+
+                $sso     = isset($input['sso']) ? trim((string)$input['sso']) : null;
+                $ip      = isset($input['ip']) ? trim((string)$input['ip']) : null;
+                $country = isset($input['country']) ? strtoupper(trim((string)$input['country'])) : null;
+                $range   = isset($input['range']) && is_array($input['range']) ? $input['range'] : null;
+                $devices = isset($input['devices']) ? (bool)$input['devices'] : false;
+
+                $repo = $this->entityManager->getRepository(UserConnectionHistory::class);
+
+                // Priorité : IP > SSO + range > SSO > country > devices > userId
+                if ($ip) {
+                    $result = $repo->getConnectionsByIp($ip);
+                } elseif ($sso && $range && isset($range['from'], $range['to'])) {
+                    try {
+                        $from = new \DateTime($range['from']);
+                        $to   = new \DateTime($range['to']);
+                        $count = $repo->countConnectionsBySso($sso, $from, $to);
+                        return ['sso' => $sso, 'from' => $from->format('c'), 'to' => $to->format('c'), 'count' => $count];
+                    } catch (\Exception $e) {
+                        return ['error' => 'Invalid date range'];
+                    }
+                } elseif ($sso) {
+                    $result = $repo->findConnectionsBySso($sso, $limit);
+                } elseif ($userId && $country) {
+                    $result = $repo->findConnectionsByCountry($userId, $country);
+                } elseif ($userId && $devices) {
+                    $result = $repo->getRecentDevices($userId, $limit);
+                } elseif ($userId) {
+                    $result = $repo->findConnectionsByUser($userId, $limit);
+                } else {
+                    return ['error' => 'Missing userId or query parameters'];
+                }
+
+                return ['result' => $result];
+            },
+            'user-count-login' => function () {
+                if (empty($_SESSION['id'])) {
+                    return ['error' => 'Utilisateur non authentifié'];
+                }
+
+                $idUser = (int) $_SESSION['id'];
+
+                $ipWithOutLastOctet = null;
+                if (!empty($_SERVER['REMOTE_ADDR'])) {
+                    $ipParts = explode('.', $_SERVER['REMOTE_ADDR']);
+                    if (count($ipParts) === 4) {
+                        array_pop($ipParts);
+                        $ipWithOutLastOctet = implode('.', $ipParts) . '.0';
+                    }
+                }
+
+                $login = new UserConnectionHistory();
+                $login->setUserId($idUser);
+                $login->setTimestamp(new \DateTime());
+                $login->setDevice($_SERVER['HTTP_USER_AGENT'] ?? null);
+                $login->setCountry($_SESSION['country_code']);
+                $login->setIp($ipWithOutLastOctet);
+
+                $this->entityManager->persist($login);
+                $this->entityManager->flush();
+
+                return ['success' => true, 'userId' => $idUser];
+            },
         );
     }
 
