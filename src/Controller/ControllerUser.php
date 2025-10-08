@@ -1894,7 +1894,6 @@ class ControllerUser extends Controller
                     'result' => $data,
                 ];
             },
-
             'user-connection-meta-search' => function () {
                 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
