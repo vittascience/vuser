@@ -1940,23 +1940,17 @@ class ControllerUser extends Controller
                     return ['error' => 'Utilisateur non authentifié'];
                 }
 
-                $idUser = (int) $_SESSION['id'];
-
-                $ipWithOutLastOctet = null;
-                if (!empty($_SERVER['REMOTE_ADDR'])) {
-                    $ipParts = explode('.', $_SERVER['REMOTE_ADDR']);
-                    if (count($ipParts) === 4) {
-                        array_pop($ipParts);
-                        $ipWithOutLastOctet = implode('.', $ipParts) . '.0';
-                    }
+                $idUser = isset($_SESSION['id']) ? intval($_SESSION['id']) : null;
+                if (!$idUser) {
+                    return ['error' => 'ID utilisateur manquant'];
                 }
 
                 $login = new UserConnectionHistory();
                 $login->setUserId($idUser);
                 $login->setTimestamp(new \DateTime());
                 $login->setDevice($_SERVER['HTTP_USER_AGENT'] ?? null);
-                $login->setCountry($_SESSION['country_code']);
-                $login->setIp($ipWithOutLastOctet);
+                $login->setCountry($_SESSION['country_code'] ?? null);
+                $login->setIp($_SESSION['truncated_ip'] ?? null);
 
                 $this->entityManager->persist($login);
                 $this->entityManager->flush();
