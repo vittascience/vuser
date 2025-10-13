@@ -5,7 +5,7 @@ namespace User\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * @ORM\Entity(repositoryClass="App\Repository\UserConnectionHistoryRepository")
+ * @ORM\Entity(repositoryClass="User\Repository\UserConnectionHistoryRepository")
  * @ORM\Table(name="user_connection_history", indexes={
  *     @ORM\Index(name="user_idx", columns={"user_id"}),
  *     @ORM\Index(name="timestamp_idx", columns={"timestamp"})
