@@ -43,7 +43,6 @@ use Classroom\Traits\UtilsTrait as ClassroomUtilsTrait;
 class ControllerUser extends Controller
 {
     use UtilsTrait;
-    use ClassroomUtilsTrait;
     public $URL = "";
     public function __construct($entityManager, $user, $url = null)
     {
