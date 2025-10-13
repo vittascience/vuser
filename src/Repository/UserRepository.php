@@ -127,11 +127,6 @@ class UserRepository extends EntityRepository
             r.fromSso    AS isFromSSO,
             (CASE WHEN t.user IS NULL THEN 0 ELSE 1 END) AS teacher,
 
-            -- compte par type (≥1 suffit)
-            COUNT(up.user)        AS cntLegacy,
-            COUNT(DISTINCT ur.id) AS cntPersonal,
-            COUNT(DISTINCT g.id)  AS cntGroup,
-
             -- dates par type (max si multiples)
             MAX(up.dateBegin)     AS legacyDateBegin,
             MAX(up.dateEnd)       AS legacyDateEnd,
