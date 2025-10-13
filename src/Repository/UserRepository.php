@@ -39,6 +39,60 @@ class UserRepository extends EntityRepository
     }
 
 
+    public function getUserFromSSO(string $ssoId): ?User
+    {
+        return $this->createQueryBuilder('u')
+            ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
+            ->where('r.fromSso like :ssoId')
+            ->setParameter('ssoId', '%' . $ssoId . '%')
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    <?php
+
+namespace User\Repository;
+
+use User\Entity\User;
+use User\Entity\Regular;
+use User\Entity\Teacher;
+use Classroom\Entity\Groups;
+use User\Entity\UserPremium;
+use Doctrine\ORM\Query\Expr\Join;
+use Doctrine\ORM\EntityRepository;
+use Classroom\Entity\UsersLinkGroups;
+use Classroom\Entity\UsersRestrictions;
+
+//show php errors
+ini_set('display_errors', 1);
+
+class UserRepository extends EntityRepository
+{
+    public function getMultipleUsers($array)
+    {
+        $queryBuilder = $this->getEntityManager()
+            ->createQueryBuilder();
+        $query = $queryBuilder
+            ->select('u')
+            ->from(User::class, 'u')
+            ->where('u.id IN(' . implode(', ', $array) . ")")
+            ->getQuery();
+        return $query->getResult();
+    }
+
+    public function getNewsLetterMembers()
+    {
+        $query = $this->getEntityManager()
+            ->createQueryBuilder()
+            ->select("r.email, u.firstname, u.surname")
+            ->from(User::class, 'u')
+            ->innerJoin(Regular::class, 'r', Join::WITH, 'u.id = r.user')
+            ->where('r.newsletter = 1')
+            ->getQuery();
+        return $query->getResult();
+    }
+
+
     public function findPaginated(
         int $page = 1,
         int $perPage = 25,
@@ -214,54 +268,13 @@ class UserRepository extends EntityRepository
     }
 
 
-
-    public function findPaginatedUpdated(
-        int $page = 1,
-        int $perPage = 25,
-        ?string $search = null,
-        $sort = 'id',
-        string $dir = 'asc',
-        array $filters = []
-    ): array {
+    public function findPaginated(int $page = 1, int $perPage = 25, ?string $search = null, $sort = 'id', string $dir = 'asc', array $filters = []): array {
         $page    = max(1, $page);
         $perPage = max(1, min(200, $perPage));
         $offset  = ($page - 1) * $perPage;
 
-        // ---- dates "now" pour les sous-requêtes ----
         $now = new \DateTimeImmutable('now');
 
-        // 🔹 NEW: sous-requêtes prêtes à réutiliser (strings DQL)
-        // Personal active restrictions
-        $existsUR = "EXISTS(
-        SELECT ur1.id FROM " . UsersRestrictions::class . " ur1
-        WHERE ur1.user = u.id AND (ur1.dateEnd IS NULL OR ur1.dateEnd > :now)
-    )";
-        // Group active (via link)
-        $existsG = "EXISTS(
-        SELECT g1.id FROM " . UsersLinkGroups::class . " ulg1
-        JOIN " . Groups::class . " g1 WITH g1.id = ulg1.group
-        WHERE ulg1.user = u.id AND (g1.dateEnd IS NULL OR g1.dateEnd > :now)
-    )";
-        // Legacy personal premium
-        $existsUP = "EXISTS(
-        SELECT up1.id FROM " . UserPremium::class . " up1
-        WHERE up1.user = u.id
-    )";
-
-        // Dates perso / groupe par MAX (si plusieurs enregistrements)
-        $urDateBegin = "(SELECT MAX(ur2.dateBegin) FROM " . UsersRestrictions::class . " ur2
-                     WHERE ur2.user = u.id AND (ur2.dateEnd IS NULL OR ur2.dateEnd > :now))";
-        $urDateEnd   = "(SELECT MAX(ur3.dateEnd)   FROM " . UsersRestrictions::class . " ur3
-                     WHERE ur3.user = u.id AND (ur3.dateEnd IS NULL OR ur3.dateEnd > :now))";
-
-        $gDateBegin  = "(SELECT MAX(g2.dateBegin) FROM " . UsersLinkGroups::class . " ulg2
-                    JOIN " . Groups::class . " g2 WITH g2.id = ulg2.group
-                    WHERE ulg2.user = u.id AND (g2.dateEnd IS NULL OR g2.dateEnd > :now))";
-        $gDateEnd    = "(SELECT MAX(g3.dateEnd)   FROM " . UsersLinkGroups::class . " ulg3
-                    JOIN " . Groups::class . " g3 WITH g3.id = ulg3.group
-                    WHERE ulg3.user = u.id AND (g3.dateEnd IS NULL OR g3.dateEnd > :now))";
-
-        // triables
         $orderable = [
             'id'         => 'u.id',
             'firstname'  => 'u.firstname',
@@ -273,14 +286,21 @@ class UserRepository extends EntityRepository
             'isFromSSO'  => 'r.fromSso',
             'teacher'    => '(CASE WHEN t.user IS NULL THEN 0 ELSE 1 END)',
 
-            // 🔹 NEW
+            // existants
             'premium'        => 'premium',
             'premiumType'    => 'premiumType',
             'premiumBegin'   => 'premiumDateBegin',
             'premiumEnd'     => 'premiumDateEnd',
+
+            // nouveaux tris utiles
+            'premiumLegacy'   => 'premiumLegacy',
+            'premiumPersonal' => 'premiumPersonal',
+            'premiumGroup'    => 'premiumGroup',
+            'legacyEnd'       => 'legacyDateEnd',
+            'personalEnd'     => 'personalDateEnd',
+            'groupEnd'        => 'groupDateEnd',
         ];
 
-        // filtrables
         $filterable = [
             'email'      => ['expr' => 'r.email',     'type' => 'string'],
             'email~'     => ['expr' => 'r.email',     'type' => 'like'],
@@ -300,23 +320,20 @@ class UserRepository extends EntityRepository
 
             'teacher'    => ['expr' => 't.user', 'type' => 'exists'],
 
-            // 🔹 NEW
-            'premium'        => ['expr' => 'premium',         'type' => 'bool'],
-            'premiumType'    => ['expr' => 'premiumType',     'type' => 'string'],
-            'premiumType~'   => ['expr' => 'premiumType',     'type' => 'like'],
-            'premiumBegin'   => ['expr' => 'premiumDateBegin', 'type' => 'string'], // tu peux mettre un opérateur côté appelant
-            'premiumEnd'     => ['expr' => 'premiumDateEnd',  'type' => 'string'],
+            'premium'         => ['expr' => 'premium',         'type' => 'bool'],
+            'premiumLegacy'   => ['expr' => 'premiumLegacy',   'type' => 'bool'],
+            'premiumPersonal' => ['expr' => 'premiumPersonal', 'type' => 'bool'],
+            'premiumGroup'    => ['expr' => 'premiumGroup',    'type' => 'bool'],
         ];
 
-        // total
-        $total = (int) $this->createQueryBuilder('u')
-            ->select('COUNT(u.id)')
-            ->getQuery()->getSingleScalarResult();
-
-        // base
+        $total = (int) $this->createQueryBuilder('u')->select('COUNT(u.id)')->getQuery()->getSingleScalarResult();
         $qb = $this->createQueryBuilder('u')
             ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
             ->leftJoin(Teacher::class,  't', Join::WITH, 't.user = u')
+            ->leftJoin(UserPremium::class,'up',Join::WITH,'up.user = u AND (up.dateEnd IS NULL OR up.dateEnd > :now)')
+            ->leftJoin(UsersRestrictions::class, 'ur', Join::WITH, 'ur.user = u AND ur.dateEnd IS NOT NULL AND ur.dateEnd > :now')
+            ->leftJoin(UsersLinkGroups::class, 'ulg', Join::WITH, 'ulg.user = u')
+            ->leftJoin('ulg.group', 'g', Join::WITH, '(g.dateEnd IS NULL OR g.dateEnd > :now)')
             ->select("
             u.id         AS id,
             u.firstname  AS firstname,
@@ -328,37 +345,60 @@ class UserRepository extends EntityRepository
             r.fromSso    AS isFromSSO,
             (CASE WHEN t.user IS NULL THEN 0 ELSE 1 END) AS teacher,
 
-            -- 🔹 NEW: bool premium (0/1)
+            -- compte par type (≥1 suffit)
+            COUNT(up.user)        AS cntLegacy,
+            COUNT(DISTINCT ur.id) AS cntPersonal,
+            COUNT(DISTINCT g.id)  AS cntGroup,
+
+            -- dates par type (max si multiples)
+            MAX(up.dateBegin)     AS legacyDateBegin,
+            MAX(up.dateEnd)       AS legacyDateEnd,
+            MAX(ur.dateBegin)     AS personalDateBegin,
+            MAX(ur.dateEnd)       AS personalDateEnd,
+            MAX(g.dateBegin)      AS groupDateBegin,
+            MAX(g.dateEnd)        AS groupDateEnd,
+
+            -- flags par type
+            (CASE WHEN COUNT(up.user)        > 0 THEN 1 ELSE 0 END) AS premiumLegacy,
+            (CASE WHEN COUNT(DISTINCT ur.id) > 0 THEN 1 ELSE 0 END) AS premiumPersonal,
+            (CASE WHEN COUNT(DISTINCT g.id)  > 0 THEN 1 ELSE 0 END) AS premiumGroup,
+
+            -- bool global
             (CASE
-                WHEN $existsUR THEN 1
-                WHEN $existsG  THEN 1
-                WHEN $existsUP THEN 1
-                WHEN r.isPremium = 1 THEN 1
-                ELSE 0
+                WHEN (COUNT(up.user) > 0 OR COUNT(DISTINCT ur.id) > 0 OR COUNT(DISTINCT g.id) > 0)
+                THEN 1 ELSE 0
             END) AS premium,
 
-            -- 🔹 NEW: type priorisé
+            COALESCE(
+                MAX(ur.dateBegin),
+                MAX(g.dateBegin),
+                MAX(up.dateBegin)
+            ) AS premiumDateBegin,
+            COALESCE(
+                MAX(ur.dateEnd),
+                MAX(g.dateEnd),
+                MAX(up.dateEnd)
+            ) AS premiumDateEnd,
+
+            -- type unique (priorité: Personal > Group > Legacy > free)
             (CASE
-                WHEN $existsUR THEN 'PersonalPremium'
-                WHEN $existsG  THEN 'GroupPremium'
-                WHEN $existsUP THEN 'LegacyPersonalPremium'
-                WHEN r.isPremium = 1 THEN 'RegularFlag'
+                WHEN (COUNT(DISTINCT ur.id) > 0) THEN 'PersonalPremium'
+                WHEN (COUNT(DISTINCT g.id)  > 0) THEN 'GroupPremium'
+                WHEN (COUNT(up.user)        > 0) THEN 'LegacyPersonalPremium'
                 ELSE 'free'
-            END) AS premiumType,
-
-            -- 🔹 NEW: dates (perso prioritaire, sinon groupe)
-            COALESCE($urDateBegin, $gDateBegin) AS premiumDateBegin,
-            COALESCE($urDateEnd,   $gDateEnd)   AS premiumDateEnd
+            END) AS premiumType
         ")
-            ->setParameter('now', $now);
+            ->setParameter('now', $now)
+            ->groupBy('u.id, r.email, r.newsletter, r.active, r.isAdmin, r.fromSso, t.user');
 
+        // recherche globale
         if ($search !== null && $search !== '') {
             $q = mb_strtolower($search);
             $qb->andWhere('LOWER(u.firstname) LIKE :q OR LOWER(u.surname) LIKE :q OR LOWER(r.email) LIKE :q')
                 ->setParameter('q', '%' . $q . '%');
         }
 
-        // filtres
+        // filtres dynamiques
         $i = 0;
         foreach ($filters as $key => $value) {
             $i++;
@@ -366,7 +406,7 @@ class UserRepository extends EntityRepository
                 $qb->andWhere($filterable[$key . ':null']['expr'] . ' IS NULL');
                 continue;
             }
-            if (isset($filterable[$key . ':notnull']) && ($value === 'notnull')) {
+            if (isset($filterable[$key . ':notnull']) && $value === 'notnull') {
                 $qb->andWhere($filterable[$key . ':notnull']['expr'] . ' IS NOT NULL');
                 continue;
             }
@@ -382,7 +422,6 @@ class UserRepository extends EntityRepository
                         ->setParameter($param, filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ? 1 : 0);
                     break;
                 case 'string':
-                    // NOTE: si tu veux faire des comparaisons de dates, passe un \DateTimeImmutable côté appelant
                     $qb->andWhere($meta['expr'] . ' = :' . $param)
                         ->setParameter($param, $value);
                     break;
@@ -403,14 +442,8 @@ class UserRepository extends EntityRepository
             }
         }
 
-        // comptage post-filtres (sans perturber $qb)
-        $filtered = (int) (clone $qb)
-            ->resetDQLPart('select')
-            ->select('COUNT(DISTINCT u.id)')
-            ->resetDQLPart('orderBy')
-            ->getQuery()->getSingleScalarResult();
+        $filtered = (int) (clone $qb)->resetDQLPart('select')->resetDQLPart('orderBy')->resetDQLPart('groupBy')->select('COUNT(DISTINCT u.id)')->getQuery()->getSingleScalarResult();
 
-        // tris
         $orders = [];
         if (is_array($sort)) {
             $orders = $sort;
@@ -433,19 +466,79 @@ class UserRepository extends EntityRepository
             $qb->addOrderBy('u.id', 'ASC');
         }
 
-        // pas besoin de GROUP BY: aucune duplication grâce aux EXISTS/sous-requêtes
+        // exécution
         $rows = $qb->setFirstResult($offset)->setMaxResults($perPage)->getQuery()->getArrayResult();
 
+        // normalisation
         foreach ($rows as &$row) {
+            // normalisation existante
             $row['newsletter'] = (int) ($row['newsletter'] ?? 0);
             $row['is_active']  = (int) ($row['is_active']  ?? 0);
             $row['is_admin']   = (int) ($row['is_admin']   ?? 0);
             $row['teacher']    = ((int)$row['teacher']) === 1;
 
-            // 🔹 NEW: normalisation premium -> bool
-            $row['premium']    = ((int)($row['premium'] ?? 0)) === 1;
-            // Optionnel: caster les dates en string ISO si besoin d’API JSON propre
-            // if ($row['premiumDateBegin'] instanceof \DateTimeInterface) { ... }
+            // flags -> bool
+            $premium           = ((int)($row['premium'] ?? 0)) === 1;
+            $premiumLegacy     = ((int)($row['premiumLegacy'] ?? 0)) === 1;
+            $premiumPersonal   = ((int)($row['premiumPersonal'] ?? 0)) === 1;
+            $premiumGroup      = ((int)($row['premiumGroup'] ?? 0)) === 1;
+
+            // liste des types actifs (ordre arbitraire)
+            $types = [];
+            if ($premiumPersonal) $types[] = 'PersonalPremium';
+            if ($premiumGroup)    $types[] = 'GroupPremium';
+            if ($premiumLegacy)   $types[] = 'LegacyPersonalPremium';
+
+            // type prioritaire (Personal > Group > Legacy > free)
+            $primaryType = 'free';
+            if ($premiumPersonal) $primaryType = 'PersonalPremium';
+            elseif ($premiumGroup)    $primaryType = 'GroupPremium';
+            elseif ($premiumLegacy)   $primaryType = 'LegacyPersonalPremium';
+
+            // construction premiumData
+            $row['premiumData'] = [
+                'active'      => $premium,
+                'types'       => $types,        // ex: ['GroupPremium','LegacyPersonalPremium']
+                'primaryType' => $primaryType,  // ex: 'GroupPremium'
+
+                // dates "globales" (déjà priorisées dans le SELECT: perso > group > legacy)
+                'dateBegin'   => $row['premiumDateBegin'] ?? null,
+                'dateEnd'     => $row['premiumDateEnd']   ?? null,
+
+                // détails par type
+                'legacy' => [
+                    'active'    => $premiumLegacy,
+                    'dateBegin' => $row['legacyDateBegin'] ?? null,
+                    'dateEnd'   => $row['legacyDateEnd']   ?? null,
+                ],
+                'personal' => [
+                    'active'    => $premiumPersonal,
+                    'dateBegin' => $row['personalDateBegin'] ?? null,
+                    'dateEnd'   => $row['personalDateEnd']   ?? null,
+                ],
+                'group' => [
+                    'active'    => $premiumGroup,
+                    'dateBegin' => $row['groupDateBegin'] ?? null,
+                    'dateEnd'   => $row['groupDateEnd']   ?? null,
+                ],
+            ];
+
+            // on nettoie les champs à plat pour ne garder que premiumData
+            unset(
+                $row['premium'],
+                $row['premiumLegacy'],
+                $row['premiumPersonal'],
+                $row['premiumGroup'],
+                $row['premiumType'],
+                $row['premiumDateBegin'],
+                $row['premiumDateEnd'],
+                $row['legacyDateBegin'],
+                $row['legacyDateEnd'],
+                $row['personalDateBegin'],
+                $row['personalDateEnd'],
+                $row['groupDateBegin'],
+                $row['groupDateEnd']
+            );
         }
 
         return [
@@ -457,4 +550,5 @@ class UserRepository extends EntityRepository
             'sort'     => $orders,
         ];
     }
+
 }
