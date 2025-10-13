@@ -2,13 +2,12 @@
 
 namespace User\Repository;
 
-use Doctrine\ORM\EntityRepository;
 use User\Entity\User;
 use User\Entity\Regular;
-use Doctrine\ORM\Query\Expr\Join;
 use User\Entity\Teacher;
-use Classroom\Entity\Groups;
 use User\Entity\UserPremium;
+use Doctrine\ORM\Query\Expr\Join;
+use Doctrine\ORM\EntityRepository;
 use Classroom\Entity\UsersLinkGroups;
 use Classroom\Entity\UsersRestrictions;
 
@@ -49,58 +48,6 @@ class UserRepository extends EntityRepository
             ->getOneOrNullResult();
     }
 
-    <?php
-
-namespace User\Repository;
-
-use User\Entity\User;
-use User\Entity\Regular;
-use User\Entity\Teacher;
-use Classroom\Entity\Groups;
-use User\Entity\UserPremium;
-use Doctrine\ORM\Query\Expr\Join;
-use Doctrine\ORM\EntityRepository;
-use Classroom\Entity\UsersLinkGroups;
-use Classroom\Entity\UsersRestrictions;
-
-//show php errors
-ini_set('display_errors', 1);
-
-class UserRepository extends EntityRepository
-{
-    public function getMultipleUsers($array)
-    {
-        $queryBuilder = $this->getEntityManager()
-            ->createQueryBuilder();
-        $query = $queryBuilder
-            ->select('u')
-            ->from(User::class, 'u')
-            ->where('u.id IN(' . implode(', ', $array) . ")")
-            ->getQuery();
-        return $query->getResult();
-    }
-
-    public function getNewsLetterMembers()
-    {
-        $query = $this->getEntityManager()
-            ->createQueryBuilder()
-            ->select("r.email, u.firstname, u.surname")
-            ->from(User::class, 'u')
-            ->innerJoin(Regular::class, 'r', Join::WITH, 'u.id = r.user')
-            ->where('r.newsletter = 1')
-            ->getQuery();
-        return $query->getResult();
-    }
-
-    public function getUserFromSSO(string $ssoId): ?User
-    {
-        return $this->createQueryBuilder('u')
-            ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
-            ->where('r.fromSso like :ssoId')
-            ->setParameter('ssoId', '%' . $ssoId . '%')
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
 
 
     public function findPaginated(int $page = 1, int $perPage = 25, ?string $search = null, $sort = 'id', string $dir = 'asc', array $filters = []): array {
