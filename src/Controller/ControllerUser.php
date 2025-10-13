@@ -12,16 +12,9 @@ use DAO\RegularDAO;
 use User\Entity\User;
 use User\Entity\LtiUser;
 use User\Entity\Regular;
-
-
-/**
- * @ THOMAS MODIF 1 line just below
- */
-
 use User\Entity\Teacher;
 use Aiken\i18next\i18next;
 use User\Traits\UtilsTrait;
-use Classroom\Entity\Groups;
 use User\Entity\UserPremium;
 use Utils\ConnectionManager;
 use Database\DataBaseManager;
@@ -29,12 +22,9 @@ use Lti13\Entity\LtiConsumer;
 use User\Entity\ClassroomUser;
 use Classroom\Entity\Classroom;
 use Classroom\Entity\Applications;
-use Classroom\Entity\Restrictions;
-use Classroom\Entity\UsersLinkGroups;
 use Classroom\Entity\ActivityLinkUser;
 use User\Entity\UserConnectionHistory;
 use Classroom\Entity\ClassroomLinkUser;
-use Classroom\Entity\UsersRestrictions;
 use Classroom\Entity\ActivityLinkClassroom;
 use User\Entity\ClassroomUserConnectionLog;
 use Classroom\Traits\UtilsTrait as ClassroomUtilsTrait;
@@ -43,6 +33,7 @@ use Classroom\Traits\UtilsTrait as ClassroomUtilsTrait;
 class ControllerUser extends Controller
 {
     use UtilsTrait;
+    use ClassroomUtilsTrait;
     public $URL = "";
     public function __construct($entityManager, $user, $url = null)
     {
