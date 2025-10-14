@@ -90,7 +90,6 @@ class UserRepository extends EntityRepository
                 $byUser[$uid]['connectionHistory'][] = [
                     'id'        => (int) $r['logId'],
                     'timestamp' => $r['ts'],
-                    'ip'        => $r['ip'],
                 ];
             }
         }
