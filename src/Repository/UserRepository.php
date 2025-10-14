@@ -60,10 +60,12 @@ class UserRepository extends EntityRepository
             ->addSelect('uch.device AS device')
             ->addSelect('uch.country AS country')
             ->addSelect('uch.ip AS ip')
+            ->addSelect('(CASE WHEN UPPER(r.fromSso) LIKE :student THEN 1 ELSE 0 END) AS isStudentFlag')
             ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
             ->andWhere('r.fromSso LIKE :sso')
             ->leftJoin(UserConnectionHistory::class, 'uch', Join::WITH, 'uch.userId = u.id')
             ->setParameter('sso', '%SAML%')
+            ->setParameter('student', '%STUDENT%')
             ->orderBy('u.id', 'ASC')
             ->addOrderBy('uch.timestamp', 'DESC');
 
@@ -82,6 +84,7 @@ class UserRepository extends EntityRepository
             if (!isset($byUser[$uid])) {
                 $byUser[$uid] = [
                     'userId' => $uid,
+                    'isStudent' => ((int)($r['isStudentFlag'] ?? 0) === 1),
                     'connectionHistory' => [],
                 ];
             }
@@ -98,7 +101,9 @@ class UserRepository extends EntityRepository
     }
 
 
-    public function findPaginated(int $page = 1, int $perPage = 25, ?string $search = null, $sort = 'id', string $dir = 'asc', array $filters = []): array {
+
+    public function findPaginated(int $page = 1, int $perPage = 25, ?string $search = null, $sort = 'id', string $dir = 'asc', array $filters = []): array
+    {
         $page    = max(1, $page);
         $perPage = max(1, min(200, $perPage));
         $offset  = ($page - 1) * $perPage;
@@ -160,7 +165,7 @@ class UserRepository extends EntityRepository
         $qb = $this->createQueryBuilder('u')
             ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
             ->leftJoin(Teacher::class,  't', Join::WITH, 't.user = u')
-            ->leftJoin(UserPremium::class,'up',Join::WITH,'up.user = u AND (up.dateEnd IS NULL OR up.dateEnd > :now)')
+            ->leftJoin(UserPremium::class, 'up', Join::WITH, 'up.user = u AND (up.dateEnd IS NULL OR up.dateEnd > :now)')
             ->leftJoin(UsersRestrictions::class, 'ur', Join::WITH, 'ur.user = u AND ur.dateEnd IS NOT NULL AND ur.dateEnd > :now')
             ->leftJoin(UsersLinkGroups::class, 'ulg', Join::WITH, 'ulg.user = u')
             ->leftJoin('ulg.group', 'g', Join::WITH, '(g.dateEnd IS NULL OR g.dateEnd > :now)')
@@ -375,5 +380,4 @@ class UserRepository extends EntityRepository
             'sort'     => $orders,
         ];
     }
-
 }
