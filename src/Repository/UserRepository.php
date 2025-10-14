@@ -38,14 +38,14 @@ class UserRepository extends EntityRepository
     }
 
 
-    public function getUserFromSSO(string $ssoId): ?User
+    public function getUsersFromSSO(string $ssoId): ?User
     {
         return $this->createQueryBuilder('u')
             ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
             ->where('r.fromSso like :ssoId')
             ->setParameter('ssoId', '%' . $ssoId . '%')
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getResult();
     }
 
 
