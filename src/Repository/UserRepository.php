@@ -49,17 +49,53 @@ class UserRepository extends EntityRepository
             ->getResult();
     }
 
-
-    public function getAllConnectionsDataForSAMLUsers(): array
-    {
-         return $this->createQueryBuilder('u')
+    public function getSamlUsersWithConnectionHistory(
+        ?\DateTimeInterface $from = null,
+        ?\DateTimeInterface $to = null
+    ): array {
+        $qb = $this->createQueryBuilder('u')
+            ->select('u.id AS userId')
+            ->addSelect('uch.id AS logId')
+            ->addSelect('uch.timestamp AS ts')
+            ->addSelect('uch.device AS device')
+            ->addSelect('uch.country AS country')
+            ->addSelect('uch.ip AS ip')
             ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
-            ->where('r.fromSso like :ssoId')
-            ->setParameter('ssoId', '%SAML%')
-            ->innerJoin(UserConnectionHistory::class, 'uch', Join::WITH, 'uch.userId = u.id')
-            ->orderBy('uch.timestamp', 'DESC')
-            ->getQuery()
-            ->getResult();
+            ->andWhere('r.fromSso LIKE :sso')
+            ->leftJoin(UserConnectionHistory::class, 'uch', Join::WITH, 'uch.userId = u.id')
+            ->setParameter('sso', '%SAML%')
+            ->orderBy('u.id', 'ASC')
+            ->addOrderBy('uch.timestamp', 'DESC');
+
+        if ($from) {
+            $qb->andWhere('uch.timestamp >= :from')->setParameter('from', $from);
+        }
+        if ($to) {
+            $qb->andWhere('uch.timestamp < :to')->setParameter('to', $to);
+        }
+
+        $rows = $qb->getQuery()->getArrayResult();
+
+        $byUser = [];
+        foreach ($rows as $r) {
+            $uid = (int) $r['userId'];
+            if (!isset($byUser[$uid])) {
+                $byUser[$uid] = [
+                    'userId' => $uid,
+                    'connectionHistory' => [],
+                ];
+            }
+
+            if ($r['logId'] !== null) {
+                $byUser[$uid]['connectionHistory'][] = [
+                    'id'        => (int) $r['logId'],
+                    'timestamp' => $r['ts'],
+                    'ip'        => $r['ip'],
+                ];
+            }
+        }
+
+        return array_values($byUser);
     }
 
 
