@@ -10,6 +10,7 @@ use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\EntityRepository;
 use Classroom\Entity\UsersLinkGroups;
 use Classroom\Entity\UsersRestrictions;
+use User\Entity\UserConnectionHistory;
 
 class UserRepository extends EntityRepository
 {
@@ -48,6 +49,18 @@ class UserRepository extends EntityRepository
             ->getResult();
     }
 
+
+    public function getAllConnectionsDataForSAMLUsers(): array
+    {
+         return $this->createQueryBuilder('u')
+            ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
+            ->where('r.fromSso like :ssoId')
+            ->setParameter('ssoId', '%SAML%')
+            ->innerJoin(UserConnectionHistory::class, 'uch', Join::WITH, 'uch.userId = u.id')
+            ->orderBy('uch.timestamp', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 
 
     public function findPaginated(int $page = 1, int $perPage = 25, ?string $search = null, $sort = 'id', string $dir = 'asc', array $filters = []): array {
