@@ -61,11 +61,13 @@ class UserRepository extends EntityRepository
             ->addSelect('uch.country AS country')
             ->addSelect('uch.ip AS ip')
             ->addSelect('(CASE WHEN UPPER(r.fromSso) LIKE :student THEN 1 ELSE 0 END) AS isStudentFlag')
+            ->addSelect('(CASE WHEN UPPER(r.fromSso) LIKE :other THEN 1 ELSE 0 END) AS isOtherFlag')
             ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
             ->andWhere('r.fromSso LIKE :sso')
             ->leftJoin(UserConnectionHistory::class, 'uch', Join::WITH, 'uch.userId = u.id')
             ->setParameter('sso', '%SAML%')
             ->setParameter('student', '%STUDENT%')
+            ->setParameter('other', '%OTHER%')
             ->orderBy('u.id', 'ASC')
             ->addOrderBy('uch.timestamp', 'DESC');
 
@@ -85,6 +87,7 @@ class UserRepository extends EntityRepository
                 $byUser[$uid] = [
                     'userId' => $uid,
                     'isStudent' => ((int)($r['isStudentFlag'] ?? 0) === 1),
+                    'isOther'   => ((int)($r['isOtherFlag'] ?? 0) === 1),
                     'connectionHistory' => [],
                 ];
             }
