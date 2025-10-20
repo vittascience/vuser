@@ -1837,11 +1837,11 @@ class ControllerUser extends Controller
                 $sort = is_string($rawSort) ? trim($rawSort) : 'id';
                 $dir  = strtolower((string)$rawDir) === 'desc' ? 'desc' : 'asc';
 
-
                 $filters = [];
                 if (is_array($rawFilter)) {
                     foreach ($rawFilter as $k => $v) {
                         if (!is_string($k)) continue;
+
                         if (is_string($v)) {
                             $v = trim($v);
                             if ($v === '') continue;
@@ -1855,10 +1855,38 @@ class ControllerUser extends Controller
                             }
                         }
 
-                        if (in_array($k, ['newsletter', 'is_active', 'is_admin', 'teacher'], true)) {
+
+                        if ($k === 'group' && is_string($v)) {
+                            $lv = strtolower($v);
+                            if ($lv === 'null' || $lv === 'notnull') {
+                                $filters['group'] = $lv;
+                                continue;
+                            }
+                        }
+
+                        if (in_array($k, ['newsletter', 'is_active', 'is_admin', 'teacher', 'hasGroup'], true)) {
                             $filters[$k] = in_array((string)$v, ['1', 'true', 'on', 'yes'], true) ? 1 : 0;
                             continue;
                         }
+
+                        if ($k === 'groupId') {
+                            $filters[$k] = (int)$v;
+                            continue;
+                        }
+                        if ($k === 'groupIdIn') {
+                            if (is_array($v)) {
+                                $filters[$k] = array_values(array_filter(array_map('intval', $v), fn($x) => $x !== null));
+                            } else {
+                                $parts = array_filter(array_map('trim', explode(',', (string)$v)), fn($x) => $x !== '');
+                                $filters[$k] = array_values(array_map('intval', $parts));
+                            }
+                            continue;
+                        }
+                        if ($k === 'groupName' || $k === 'groupName~') {
+                            $filters[$k] = (string)$v;
+                            continue;
+                        }
+
 
                         if (preg_match('~^(email|firstname|surname|isFromSSO)~$~', $k)) {
                             $filters[$k] = (string)$v;
@@ -1869,19 +1897,17 @@ class ControllerUser extends Controller
                     }
                 }
 
-                // Fetch data from repository
                 $repo = $this->entityManager->getRepository(User::class);
                 $data = $repo->findPaginated($page, $perPage, $search, $sort, $dir, $filters);
 
-                // Return structured response
                 return [
-                    'page' => $page,
+                    'page'    => $page,
                     'perPage' => $perPage,
-                    'search' => $search,
-                    'sort' => $sort,
-                    'dir' => $dir,
+                    'search'  => $search,
+                    'sort'    => $sort,
+                    'dir'     => $dir,
                     'filters' => $filters,
-                    'result' => $data,
+                    'result'  => $data,
                 ];
             },
             'user-connection-meta-search' => function () {
