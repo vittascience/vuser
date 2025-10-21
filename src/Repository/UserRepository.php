@@ -193,6 +193,7 @@ class UserRepository extends EntityRepository
             r.active     AS is_active,
             r.isAdmin    AS is_admin,
             r.fromSso    AS isFromSSO,
+            r.roles      AS roles,
             (CASE WHEN t.user IS NULL THEN 0 ELSE 1 END) AS teacher,
 
             MAX(up.dateBegin)     AS legacyDateBegin,
@@ -241,7 +242,7 @@ class UserRepository extends EntityRepository
         // Recherche globale
         if ($search !== null && $search !== '') {
             $q = mb_strtolower($search);
-            $qb->andWhere('LOWER(u.firstname) LIKE :q OR LOWER(u.surname) LIKE :q OR LOWER(r.email) LIKE :q OR LOWER(g.name) LIKE :q OR LOWER(u.id) LIKE :q OR LOWER(r.fromSso) LIKE :q')
+            $qb->andWhere('LOWER(u.firstname) LIKE :q OR LOWER(u.surname) LIKE :q OR LOWER(r.email) LIKE :q OR LOWER(g.name) LIKE :q OR LOWER(u.id) LIKE :q OR LOWER(r.fromSso) LIKE :q OR LOWER(r.roles) LIKE :q')
                 ->setParameter('q', '%' . $q . '%');
         }
 
@@ -382,6 +383,7 @@ class UserRepository extends EntityRepository
             $row['is_active']  = (int) ($row['is_active']  ?? 0);
             $row['is_admin']   = (int) ($row['is_admin']   ?? 0);
             $row['teacher']    = ((int)$row['teacher']) === 1;
+            $row['roles']      = $row['roles'] ? explode(',', $row['roles']) : [];
 
             $premium           = ((int)($row['premium'] ?? 0)) === 1;
             $premiumLegacy     = ((int)($row['premiumLegacy'] ?? 0)) === 1;

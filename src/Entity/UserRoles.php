@@ -21,7 +21,7 @@ class UserRoles
 
     public function __construct()
     {
-        $this->isActive = true;
+        $this->active = true;
     }
 
     // Getters and setters (optionally typed for IDE support)
