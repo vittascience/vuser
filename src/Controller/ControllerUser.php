@@ -28,6 +28,7 @@ use Classroom\Entity\ClassroomLinkUser;
 use Classroom\Entity\ActivityLinkClassroom;
 use User\Entity\ClassroomUserConnectionLog;
 use Classroom\Traits\UtilsTrait as ClassroomUtilsTrait;
+use User\Entity\UserRoles;
 
 
 class ControllerUser extends Controller
@@ -1817,6 +1818,8 @@ class ControllerUser extends Controller
                 return UtilsTrait::getUserRestrictions($this->entityManager);
             },
             'user-meta-search' => function () {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "method_not_allowed"];
+                if (!$this->isAdminRequester()) return ["error" => "not_allowed"];
 
                 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -1911,8 +1914,11 @@ class ControllerUser extends Controller
                 ];
             },
             'user-connection-meta-search' => function () {
-                $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "method_not_allowed"];
+                if (!$this->isAdminRequester()) return ["error" => "not_allowed"];
+
+                $input = json_decode(file_get_contents('php://input'), true) ?? [];
                 $userId = isset($input['userId']) ? (int)$input['userId'] : null;
                 $limit  = isset($input['limit']) ? max(1, (int)$input['limit']) : 20;
 
@@ -1981,7 +1987,7 @@ class ControllerUser extends Controller
 
                 try {
                     // Get the UserRoles repository
-                    $userRolesRepository = $this->entityManager->getRepository(\User\Entity\UserRoles::class);
+                    $userRolesRepository = $this->entityManager->getRepository(UserRoles::class);
 
                     // Get all roles (active and inactive)
                     $roles = $userRolesRepository->findAll();
@@ -2005,6 +2011,117 @@ class ControllerUser extends Controller
                         'errorType' => 'exceptionOccured',
                         'error' => $e->getMessage()
                     ];
+                }
+            },
+            'create_role' => function () {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "method_not_allowed"];
+                if (!$this->isAdminRequester()) return ["error" => "not_allowed"];
+
+                $data = json_decode(file_get_contents('php://input'), true);
+                $name = trim($data['name'] ?? '');
+
+                if ($name === '') {
+                    return ['success' => false, 'errorType' => 'invalidData', 'message' => 'role_name_required'];
+                }
+
+                try {
+                    $userRolesRepository = $this->entityManager->getRepository(UserRoles::class);
+                    $existing = $userRolesRepository->findOneBy(['name' => $name]);
+                    if ($existing) {
+                        return ['success' => false, 'errorType' => 'roleAlreadyExists', 'message' => 'role_already_exists'];
+                    }
+
+                    $role = new \User\Entity\UserRoles();
+                    $role->setName($name);
+                    $role->setActive(true);
+
+                    $this->entityManager->persist($role);
+                    $this->entityManager->flush();
+
+                    return [
+                        'success' => true,
+                        'message' => 'role_created_successfully',
+                        'role' => [
+                            'id' => $role->getId(),
+                            'name' => $role->getName(),
+                            'active' => $role->getActive()
+                        ]
+                    ];
+                } catch (Exception $e) {
+                    return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
+                }
+            },
+            'update_role' => function () {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "method_not_allowed"];
+                if (!$this->isAdminRequester()) return ["error" => "not_allowed"];
+
+                $data = json_decode(file_get_contents('php://input'), true);
+                $id = (int)($data['id'] ?? 0);
+                $name = trim($data['name'] ?? '');
+
+                if ($id <= 0 || $name === '') {
+                    return ['success' => false, 'errorType' => 'invalidData', 'message' => 'role_id_or_name_invalid'];
+                }
+
+                try {
+                    $repo = $this->entityManager->getRepository(UserRoles::class);
+                    $role = $repo->find($id);
+
+                    if (!$role) {
+                        return ['success' => false, 'errorType' => 'roleNotFound', 'message' => 'role_not_found'];
+                    }
+
+                    $role->setName($name);
+                    $this->entityManager->flush();
+
+                    return [
+                        'success' => true,
+                        'message' => 'role_updated_successfully',
+                        'role' => [
+                            'id' => $role->getId(),
+                            'name' => $role->getName(),
+                            'active' => $role->getActive()
+                        ]
+                    ];
+                } catch (Exception $e) {
+                    return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
+                }
+            },
+            'toggle_role' => function () {
+
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "method_not_allowed"];
+                if (!$this->isAdminRequester()) return ["error" => "not_allowed"];
+
+                $data = json_decode(file_get_contents('php://input'), true);
+                $id = (int)($data['id'] ?? 0);
+                $active = filter_var($data['active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+                if ($id <= 0) {
+                    return ['success' => false, 'errorType' => 'invalidData', 'message' => 'role_id_invalid'];
+                }
+
+                try {
+                    $repo = $this->entityManager->getRepository(\User\Entity\UserRoles::class);
+                    $role = $repo->find($id);
+
+                    if (!$role) {
+                        return ['success' => false, 'errorType' => 'roleNotFound', 'message' => 'role_not_found'];
+                    }
+
+                    $role->setActive($active);
+                    $this->entityManager->flush();
+
+                    return [
+                        'success' => true,
+                        'message' => 'status_updated_successfully',
+                        'role' => [
+                            'id' => $role->getId(),
+                            'name' => $role->getName(),
+                            'active' => $role->getActive()
+                        ]
+                    ];
+                } catch (Exception $e) {
+                    return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
                 }
             },
         );
@@ -2138,6 +2255,20 @@ class ControllerUser extends Controller
             ->setConnectionDate(new \DateTime());
         $this->entityManager->persist($connection);
         $this->entityManager->flush();
+    }
+
+
+    private function isAdminRequester()
+    {
+        $user = $this->entityManager->getRepository(User::class)->find(isset($_SESSION['id']) ? (int)$_SESSION['id'] : null);
+        if (!$user) {
+            return false;
+        }
+        $regular = $this->entityManager->getRepository(Regular::class)->find($user->getId());
+        if (!$regular || !$regular->getIsAdmin()) {
+            return false;
+        }
+        return true;
     }
 }
 function passwordGenerator()

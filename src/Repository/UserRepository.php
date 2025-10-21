@@ -374,21 +374,19 @@ class UserRepository extends EntityRepository
             }
         }
 
-        // Normalisation
         foreach ($rows as &$row) {
-            // apps pour ce user
             $row['applications'] = $appMap[(int)$row['id']] ?? [];
 
             $row['newsletter'] = (int) ($row['newsletter'] ?? 0);
-            $row['is_active']  = (int) ($row['is_active']  ?? 0);
-            $row['is_admin']   = (int) ($row['is_admin']   ?? 0);
-            $row['teacher']    = ((int)$row['teacher']) === 1;
-            $row['roles']      = $row['roles'] ? explode(',', $row['roles']) : [];
+            $row['is_active'] = (int) ($row['is_active']  ?? 0);
+            $row['is_admin'] = (int) ($row['is_admin']   ?? 0);
+            $row['teacher'] = ((int)$row['teacher']) === 1;
+            $row['roles'] = $row['roles'] ? json_decode($row['roles'], true) : [];
 
-            $premium           = ((int)($row['premium'] ?? 0)) === 1;
-            $premiumLegacy     = ((int)($row['premiumLegacy'] ?? 0)) === 1;
-            $premiumPersonal   = ((int)($row['premiumPersonal'] ?? 0)) === 1;
-            $premiumGroup      = ((int)($row['premiumGroup'] ?? 0)) === 1;
+            $premium = ((int)($row['premium'] ?? 0)) === 1;
+            $premiumLegacy = ((int)($row['premiumLegacy'] ?? 0)) === 1;
+            $premiumPersonal = ((int)($row['premiumPersonal'] ?? 0)) === 1;
+            $premiumGroup = ((int)($row['premiumGroup'] ?? 0)) === 1;
 
             $types = [];
             if ($premiumPersonal) $types[] = 'PersonalPremium';
