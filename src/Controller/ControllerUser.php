@@ -1946,6 +1946,41 @@ class ControllerUser extends Controller
 
                 return ['success' => true, 'userId' => $idUser];
             },
+            'get_all_roles' => function () {
+                // accept only POST request
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // accept only connected user
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                try {
+                    // Get the UserRoles repository
+                    $userRolesRepository = $this->entityManager->getRepository(\User\Entity\UserRoles::class);
+
+                    // Get all roles (active and inactive)
+                    $roles = $userRolesRepository->findAll();
+
+                    // Format the data for the response
+                    $rolesData = array_map(function ($role) {
+                        return [
+                            'id' => $role->getId(),
+                            'name' => $role->getName(),
+                            'active' => $role->getActive()
+                        ];
+                    }, $roles);
+
+                    return [
+                        'success' => true,
+                        'roles' => $rolesData
+                    ];
+                } catch (Exception $e) {
+                    return [
+                        'success' => false,
+                        'errorType' => 'exceptionOccured',
+                        'error' => $e->getMessage()
+                    ];
+                }
+            },
         );
     }
 
