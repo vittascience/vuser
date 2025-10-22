@@ -2124,6 +2124,53 @@ class ControllerUser extends Controller
                     return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
                 }
             },
+            "update_user_roles" => function () {
+
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "method_not_allowed"];
+                if (!$this->isAdminRequester()) return ["error" => "not_allowed"];
+
+                $data = json_decode(file_get_contents('php://input'), true);
+                $userId = (int)($data['userId'] ?? 0);
+                $roleIds = isset($data['roles']) ? json_decode($data['roles'], true) : [];
+                if (!is_array($roleIds)) {
+                    return ['success' => false, 'errorType' => 'invalidData', 'message' => 'roles_invalid_format'];
+                }
+
+                if (empty($userId)) {
+                    return ['success' => false, 'errorType' => 'invalidData', 'message' => 'user_id_invalid'];
+                }
+
+                try {
+                    $userRepo = $this->entityManager->getRepository(User::class);
+                    $user = $userRepo->find($userId);
+
+                    if (!$user) {
+                        return ['success' => false, 'errorType' => 'userNotFound', 'message' => 'user_not_found'];
+                    }
+
+                    $regularRepo = $this->entityManager->getRepository(Regular::class);
+                    $regular = $regularRepo->findOneBy(['user' => $user]);
+                    if (!$regular) {
+                        return ['success' => false, 'errorType' => 'regularUserNotFound', 'message' => 'regular_user_not_found'];
+                    }
+
+                    $roleRepo = $this->entityManager->getRepository(UserRoles::class);
+                    $roles = $roleRepo->findBy(['id' => $roleIds]);
+                    $rolesNamesArr = array_map(fn($role) => $role->getName(), $roles);
+                    $regular->setRoles($rolesNamesArr);
+                    $this->entityManager->persist($regular);
+                    $this->entityManager->flush();
+
+                    return [
+                        'success' => true,
+                        'message' => 'user_roles_updated_successfully',
+                        'userId' => $user->getId(),
+                        'assignedRoleIds' => array_map(fn($role) => $role->getId(), $roles)
+                    ];
+                } catch (Exception $e) {
+                    return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
+                }
+            }
         );
     }
 
