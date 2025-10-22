@@ -1891,7 +1891,7 @@ class ControllerUser extends Controller
                         }
 
 
-                        if (preg_match('~^(email|firstname|surname|isFromSSO)~$~', $k)) {
+                        if (preg_match('/^(email|firstname|surname|isFromSSO)(~)?$/', $k)) {
                             $filters[$k] = (string)$v;
                             continue;
                         }
