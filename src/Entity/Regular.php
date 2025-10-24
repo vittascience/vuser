@@ -113,6 +113,12 @@ class Regular
      */
     private $fromSso = null;
 
+    /**
+     * @ORM\Column(name="roles", type="text", nullable=true)
+     * @var string
+     */
+    private $roles = null;
+
     public function __construct(User $user, $email, $bio = NULL, $telephone = NULL, $privateFlag = false, $isAdmin = false, $newMail = null, $recoveryToken = null, $active = false, $mailMessages = false, $newsletter = false, $contactFlag = false, $confirmToken = null)
     {
         $this->setUser($user);
@@ -351,6 +357,62 @@ class Regular
     public function setFromSso(?string $fromSso)
     {
         $this->fromSso = $fromSso;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRoles(): array
+    {
+        if (empty($this->roles)) {
+            return [];
+        }
+        $decoded = json_decode($this->roles, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param array $roles
+     */
+    public function setRoles(array $roles)
+    {
+        $this->roles = json_encode($roles);
+    }
+
+    /**
+     * Add a role to the user's roles
+     * @param string $roleName - The role name (e.g., "ROLE_USER")
+     */
+    public function addRole(string $roleName)
+    {
+        $currentRoles = $this->getRoles();
+        if (!in_array($roleName, $currentRoles)) {
+            $currentRoles[] = $roleName;
+            $this->setRoles($currentRoles);
+        }
+    }
+
+    /**
+     * Remove a role from the user's roles
+     * @param string $roleName - The role name (e.g., "ROLE_USER")
+     */
+    public function removeRole(string $roleName)
+    {
+        $currentRoles = $this->getRoles();
+        $currentRoles = array_values(array_filter($currentRoles, function($name) use ($roleName) {
+            return $name !== $roleName;
+        }));
+        $this->setRoles($currentRoles);
+    }
+
+    /**
+     * Check if the user has a specific role
+     * @param string $roleName - The role name (e.g., "ROLE_USER")
+     * @return bool
+     */
+    public function hasRole(string $roleName): bool
+    {
+        return in_array($roleName, $this->getRoles());
     }
 
     public function jsonSerialize()
