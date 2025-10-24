@@ -119,7 +119,6 @@ class UserRepository extends EntityRepository
             'isFromSSO'  => 'r.fromSso',
             'teacher'    => '(CASE WHEN t.user IS NULL THEN 0 ELSE 1 END)',
 
-            // ces alias viennent du SELECT
             'premium'        => 'premium',
             'premiumType'    => 'premiumType',
             'premiumBegin'   => 'premiumDateBegin',
@@ -137,7 +136,6 @@ class UserRepository extends EntityRepository
             'groupRights' => 'groupRights',
         ];
 
-        // ⚡ premium via (NOT) EXISTS en WHERE (très rapide)
         $filterable = [
             'email'      => ['expr' => 'r.email',     'type' => 'string'],
             'email~'     => ['expr' => 'r.email',     'type' => 'like'],
@@ -157,7 +155,6 @@ class UserRepository extends EntityRepository
 
             'teacher'    => ['expr' => 't.user', 'type' => 'exists'],
 
-            // ⬇️ remplace complètement les versions HAVING par cette seule clé :
             'premium'    => ['type' => 'existsPremium'],
 
             'groupId'        => ['expr' => 'g.id', 'type' => 'int'],
@@ -241,7 +238,6 @@ class UserRepository extends EntityRepository
                 ->setParameter('q', '%' . $q . '%');
         }
 
-        // Filtres dynamiques
         $i = 0;
         foreach ($filters as $key => $value) {
             $i++;
@@ -307,10 +303,8 @@ class UserRepository extends EntityRepository
                     break;
 
                 case 'existsPremium': {
-                        // true => premium actif ; false => non-premium
                         $truthy = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ? true : false;
 
-                        // IMPORTANT: use SELECT 1 (or SELECT up2) instead of a non-existent 'id' field
                         $existsLegacy =
                             'EXISTS (SELECT 1 FROM ' . UserPremium::class . ' up2 ' .
                             ' WHERE up2.user = u AND (up2.dateEnd IS NULL OR up2.dateEnd > :now))';
@@ -336,7 +330,6 @@ class UserRepository extends EntityRepository
             }
         }
 
-        // Comptage filtré — pas de HAVING ici => COUNT(DISTINCT) direct
         $qbCount = clone $qb;
         $qbCount->resetDQLPart('select');
         $qbCount->resetDQLPart('orderBy');
@@ -347,7 +340,6 @@ class UserRepository extends EntityRepository
             ->getQuery()
             ->getSingleScalarResult();
 
-        // Tri
         $orders = [];
         if (is_array($sort)) {
             $orders = $sort;
@@ -372,7 +364,6 @@ class UserRepository extends EntityRepository
 
         $rows = $qb->setFirstResult($offset)->setMaxResults($perPage)->getQuery()->getArrayResult();
 
-        // Applications
         $ids = array_map(static fn($r) => (int)$r['id'], $rows);
         $appMap = [];
         if (!empty($ids)) {
@@ -398,7 +389,6 @@ class UserRepository extends EntityRepository
             }
         }
 
-        // Recalcul PHP SÛR (inchangé)
         foreach ($rows as &$row) {
             $row['applications'] = $appMap[(int)$row['id']] ?? [];
 
