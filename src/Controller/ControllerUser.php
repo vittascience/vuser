@@ -2124,6 +2124,37 @@ class ControllerUser extends Controller
                     return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
                 }
             },
+            "delete_role" => function () {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "method_not_allowed"];
+                if (!$this->isAdminRequester()) return ["error" => "not_allowed"];
+
+                $data = json_decode(file_get_contents('php://input'), true);
+                $id = (int)($data['id'] ?? 0);
+
+                if ($id <= 0) {
+                    return ['success' => false, 'errorType' => 'invalidData', 'message' => 'role_id_invalid'];
+                }
+
+                try {
+                    $repo = $this->entityManager->getRepository(UserRoles::class);
+                    $role = $repo->find($id);
+
+                    if (!$role) {
+                        return ['success' => false, 'errorType' => 'roleNotFound', 'message' => 'role_not_found'];
+                    }
+
+                    $this->entityManager->remove($role);
+                    $this->entityManager->flush();
+
+                    return [
+                        'success' => true,
+                        'message' => 'role_deleted_successfully',
+                        'roleId' => $id
+                    ];
+                } catch (Exception $e) {
+                    return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
+                }
+            },
             "update_user_roles" => function () {
 
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "method_not_allowed"];
