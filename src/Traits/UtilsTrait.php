@@ -18,7 +18,10 @@ trait UtilsTrait {
         $idToCheck = $teacherId ?: $_SESSION['id'];
         $now = new \DateTimeImmutable('now');
 
-        $betterCap = static function (int $cur, int $cand): int {
+        $betterCap = static function (?int $cur, ?int $cand): int {
+            $cur = $cur ?? 0;
+            $cand = $cand ?? 0;
+
             if ($cur === -1 || $cand === -1) return -1;
             return max($cur, $cand);
         };
