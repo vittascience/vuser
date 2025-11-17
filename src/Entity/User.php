@@ -85,6 +85,12 @@ class User
      */
     private $totp_secret = NULL;
 
+    /**
+     * @ORM\Column(name="is_deleted", type="boolean", options={"default":0})
+     * @var int
+     */
+    private $isDeleted = 0;
+
 
     public function __construct()
     {
@@ -222,6 +228,10 @@ class User
         $this->picture = $picture;
     }
 
+
+    public function setIsDeleted(bool $isDeleted) { $this->isDeleted = $isDeleted; }   
+    public function getIsDeleted(): bool { return $this->isDeleted; }
+
     public function processPicture($picture)
     {
         $extension = explode("/", $picture["type"])[1];
@@ -285,7 +295,8 @@ class User
             'firstname' => $this->getFirstname(),
             'surname' => $this->getSurname(),
             'picture' => $this->getPicture(),
-            'pseudo' => $this->getPseudo()
+            'pseudo' => $this->getPseudo(),
+            'isDeleted' => $this->getIsDeleted(),
         ];
     }
 }
