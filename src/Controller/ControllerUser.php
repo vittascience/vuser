@@ -1878,13 +1878,26 @@ class ControllerUser extends Controller
                         }
                         if ($k === 'groupIdIn') {
                             if (is_array($v)) {
-                                $filters[$k] = array_values(array_filter(array_map('intval', $v), fn($x) => $x !== null));
+                                $filters[$k] = array_values(
+                                    array_filter(
+                                        array_map('intval', $v),
+                                        function ($x) {
+                                            return $x !== null;
+                                        }
+                                    )
+                                );
                             } else {
-                                $parts = array_filter(array_map('trim', explode(',', (string)$v)), fn($x) => $x !== '');
+                                $parts = array_filter(
+                                    array_map('trim', explode(',', (string) $v)),
+                                    function ($x) {
+                                        return $x !== '';
+                                    }
+                                );
                                 $filters[$k] = array_values(array_map('intval', $parts));
                             }
                             continue;
                         }
+
                         if ($k === 'groupName' || $k === 'groupName~') {
                             $filters[$k] = (string)$v;
                             continue;
@@ -2187,16 +2200,29 @@ class ControllerUser extends Controller
 
                     $roleRepo = $this->entityManager->getRepository(UserRoles::class);
                     $roles = $roleRepo->findBy(['id' => $roleIds]);
-                    $rolesNamesArr = array_map(fn($role) => $role->getName(), $roles);
+
+                    $rolesNamesArr = array_map(
+                        function ($role) {
+                            return $role->getName();
+                        },
+                        $roles
+                    );
+                    
                     $regular->setRoles($rolesNamesArr);
                     $this->entityManager->persist($regular);
                     $this->entityManager->flush();
+
 
                     return [
                         'success' => true,
                         'message' => 'user_roles_updated_successfully',
                         'userId' => $user->getId(),
-                        'assignedRoleIds' => array_map(fn($role) => $role->getId(), $roles)
+                        'assignedRoleIds' => array_map(
+                            function ($role) {
+                                return $role->getId();
+                            },
+                            $roles
+                        )
                     ];
                 } catch (Exception $e) {
                     return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
