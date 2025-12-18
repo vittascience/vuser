@@ -271,8 +271,17 @@ class UserRepository extends EntityRepository
                 case 'in':
                     $vals = is_array($value)
                         ? array_map('intval', $value)
-                        : array_map('intval', explode(',', (string)$value));
-                    $vals = array_values(array_filter($vals, fn($v) => $v !== null));
+                        : array_map('intval', explode(',', (string) $value));
+
+                    $vals = array_values(
+                        array_filter(
+                            $vals,
+                            function ($v) {
+                                return $v !== null;
+                            }
+                        )
+                    );
+                    
                     if (!empty($vals)) {
                         $qb->andWhere($meta['expr'] . ' IN (:' . $param . ')')
                             ->setParameter($param, $vals);
@@ -364,7 +373,12 @@ class UserRepository extends EntityRepository
 
         $rows = $qb->setFirstResult($offset)->setMaxResults($perPage)->getQuery()->getArrayResult();
 
-        $ids = array_map(static fn($r) => (int)$r['id'], $rows);
+        $ids = array_map(
+            static function ($r) {
+                return (int) $r['id'];
+            },
+            $rows
+        );
         $appMap = [];
         if (!empty($ids)) {
             $conn = $this->getEntityManager()->getConnection();
