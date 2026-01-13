@@ -1831,7 +1831,7 @@ class ControllerUser extends Controller
                     if ($token) {
                         $userId = $token->getUserRef()->getId();
                         $regular = $this->entityManager->getRepository(Regular::class)->findOneBy(['user' => $userId]);
-                        if (!$regular || !$regular->getIsActive()) {
+                        if (!$regular) {
                             return ["success"=> false, "message" => "no_user"];
                         }
                         return UtilsTrait::getUserRestrictions($this->entityManager, $userId);
