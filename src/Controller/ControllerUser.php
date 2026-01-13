@@ -1817,6 +1817,23 @@ class ControllerUser extends Controller
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
                 return UtilsTrait::getUserRestrictions($this->entityManager);
             },
+            'get_my_token' => function () {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+                if (!$this->user) return ["error" => "User not connected"];
+                try {
+                    $userId = $this->user['id'];
+                    $token = $this->entityManager->getRepository(ConnectionToken::class)->findOneBy(['userRef' => $userId]);
+                    if ($token) {
+                        $token->setLastTimeActive(new \DateTime());
+                        $this->entityManager->persist($token);
+                        $this->entityManager->flush();
+                        return ["success" => true, "token" => $token->getToken()];
+                    }
+                    return ["success" => false, "message" => "token_not_found"];
+                } catch (Exception $e) {
+                    return ["error" => $e->getMessage()];
+                }
+            },
             'get_user_restriction_from_token' => function ($data) {
 
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
