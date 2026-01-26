@@ -11,7 +11,7 @@ use Classroom\Entity\UsersRestrictions;
 
 trait UtilsTrait {
     public static function getUserRestrictions($entityManager, $teacherId = null) {
-        if (empty($_SESSION['id'])) {
+        if (empty($_SESSION['id']) && empty($teacherId)) {
             return ["errorType" => "userNotRetrievedNotAuthenticated"];
         }
 

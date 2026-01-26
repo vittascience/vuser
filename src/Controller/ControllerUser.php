@@ -29,7 +29,7 @@ use Classroom\Entity\ActivityLinkClassroom;
 use User\Entity\ClassroomUserConnectionLog;
 use Classroom\Traits\UtilsTrait as ClassroomUtilsTrait;
 use User\Entity\UserRoles;
-
+use User\Entity\ConnectionToken;
 
 class ControllerUser extends Controller
 {
@@ -1817,6 +1817,48 @@ class ControllerUser extends Controller
             'get_user_restriction' => function () {
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
                 return UtilsTrait::getUserRestrictions($this->entityManager);
+            },
+            'get_my_token' => function () {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+                if (!$this->user) return ["error" => "User not connected"];
+                try {
+                    $userId = $this->user['id'];
+                    $token = $this->entityManager->getRepository(ConnectionToken::class)->findOneBy(['userRef' => $userId]);
+                    if ($token) {
+                        $token->setLastTimeActive(new \DateTime());
+                        $this->entityManager->persist($token);
+                        $this->entityManager->flush();
+                        return ["success" => true, "token" => $token->getToken()];
+                    }
+                    return ["success" => false, "message" => "token_not_found"];
+                } catch (Exception $e) {
+                    return ["error" => $e->getMessage()];
+                }
+            },
+            'get_user_restriction_from_token' => function ($data) {
+
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                try {
+                    $data = json_decode($data['payload']);
+                    $token = $data->token ? htmlspecialchars(strip_tags(trim($data->token))) : null;
+    
+                    if (!$token) return ["success"=> false, "message" => "token_not_found"];
+    
+                    $token = $this->entityManager->getRepository(ConnectionToken::class)->findOneBy(['token' => $token]);
+                    if ($token) {
+                        $userId = $token->getUserRef()->getId();
+                        $regular = $this->entityManager->getRepository(Regular::class)->findOneBy(['user' => $userId]);
+                        if (!$regular) {
+                            return ["success"=> false, "message" => "no_user"];
+                        }
+                        return UtilsTrait::getUserRestrictions($this->entityManager, $userId);
+                    } else {
+                        return ["success"=> false, "message" => "invalid_token"];
+                    }
+                } catch (Exception $e) {
+                    return ["error" => $e->getMessage()];
+                }
             },
             'user-meta-search' => function () {
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "method_not_allowed"];
