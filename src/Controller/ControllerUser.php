@@ -902,9 +902,11 @@ class ControllerUser extends Controller
                 }
 
                 $classroomTeacher = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                    ->findBy(array("classroom" => $classroom->getId()));
+                    ->findOneBy(array("classroom" => $classroom->getId(), "rights" => 2));
 
-                $currentUserId = $classroomTeacher[0]->getUser()->getId();
+                if (!$classroomTeacher) return ["isUsersAdded" => false, "errorType" => "teacherNotFound"];
+
+                $currentUserId = $classroomTeacher->getUser()->getId();
 
                 // get the statuses for the current classroom owner
                 $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
@@ -914,18 +916,9 @@ class ControllerUser extends Controller
                 // get demoStudent from .env file
                 $demoStudent = $this->manageDemoStudentPseudo();
 
-                $classrooms = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                    ->findBy(array("user" => $currentUserId));
-
-                // initiate the $nbApprenants counter and loop through each classrooms
-                $nbApprenants = 0;
-                foreach ($classrooms as $c) {
-                    $students = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                        ->getAllStudentsInClassroom($c->getClassroom()->getId(), 0, $demoStudent);
-
-                    // add the current classroom users number and increase the total
-                    $nbApprenants += count($students);
-                }
+                // count all students across all classrooms of the teacher (single COUNT query, no entity hydration)
+                $nbApprenants = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
+                    ->countStudentsForTeacher($currentUserId, $demoStudent);
 
                 $learnerNumberCheck = [
                     "idUser" => $currentUserId,
@@ -1000,7 +993,6 @@ class ControllerUser extends Controller
                 $user->setFirstname("links-élève");
                 $user->setSurname("links-modèl");
                 $user->setPseudo($pseudo);
-                $password = passwordGenerator();
                 $user->setPassword($password);
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
@@ -1014,8 +1006,6 @@ class ControllerUser extends Controller
                 // persist in doctrine memory and save it in db later
                 $this->entityManager->persist($classroomUser);
 
-                $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')
-                    ->findOneBy(array("link" => $classroomLink));
                 $linkteacherToGroup = new ClassroomLinkUser($user, $classroom);
                 $linkteacherToGroup->setRights(0);
                 $this->entityManager->persist($linkteacherToGroup);
