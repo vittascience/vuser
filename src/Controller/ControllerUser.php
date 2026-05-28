@@ -2260,6 +2260,31 @@ class ControllerUser extends Controller
                 } catch (Exception $e) {
                     return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
                 }
+            },
+            'is_premium_from_jwt' => function () {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                $secret = !empty($_POST['secret']) ? $_POST['secret'] : null;
+                if (!$secret || !isset($_ENV['VS_NODE_SECRET']) || !hash_equals($_ENV['VS_NODE_SECRET'], $secret)) {
+                    http_response_code(403);
+                    return ["error" => "Forbidden"];
+                }
+
+                $userId = !empty($_POST['userId']) ? intval($_POST['userId']) : null;
+                if (!$userId) return ["isPremium" => false];
+
+                $prevId = $_SESSION['id'] ?? null;
+                $_SESSION['id'] = $userId;
+                $restrictions = UtilsTrait::getUserRestrictions($this->entityManager);
+                if ($prevId !== null) {
+                    $_SESSION['id'] = $prevId;
+                } else {
+                    unset($_SESSION['id']);
+                }
+
+                if (isset($restrictions['errorType'])) return ["isPremium" => false];
+
+                return ["isPremium" => !empty($restrictions['premium'])];
             }
         );
     }
