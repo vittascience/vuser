@@ -95,6 +95,7 @@ trait UtilsTrait {
         if ($checkPremium) {
             $restrictionsArray['premium'] = true;
             $restrictionsArray['type'] = 'LegacyPersonalPremium';
+            $restrictionsArray['legacyDateBegin'] = $checkPremium->getDateBegin();
         }
 
         $userDefaultRestrictions = $entityManager->getRepository(Restrictions::class)->findOneBy(['name' => "userDefaultRestrictions"]);

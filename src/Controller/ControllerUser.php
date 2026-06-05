@@ -2271,7 +2271,7 @@ class ControllerUser extends Controller
                 }
 
                 $userId = !empty($_POST['userId']) ? intval($_POST['userId']) : null;
-                if (!$userId) return ["isPremium" => false];
+                if (!$userId) return ["isPremium" => false, "premiumSince" => null];
 
                 $prevId = $_SESSION['id'] ?? null;
                 $_SESSION['id'] = $userId;
@@ -2282,9 +2282,24 @@ class ControllerUser extends Controller
                     unset($_SESSION['id']);
                 }
 
-                if (isset($restrictions['errorType'])) return ["isPremium" => false];
+                if (isset($restrictions['errorType'])) return ["isPremium" => false, "premiumSince" => null];
 
-                return ["isPremium" => !empty($restrictions['premium'])];
+                $isPremium = !empty($restrictions['premium']);
+                $premiumSince = null;
+
+                if ($isPremium) {
+                    // dateBegin is a \DateTime for PersonalPremium/GroupPremium types.
+                    // For LegacyPersonalPremium it gets overwritten by -1, so we use legacyDateBegin.
+                    $dateBegin = $restrictions['dateBegin'] ?? null;
+                    if (!($dateBegin instanceof \DateTimeInterface)) {
+                        $dateBegin = $restrictions['legacyDateBegin'] ?? null;
+                    }
+                    if ($dateBegin instanceof \DateTimeInterface) {
+                        $premiumSince = $dateBegin->format('Y-m-d');
+                    }
+                }
+
+                return ["isPremium" => $isPremium, "premiumSince" => $premiumSince];
             }
         );
     }
