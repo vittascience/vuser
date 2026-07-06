@@ -2261,6 +2261,18 @@ class ControllerUser extends Controller
                     return ['success' => false, 'errorType' => 'exceptionOccured', 'error' => $e->getMessage()];
                 }
             },
+            'get_my_roles' => function () {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+                if (empty($_SESSION['id'])) return ["errorType" => "userNotRetrievedNotAuthenticated"];
+
+                $id = intval($_SESSION['id']);
+                $regular = $this->entityManager->getRepository(Regular::class)->find($id);
+
+                return [
+                    'success' => true,
+                    'roles' => $regular ? $regular->getRoles() : []
+                ];
+            },
             'is_premium_from_jwt' => function () {
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
 
