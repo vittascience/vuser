@@ -30,6 +30,8 @@ use User\Entity\ClassroomUserConnectionLog;
 use Classroom\Traits\UtilsTrait as ClassroomUtilsTrait;
 use User\Entity\UserRoles;
 use User\Entity\ConnectionToken;
+use User\Entity\MobileDeviceToken;
+use Utils\DeviceTokenManager;
 
 class ControllerUser extends Controller
 {
@@ -1250,12 +1252,64 @@ class ControllerUser extends Controller
 
                     $_SESSION["id"] = $reponseLogin[0];
                     $_SESSION["token"] = $reponseLogin[1];
-                    return ["success" => true];
+
+                    $response = ["success" => true];
+
+                    // Mobile app only: issues a separate, per-device long-lived
+                    // token (mobile_device_tokens — unrelated to connection_tokens
+                    // above) so the app can silently re-authenticate after the PHP
+                    // session dies, without invalidating any other device's token.
+                    if (!empty($_POST['device_id'])) {
+                        $deviceId = htmlspecialchars(strip_tags(trim($_POST['device_id'])));
+                        $deviceName = !empty($_POST['device_name']) ? htmlspecialchars(strip_tags(trim($_POST['device_name']))) : null;
+                        $response['deviceToken'] = DeviceTokenManager::getSharedInstance()->issueToken($reponseLogin[0], $deviceId, $deviceName);
+                    }
+
+                    return $response;
                 } else {
                     if ($reponseLogin["success"] == false) {
                         return $reponseLogin;
                     }
                 }
+            },
+            'refresh_session' => function () {
+                // Mobile app only: exchanges a mobile_device_tokens value for a
+                // fresh PHP session, no password needed — this is what lets the
+                // app silently re-authenticate after the PHP session cookie's
+                // underlying server-side session has died from inactivity
+                // (typically ~24 min GC-eligible), while the account itself is
+                // still legitimately logged in and, separately, still premium.
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                $userId = !empty($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+                $deviceToken = !empty($_POST['device_token']) ? htmlspecialchars(strip_tags(trim($_POST['device_token']))) : '';
+
+                if (empty($userId) || empty($deviceToken)) return ["success" => false];
+
+                // The token row itself is the source of truth for ownership —
+                // a client-supplied user_id is only cross-checked against it,
+                // never trusted on its own, so a stale/mismatched cached
+                // user_id can't hydrate the wrong account's session.
+                $ownerId = DeviceTokenManager::getSharedInstance()->validateToken($deviceToken);
+                if (empty($ownerId) || $ownerId !== $userId) return ["success" => false];
+
+                $_SESSION["id"] = $ownerId;
+                return ["success" => true];
+            },
+            'revoke_device_token' => function () {
+                // Mobile app only: called on logout. Reads user_id/device_token
+                // explicitly from the request rather than $_SESSION, since a
+                // long-offline app may have no live PHP session to read from at
+                // the moment it logs out.
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                $userId = !empty($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+                $deviceToken = !empty($_POST['device_token']) ? htmlspecialchars(strip_tags(trim($_POST['device_token']))) : '';
+
+                if (empty($userId) || empty($deviceToken)) return ["success" => false];
+
+                $res = DeviceTokenManager::getSharedInstance()->revokeToken($userId, $deviceToken);
+                return ["success" => $res !== false];
             },
             'register' => function () {
 
