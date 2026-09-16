@@ -458,6 +458,7 @@ class ControllerUser extends Controller
                 $sanitizedData->nom = isset($incomingData->nom) ? htmlspecialchars(strip_tags(trim($incomingData->nom))) : '';
                 $sanitizedData->ido = isset($incomingData->ido) ? htmlspecialchars(strip_tags(trim($incomingData->ido))) : '';
                 $sanitizedData->uai = isset($incomingData->uai) ? htmlspecialchars(strip_tags(trim($incomingData->uai))) : '';
+                $sanitizedData->ems4 = isset($incomingData->ems4) ? htmlspecialchars(strip_tags(trim($incomingData->ems4))) : '';
                 $sanitizedData->classroomName = isset($incomingData->classroomName)
                     ? htmlspecialchars(strip_tags(trim($incomingData->classroomName)))
                     : '';
@@ -561,6 +562,7 @@ class ControllerUser extends Controller
                 $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) : '';
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
                 $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) : '';
+                $pms4 = isset($_POST['pms4']) ? htmlspecialchars(strip_tags(trim($_POST['pms4']))) : '';
 
                 // get the teacher by its ido(opaque identifier)
                 $garUserExists = $this->entityManager
@@ -599,6 +601,8 @@ class ControllerUser extends Controller
                     }
 
                     $this->repairAnonymisedGarUser($garUserExists->getId(), $pre, $nom);
+                    $garUserExists->setGarMs4($pms4);
+                    $this->entityManager->flush();
                     $this->saveGarUserConnection($garUserExists->getGarId());
 
                     return array(
@@ -628,6 +632,7 @@ class ControllerUser extends Controller
                     $classroomUser->setSchoolId($uai);
                     $classroomUser->setIsTeacher(true);
                     $classroomUser->setMailTeacher($pmel);
+                    $classroomUser->setGarMs4($pms4);
                     $this->entityManager->persist($classroomUser);
                     $this->entityManager->flush();
 
@@ -748,6 +753,7 @@ class ControllerUser extends Controller
                 $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) : '';
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
                 $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) : '';
+                $pms4 = isset($_POST['pms4']) ? htmlspecialchars(strip_tags(trim($_POST['pms4']))) : '';
                 $fakeRegularEmail = $this->generateFakeEmailWithPrefix("gar.employee");
 
 
@@ -758,6 +764,8 @@ class ControllerUser extends Controller
 
                 if ($garUserExists) {
                     $this->repairAnonymisedGarUser($garUserExists->getId(), $pre, $nom);
+                    $garUserExists->setGarMs4($pms4);
+                    $this->entityManager->flush();
                     $this->saveGarUserConnection($garUserExists->getGarId());
                     return array(
                         'userId' => $garUserExists->getId()->getId()
@@ -785,6 +793,7 @@ class ControllerUser extends Controller
                 $classroomUser->setSchoolId($uai);
                 $classroomUser->setIsTeacher(true);
                 $classroomUser->setMailTeacher($pmel);
+                $classroomUser->setGarMs4($pms4);
                 $this->entityManager->persist($classroomUser);
                 $this->entityManager->flush();
 
@@ -2414,6 +2423,7 @@ class ControllerUser extends Controller
             $classroomUser->setGarId($sanitizedData->customIdo);
             $classroomUser->setSchoolId($sanitizedData->uai);
             $classroomUser->setIsTeacher(false);
+            $classroomUser->setGarMs4($sanitizedData->ems4 ?? '');
 
             // persist the classroomUser for later flush
             $this->entityManager->persist($classroomUser);
@@ -2421,6 +2431,8 @@ class ControllerUser extends Controller
             return $user;
         } else {
             $this->repairAnonymisedGarUser($garUserExists->getId(), $sanitizedData->pre, $sanitizedData->nom);
+            $garUserExists->setGarMs4($sanitizedData->ems4 ?? '');
+            $this->entityManager->flush();
             return $garUserExists;
         }
     }

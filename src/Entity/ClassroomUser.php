@@ -54,6 +54,13 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
      */
     private $samlId;
 
+    /**
+     * GAR restriction code (E_MS4 for students, P_MS4 for teachers/staff), used to gate IAG access.
+     * @ORM\Column(name="gar_ms4", type="string", length=255, nullable=true)
+     * @var string
+     */
+    private $garMs4;
+
     public function __construct(User $user, $garId = NULL, $schoolId = NULL, $isTeacher = false, $mailTeacher = NULL, $samlId = NULL)
     {
         $this->setId($user);
@@ -215,6 +222,30 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
         return $this;
     }
 
+    /**
+     * @return string
+     */
+    public function getGarMs4()
+    {
+        return $this->garMs4;
+    }
+
+    /**
+     * @param string $garMs4
+     */
+    public function setGarMs4($garMs4)
+    {
+        if (is_string($garMs4) || $garMs4 == NULL) {
+            if ((strlen($garMs4) == 0 || strlen($garMs4) < 255)) {
+                $this->garMs4 = $garMs4;
+            } else {
+                throw new EntityDataIntegrityException("garMs4 needs to have a lenght null or less than 255 characters");
+            }
+        } else {
+            throw new EntityDataIntegrityException("garMs4 needs to be string or null");
+        }
+    }
+
     public function jsonSerialize()
     {
         $id = $this->getId();
@@ -227,7 +258,8 @@ class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
             'mailTeacher' => $this->getMailTeacher(),
             'isTeacher' => $this->getIsTeacher(),
             'id' => $id,
-            'samlId' => $this->getSamlId()
+            'samlId' => $this->getSamlId(),
+            'garMs4' => $this->getGarMs4()
         ];
     }
 
