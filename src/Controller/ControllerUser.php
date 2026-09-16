@@ -598,6 +598,7 @@ class ControllerUser extends Controller
                         ]);
                     }
 
+                    $this->repairAnonymisedGarUser($garUserExists->getId(), $pre, $nom);
                     $this->saveGarUserConnection($garUserExists->getGarId());
 
                     return array(
@@ -756,6 +757,7 @@ class ControllerUser extends Controller
                     ->findOneBy(array("garId" => $ido));
 
                 if ($garUserExists) {
+                    $this->repairAnonymisedGarUser($garUserExists->getId(), $pre, $nom);
                     $this->saveGarUserConnection($garUserExists->getGarId());
                     return array(
                         'userId' => $garUserExists->getId()->getId()
@@ -2417,7 +2419,27 @@ class ControllerUser extends Controller
             $this->entityManager->persist($classroomUser);
             $this->entityManager->flush();
             return $user;
-        } else return $garUserExists;
+        } else {
+            $this->repairAnonymisedGarUser($garUserExists->getId(), $sanitizedData->pre, $sanitizedData->nom);
+            return $garUserExists;
+        }
+    }
+
+    /**
+     * Reset the identity fields of a GAR user if it was anonymised by the RGPD cleanup job,
+     * restoring them from the CAS attributes received on this reconnection.
+     * @param User $user
+     * @param string $pre
+     * @param string $nom
+     */
+    private function repairAnonymisedGarUser($user, $pre, $nom)
+    {
+        if ($user->getFirstname() !== 'gar anonymised firstname') return;
+
+        $user->setFirstname($pre);
+        $user->setSurname($nom);
+        $user->setPseudo("$pre $nom");
+        $this->entityManager->flush();
     }
 
     /**
