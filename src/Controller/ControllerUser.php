@@ -26,6 +26,7 @@ use Classroom\Entity\ActivityLinkUser;
 use User\Entity\UserConnectionHistory;
 use Classroom\Entity\ClassroomLinkUser;
 use Classroom\Entity\ActivityLinkClassroom;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use User\Entity\ClassroomUserConnectionLog;
 use Classroom\Traits\UtilsTrait as ClassroomUtilsTrait;
 use User\Entity\UserRoles;
@@ -905,6 +906,13 @@ class ControllerUser extends Controller
                 // retrieve the classroom by its link
                 $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findOneBy(array("link" => $classroomLink));
 
+                if (!$classroom) {
+                    return [
+                        "isUsersAdded" => false,
+                        "errorType" => "invalidLink"
+                    ];
+                }
+
                 // if the current classroom is Blocked by the teacher
                 if ($classroom->getIsBlocked() === true) {
                     // disallow students to join
@@ -1007,23 +1015,38 @@ class ControllerUser extends Controller
                 $user->setSurname("links-modèl");
                 $user->setPseudo($pseudo);
                 $user->setPassword($password);
-                $this->entityManager->persist($user);
-                $this->entityManager->flush();
 
-                // related to a new entry in user_classroom_users table in db
-                $classroomUser = new ClassroomUser($user);
-                $classroomUser->setGarId(null);
-                $classroomUser->setSchoolId(null);
-                $classroomUser->setIsTeacher(false);
-                $classroomUser->setMailTeacher(NULL);
-                // persist in doctrine memory and save it in db later
-                $this->entityManager->persist($classroomUser);
+                $this->entityManager->beginTransaction();
+                try {
+                    $this->entityManager->persist($user);
+                    $this->entityManager->flush();
 
-                $linkteacherToGroup = new ClassroomLinkUser($user, $classroom);
-                $linkteacherToGroup->setRights(0);
-                $this->entityManager->persist($linkteacherToGroup);
+                    // related to a new entry in user_classroom_users table in db
+                    $classroomUser = new ClassroomUser($user);
+                    $classroomUser->setGarId(null);
+                    $classroomUser->setSchoolId(null);
+                    $classroomUser->setIsTeacher(false);
+                    $classroomUser->setMailTeacher(NULL);
+                    // persist in doctrine memory and save it in db later
+                    $this->entityManager->persist($classroomUser);
 
-                $this->entityManager->flush();
+                    $linkteacherToGroup = new ClassroomLinkUser($user, $classroom);
+                    $linkteacherToGroup->setRights(0);
+                    $this->entityManager->persist($linkteacherToGroup);
+
+                    $this->entityManager->flush();
+                    $this->entityManager->commit();
+                } catch (ForeignKeyConstraintViolationException $e) {
+                    // classroom deleted by the teacher while the student was joining
+                    $this->entityManager->rollback();
+                    return [
+                        "isUsersAdded" => false,
+                        "errorType" => "invalidLink"
+                    ];
+                } catch (\Throwable $e) {
+                    $this->entityManager->rollback();
+                    throw $e;
+                }
 
                 // get retro attributed activities if any
                 $classroomRetroAttributedActivities = $this->entityManager
