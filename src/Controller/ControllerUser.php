@@ -2376,7 +2376,10 @@ class ControllerUser extends Controller
                     }
                 }
 
-                return ["isPremium" => $isPremium, "premiumSince" => $premiumSince];
+                // Students of a premium teacher consume that teacher's quota
+                $quotaOwnerId = $isPremium ? ($restrictions['premiumOwnerId'] ?? $userId) : $userId;
+
+                return ["isPremium" => $isPremium, "premiumSince" => $premiumSince, "quotaOwnerId" => $quotaOwnerId];
             }
         );
     }
