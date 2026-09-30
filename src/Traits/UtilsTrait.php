@@ -41,42 +41,50 @@ trait UtilsTrait {
             $hasTeacherLink = (bool) $entityManager->getRepository(ClassroomLinkUser::class)->findOneBy(['user' => $idToCheck, 'rights' => 2]);
 
             if (!$hasTeacherLink) {
-                $isStudent = $entityManager->getRepository(ClassroomLinkUser::class)->findOneBy(['user' => $idToCheck, 'rights' => 0]);
-                if ($isStudent) {
-                    $classroomTeacher = $entityManager->getRepository(ClassroomLinkUser::class)->findOneBy(['classroom' => $isStudent->getClassroom(), 'rights' => 2]);
+                // Deterministic order: the first premium teacher found also owns the student's shared AI quota
+                $studentLinks = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['user' => $idToCheck, 'rights' => 0], ['classroom' => 'ASC']);
+                if ($studentLinks) {
+                    $hasTeacher = false;
+                    $checkedTeachers = [];
+                    foreach ($studentLinks as $studentLink) {
+                        $classroomTeachers = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['classroom' => $studentLink->getClassroom(), 'rights' => 2], ['user' => 'ASC']);
+                        foreach ($classroomTeachers as $classroomTeacher) {
+                            $hasTeacher = true;
+                            $classroomTeacherId = $classroomTeacher->getUser()->getId();
+                            if (isset($checkedTeachers[$classroomTeacherId])) continue;
+                            $checkedTeachers[$classroomTeacherId] = true;
 
-                    if (!$classroomTeacher) {
+                            $teacherRestrictions = self::getUserRestrictions($entityManager, $classroomTeacherId);
+                            if (isset($teacherRestrictions['errorType']) || empty($teacherRestrictions['premium'])) continue;
+
+                            return [
+                                'maxClassrooms' => -1,
+                                'maxStudents' => -1,
+                                'dateBegin' => $teacherRestrictions['dateBegin'],
+                                'dateEnd' => $teacherRestrictions['dateEnd'],
+                                'premium' => true,
+                                'totalClassrooms' => -1,
+                                'totalStudents' => -1,
+                                'type' => 'StudentOfPremium',
+                                'premiumOwnerId' => $classroomTeacherId
+                            ];
+                        }
+                    }
+
+                    if (!$hasTeacher) {
                         return ["errorType" => "studentWithoutTeacher"];
                     }
 
-                    $teacherRestrictions = self::getUserRestrictions($entityManager, $classroomTeacher->getUser()->getId());
-                    if (isset($teacherRestrictions['errorType'])) {
-                        return $teacherRestrictions;
-                    }
-
-                    if (!empty($teacherRestrictions['premium'])) {
-                        return [
-                            'maxClassrooms' => -1,
-                            'maxStudents' => -1,
-                            'dateBegin' => $teacherRestrictions['dateBegin'],
-                            'dateEnd' => $teacherRestrictions['dateEnd'],
-                            'premium' => true,
-                            'totalClassrooms' => -1,
-                            'totalStudents' => -1,
-                            'type' => 'StudentOfPremium'
-                        ];
-                    } else {
-                        return [
-                            'maxClassrooms' => 0,
-                            'maxStudents' => 0,
-                            'dateBegin' => 0,
-                            'dateEnd' => 0,
-                            'premium' => false,
-                            'totalClassrooms' => 0,
-                            'totalStudents' => 0,
-                            'type' => 'free'
-                        ];
-                    }
+                    return [
+                        'maxClassrooms' => 0,
+                        'maxStudents' => 0,
+                        'dateBegin' => 0,
+                        'dateEnd' => 0,
+                        'premium' => false,
+                        'totalClassrooms' => 0,
+                        'totalStudents' => 0,
+                        'type' => 'free'
+                    ];
                 }
             }
         }
