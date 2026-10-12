@@ -17,6 +17,9 @@ trait UtilsTrait {
 
         $idToCheck = $teacherId ?: $_SESSION['id'];
         $now = new \DateTimeImmutable('now');
+        // A group / personal premium only counts within valid dates (both set, begin <= now < end), like the apps "outDated" check
+        $isWithinDates = static fn($dateBegin, $dateEnd): bool =>
+            $dateBegin !== null && $dateEnd !== null && $dateBegin <= $now && $dateEnd > $now;
 
         $betterCap = static function (?int $cur, ?int $cand): int {
             $cur = $cur ?? 0;
@@ -118,7 +121,7 @@ trait UtilsTrait {
         $userGroups = $entityManager->getRepository(UsersLinkGroups::class)->findOneBy(['user' => $idToCheck]);
         if ($userGroups) {
             $group = $entityManager->getRepository(Groups::class)->findOneBy(['id' => $userGroups->getGroup()]);
-            if ($group && ($group->getDateEnd() === null || $group->getDateEnd() > $now)) {
+            if ($group && $isWithinDates($group->getDateBegin(), $group->getDateEnd())) {
                 $groupDefaultRestrictions = $entityManager->getRepository(Restrictions::class)
                     ->findOneBy(['name' => "groupDefaultRestrictions"]);
                 if ($groupDefaultRestrictions) {
@@ -151,7 +154,7 @@ trait UtilsTrait {
         }
 
         $userRestrictions = $entityManager->getRepository(UsersRestrictions::class)->findOneBy(['user' => $idToCheck]);
-        if ($userRestrictions && ($userRestrictions->getDateEnd() === null || $userRestrictions->getDateEnd() > $now)) {
+        if ($userRestrictions && $isWithinDates($userRestrictions->getDateBegin(), $userRestrictions->getDateEnd())) {
             $restrictionsArray['dateBegin'] = $userRestrictions->getDateBegin();
             $restrictionsArray['dateEnd']   = $userRestrictions->getDateEnd();
 
