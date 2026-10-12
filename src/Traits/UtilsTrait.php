@@ -18,8 +18,9 @@ trait UtilsTrait {
         $idToCheck = $teacherId ?: $_SESSION['id'];
         $now = new \DateTimeImmutable('now');
         // A group / personal premium only counts within valid dates (both set, begin <= now < end), like the apps "outDated" check
-        $isWithinDates = static fn($dateBegin, $dateEnd): bool =>
-            $dateBegin !== null && $dateEnd !== null && $dateBegin <= $now && $dateEnd > $now;
+        $isWithinDates = static function ($dateBegin, $dateEnd) use ($now): bool {
+            return $dateBegin !== null && $dateEnd !== null && $dateBegin <= $now && $dateEnd > $now;
+        };
 
         $betterCap = static function (?int $cur, ?int $cand): int {
             $cur = $cur ?? 0;
