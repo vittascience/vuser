@@ -445,20 +445,21 @@ class ControllerUser extends Controller
             },
             'register_and_add_gar_student_to_classroom' => function () {
 
-                // enable cors
-                if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
-
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // the student identity comes from the CAS validated session, never from the request
+                $garIdentity = $this->getGarSessionIdentity();
+                if (!$garIdentity) return ["error" => "garNotAuthenticated"];
 
                 $incomingData = json_decode(file_get_contents('php://input'));
 
                 // create empty object, bind and sanitize incoming data
                 $sanitizedData = new \stdClass();
-                $sanitizedData->pre = isset($incomingData->pre) ?  htmlspecialchars(strip_tags(trim($incomingData->pre))) : '';
-                $sanitizedData->nom = isset($incomingData->nom) ? htmlspecialchars(strip_tags(trim($incomingData->nom))) : '';
-                $sanitizedData->ido = isset($incomingData->ido) ? htmlspecialchars(strip_tags(trim($incomingData->ido))) : '';
-                $sanitizedData->uai = isset($incomingData->uai) ? htmlspecialchars(strip_tags(trim($incomingData->uai))) : '';
+                $sanitizedData->pre = htmlspecialchars(strip_tags(trim($garIdentity['PRE'])));
+                $sanitizedData->nom = htmlspecialchars(strip_tags(trim($garIdentity['NOM'])));
+                $sanitizedData->ido = htmlspecialchars(strip_tags(trim($garIdentity['IDO'])));
+                $sanitizedData->uai = htmlspecialchars(strip_tags(trim($garIdentity['UAI'])));
                 $sanitizedData->ems4 = isset($incomingData->ems4) ? htmlspecialchars(strip_tags(trim($incomingData->ems4))) : '';
                 $sanitizedData->classroomName = isset($incomingData->classroomName)
                     ? htmlspecialchars(strip_tags(trim($incomingData->classroomName)))
@@ -472,11 +473,17 @@ class ControllerUser extends Controller
                     : '';
                 $sanitizedData->customIdo = "{$sanitizedData->ido}-{$sanitizedData->uai}-{$sanitizedData->classroomName}-{$sanitizedData->classroomGarCode}-{$sanitizedData->classroomTeacherId}";
 
+                // the classroom must be one of the student's GAR divisions/groups in its school
+                $classroom = $this->entityManager->getRepository(Classroom::class)->find($sanitizedData->classroomId);
+                if (
+                    !$classroom
+                    || $classroom->getUai() !== $sanitizedData->uai
+                    || $classroom->getGarCode() !== $sanitizedData->classroomGarCode
+                    || !in_array($classroom->getGarCode(), $this->getGarClassroomCodes($garIdentity), true)
+                ) return ["error" => "garClassroomNotAllowed"];
+
                 // get the student
                 $studentRegistered = $this->registerGarStudentIfNeeded($sanitizedData);
-
-                // get the classroom
-                $classroom = $this->entityManager->getRepository(Classroom::class)->find($sanitizedData->classroomId);
 
 
                 if ($studentRegistered instanceof User) {
@@ -657,19 +664,20 @@ class ControllerUser extends Controller
             },
             'save_gar_teacher_classrooms' => function () {
 
-                // Allow from any origin to be commented in production
-                if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
-
                 // accept only POST request
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                // the teacher is the one CAS.php logged in, its identity comes from the CAS validated session
+                $garIdentity = $this->getGarSessionIdentity();
+                if (!$garIdentity || !$this->isGarSessionUser($garIdentity)) return ["error" => "garNotAuthenticated"];
 
                 // bind incoming json data and decode them
                 $incomingData = file_get_contents('php://input');
                 $decodedData = json_decode($incomingData);
 
-                // sanitize incoming data
-                $uai = htmlspecialchars(strip_tags(trim($decodedData->uai)));
-                $teacherId = htmlspecialchars(strip_tags(trim($decodedData->teacherId)));
+                $uai = htmlspecialchars(strip_tags(trim($garIdentity['UAI'])));
+                $teacherId = intval($_SESSION['id']);
+                $allowedCodes = $this->getGarClassroomCodes($garIdentity);
 
 
                 for ($i = 0; $i < count($decodedData->classroomsToCreate); $i++) {
@@ -678,6 +686,7 @@ class ControllerUser extends Controller
                     // bind and sanitize each classroom and related group
                     $classroomName = htmlspecialchars(strip_tags(trim($incomingClassroomName)));
                     $classroomCode = htmlspecialchars(strip_tags(trim($incomingClassroomCode)));
+                    if (!in_array($classroomCode, $allowedCodes, true)) continue;
 
 
                     // get the classroom and group from classrooms and classroom_users_link_classrooms joined tables
@@ -822,6 +831,11 @@ class ControllerUser extends Controller
                 // bind and sanitize incoming data
                 $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
                 $userId = isset($_POST['userId']) ? intval($_POST['userId']) : 0;
+
+                // only for the GAR employee CAS.php just logged in
+                $garIdentity = $this->getGarSessionIdentity();
+                if (!$garIdentity || !$this->isGarSessionUser($garIdentity) || $userId !== intval($_SESSION['id'])) return ["error" => "garNotAuthenticated"];
+                $uai = htmlspecialchars(strip_tags(trim($garIdentity['UAI'])));
 
                 // get the user from db
                 $teacher = $this->entityManager->getRepository(User::class)->find($userId);
@@ -2405,6 +2419,42 @@ class ControllerUser extends Controller
                 return ["isPremium" => $isPremium, "premiumSince" => $premiumSince, "quotaOwnerId" => $quotaOwnerId];
             }
         );
+    }
+
+    // GAR attributes (IDO, UAI, PRE, NOM, DIV, GRO...) that phpCAS stored after validating the ticket
+    private function getGarSessionIdentity()
+    {
+        $attributes = $_SESSION['phpCAS']['attributes'] ?? null;
+        if (empty($_SESSION['phpCAS']['user']) || !is_array($attributes)) return null;
+
+        $identity = [];
+        foreach (['IDO', 'UAI', 'PRE', 'NOM'] as $key) {
+            $value = $attributes[$key] ?? '';
+            $identity[$key] = is_array($value) ? (string) reset($value) : (string) $value;
+        }
+        if ($identity['IDO'] === '' || $identity['UAI'] === '') return null;
+
+        $identity['DIV'] = (array) ($attributes['DIV'] ?? []);
+        $identity['GRO'] = (array) ($attributes['GRO'] ?? []);
+        return $identity;
+    }
+
+    // Codes of the GAR divisions and groups, sent by the GAR as "code##name"
+    private function getGarClassroomCodes(array $garIdentity)
+    {
+        $codes = [];
+        foreach (array_merge($garIdentity['DIV'], $garIdentity['GRO']) as $classroom) {
+            $codes[] = htmlspecialchars(strip_tags(trim(explode('##', (string) $classroom)[0])));
+        }
+        return $codes;
+    }
+
+    // The session user is the GAR account of this identity
+    private function isGarSessionUser(array $garIdentity)
+    {
+        if (empty($_SESSION['id'])) return false;
+        $classroomUser = $this->entityManager->getRepository(ClassroomUser::class)->find(intval($_SESSION['id']));
+        return $classroomUser && $classroomUser->getGarId() === htmlspecialchars(strip_tags(trim($garIdentity['IDO'])));
     }
 
     /**
