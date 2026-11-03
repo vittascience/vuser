@@ -1441,7 +1441,7 @@ class ControllerUser extends Controller
                 $regularUser->setActive(false);
 
                 // create the confirm token and set user confirm token
-                $confirmationToken = time() . "-" . bin2hex($email);
+                $confirmationToken = bin2hex(random_bytes(16));
                 $regularUser->setConfirmToken($confirmationToken);
                 $this->entityManager->persist($regularUser);
                 $this->entityManager->flush();
@@ -1556,7 +1556,7 @@ class ControllerUser extends Controller
                     else {
                         // set new_mail, confirm_token fields to be filled in user_regulars
                         $regularUserToUpdate->setNewMail($email);
-                        $confirmationToken = time() . "-" . bin2hex($email);
+                        $confirmationToken = bin2hex(random_bytes(16));
                         $regularUserToUpdate->setConfirmToken($confirmationToken);
 
                         // set the flag to true for sending email later
