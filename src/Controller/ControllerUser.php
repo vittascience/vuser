@@ -9,6 +9,7 @@ use Exception;
 use Utils\Mailer;
 use Dotenv\Dotenv;
 use DAO\RegularDAO;
+use DAO\UserLoginAttemptDAO;
 use User\Entity\User;
 use User\Entity\LtiUser;
 use User\Entity\Regular;
@@ -340,6 +341,10 @@ class ControllerUser extends Controller
                 // check for errors
                 if (empty($pseudo) || empty($password)) return false;
 
+                // student passwords are 4 digit PINs: same lockout as teacher logins, per classroom and pseudo
+                $attemptKey = "student:$classroomLink:" . mb_strtolower($pseudo);
+                if ($this->isLoginLocked($attemptKey)) return false;
+
                 // no errors found, retrieve the user in db
                 $user = $this->entityManager
                     ->getRepository('User\Entity\User')
@@ -349,7 +354,10 @@ class ControllerUser extends Controller
                     ));
 
                 // no user found, return false
-                if (!$user) return false;
+                if (!$user) {
+                    $this->saveFailedLoginAttempt($attemptKey);
+                    return false;
+                }
 
                 // retrieve the classroom by the link provided
                 $classroomExists = $this->entityManager
@@ -369,13 +377,18 @@ class ControllerUser extends Controller
                     ));
 
                 // no classroom data found, return an error
-                if (!$userClassroomData) return false;
+                if (!$userClassroomData) {
+                    $this->saveFailedLoginAttempt($attemptKey);
+                    return false;
+                }
+                UserLoginAttemptDAO::getSharedInstance()->resetLoginAttemptsByEmail($attemptKey);
 
                 // set,save the token and connect the user
                 $token = bin2hex(random_bytes(32));
                 DatabaseManager::getSharedInstance()
                     ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
 
+                $this->regenerateSessionId();
                 $_SESSION['token'] = $token;
                 $_SESSION["id"] = $user->getId();
                 return true;
@@ -550,6 +563,7 @@ class ControllerUser extends Controller
                     );
 
                 // the token is saved in db, set session and redirect the student to its dashboard
+                $this->regenerateSessionId();
                 $_SESSION["id"] = $sessionUserId;
                 $_SESSION['token'] =  $connectionToken;
 
@@ -1081,6 +1095,7 @@ class ControllerUser extends Controller
                 DatabaseManager::getSharedInstance()
                     ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
 
+                $this->regenerateSessionId();
                 $_SESSION['token'] = $token;
                 $_SESSION["id"] = $user->getId();
                 $_SESSION["pin"] = $password;
@@ -1298,6 +1313,7 @@ class ControllerUser extends Controller
                 if (!array_key_exists('success', $reponseLogin)) {
 
 
+                    $this->regenerateSessionId();
                     $_SESSION["id"] = $reponseLogin[0];
                     $_SESSION["token"] = $reponseLogin[1];
 
@@ -1341,6 +1357,7 @@ class ControllerUser extends Controller
                 $ownerId = DeviceTokenManager::getSharedInstance()->validateToken($deviceToken);
                 if (empty($ownerId) || $ownerId !== $userId) return ["success" => false];
 
+                $this->regenerateSessionId();
                 $_SESSION["id"] = $ownerId;
                 return ["success" => true];
             },
@@ -2610,6 +2627,33 @@ class ControllerUser extends Controller
         $this->entityManager->flush();
     }
 
+
+    // A new session id at login makes any id planted before it (session fixation) worthless
+    private function regenerateSessionId()
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) session_regenerate_id(true);
+    }
+
+    private function isLoginLocked($attemptKey)
+    {
+        $maxTries = !empty($_ENV['VS_FAILED_LOGIN_MAX_TRIES']) ? intval($_ENV['VS_FAILED_LOGIN_MAX_TRIES']) : 5;
+        $failedAttempts = UserLoginAttemptDAO::getSharedInstance()->getLoginAttemptsDataByEmail($attemptKey);
+        if (!$failedAttempts || $failedAttempts['count'] < $maxTries) return false;
+        if (time() < $failedAttempts['can_not_login_before']) return true;
+
+        UserLoginAttemptDAO::getSharedInstance()->resetLoginAttemptsByEmail($attemptKey);
+        return false;
+    }
+
+    private function saveFailedLoginAttempt($attemptKey)
+    {
+        $waitingTime = !empty($_ENV['VS_WAITING_TIME_BEFORE_NEW_LOGIN']) ? intval($_ENV['VS_WAITING_TIME_BEFORE_NEW_LOGIN']) : 120;
+        $attempt = new \stdClass();
+        $attempt->email = $attemptKey;
+        $attempt->registrationTime = time();
+        $attempt->canNotLoginBefore = time() + $waitingTime;
+        UserLoginAttemptDAO::getSharedInstance()->insert($attempt);
+    }
 
     private function isAdminRequester()
     {
