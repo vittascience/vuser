@@ -395,13 +395,14 @@ class ControllerUser extends Controller
             },
             'get_gar_student_available_classrooms' => function () {
 
-                // accept only POST request
-                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+                // called in-process by the CAS page: school and classrooms come from the CAS validated session
+                $garIdentity = $this->getGarSessionIdentity();
+                if (!$garIdentity) return ["error" => "garNotAuthenticated"];
 
-                $incomingClassrooms = $_POST['classrooms'];
+                $incomingClassrooms = array_merge($garIdentity['DIV'], $garIdentity['GRO']);
                 $classroomsToFind = [];
                 // bind and sanitize incoming data
-                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
+                $uai = htmlspecialchars(strip_tags(trim($garIdentity['UAI'])));
 
                 foreach ($incomingClassrooms as $incomingClassroom) {
                     list($incomingClassroomGarCode, $incomingClassroomName) = explode('##', $incomingClassroom);
@@ -575,16 +576,18 @@ class ControllerUser extends Controller
             },
             'save_gar_teacher' => function () {
 
-                // accept only POST request
-                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+                // called in-process by the CAS page: the teacher identity comes from the CAS validated session
+                $garIdentity = $this->getGarSessionIdentity();
+                if (!$garIdentity) return ["error" => "garNotAuthenticated"];
+                if (!array_intersect($garIdentity['PRO'], ['National_ens', 'National_doc'])) return ["error" => "garProfileNotAllowed"];
 
                 // bind and sanitize incoming data
-                $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) : '';
-                $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) : '';
-                $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) : '';
-                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
-                $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) : '';
-                $pms4 = isset($_POST['pms4']) ? htmlspecialchars(strip_tags(trim($_POST['pms4']))) : '';
+                $pre = htmlspecialchars(strip_tags(trim($garIdentity['PRE'])));
+                $nom = htmlspecialchars(strip_tags(trim($garIdentity['NOM'])));
+                $ido = htmlspecialchars(strip_tags(trim($garIdentity['IDO'])));
+                $uai = htmlspecialchars(strip_tags(trim($garIdentity['UAI'])));
+                $pmel = strip_tags(trim($garIdentity['P_MEL']));
+                $pms4 = htmlspecialchars(strip_tags(trim($garIdentity['P_MS4'])));
 
                 // get the teacher by its ido(opaque identifier)
                 $garUserExists = $this->entityManager
@@ -768,16 +771,18 @@ class ControllerUser extends Controller
             },
             'save_gar_employee_as_teacher' => function () {
 
-                // accept only POST request
-                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+                // called in-process by the CAS page: the employee identity comes from the CAS validated session
+                $garIdentity = $this->getGarSessionIdentity();
+                if (!$garIdentity) return ["error" => "garNotAuthenticated"];
+                if ($garIdentity['PRO'] === ['National_elv']) return ["error" => "garProfileNotAllowed"];
 
                 // bind and sanitize incoming data
-                $pre = isset($_POST['pre']) ? htmlspecialchars(strip_tags(trim($_POST['pre']))) : '';
-                $nom = isset($_POST['nom']) ? htmlspecialchars(strip_tags(trim($_POST['nom']))) : '';
-                $ido = isset($_POST['ido']) ? htmlspecialchars(strip_tags(trim($_POST['ido']))) : '';
-                $uai = isset($_POST['uai']) ? htmlspecialchars(strip_tags(trim($_POST['uai']))) : '';
-                $pmel = isset($_POST['pmel']) ? strip_tags(trim($_POST['pmel'])) : '';
-                $pms4 = isset($_POST['pms4']) ? htmlspecialchars(strip_tags(trim($_POST['pms4']))) : '';
+                $pre = htmlspecialchars(strip_tags(trim($garIdentity['PRE'])));
+                $nom = htmlspecialchars(strip_tags(trim($garIdentity['NOM'])));
+                $ido = htmlspecialchars(strip_tags(trim($garIdentity['IDO'])));
+                $uai = htmlspecialchars(strip_tags(trim($garIdentity['UAI'])));
+                $pmel = strip_tags(trim($garIdentity['P_MEL']));
+                $pms4 = htmlspecialchars(strip_tags(trim($garIdentity['P_MS4'])));
                 $fakeRegularEmail = $this->generateFakeEmailWithPrefix("gar.employee");
 
 
@@ -2445,7 +2450,7 @@ class ControllerUser extends Controller
         if (empty($_SESSION['phpCAS']['user']) || !is_array($attributes)) return null;
 
         $identity = [];
-        foreach (['IDO', 'UAI', 'PRE', 'NOM'] as $key) {
+        foreach (['IDO', 'UAI', 'PRE', 'NOM', 'P_MEL', 'P_MS4'] as $key) {
             $value = $attributes[$key] ?? '';
             $identity[$key] = is_array($value) ? (string) reset($value) : (string) $value;
         }
@@ -2453,6 +2458,7 @@ class ControllerUser extends Controller
 
         $identity['DIV'] = (array) ($attributes['DIV'] ?? []);
         $identity['GRO'] = (array) ($attributes['GRO'] ?? []);
+        $identity['PRO'] = (array) ($attributes['PRO'] ?? []);
         return $identity;
     }
 
