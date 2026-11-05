@@ -394,7 +394,7 @@ class UserRepository extends EntityRepository
             INNER JOIN classroom_applications app ON app.id = ula.application_id
             WHERE ula.user_id IN (:ids)
         ";
-            $stmt = $conn->executeQuery($sql, ['ids' => $ids], ['ids' => \Doctrine\DBAL\Connection::PARAM_INT_ARRAY]);
+            $stmt = $conn->executeQuery($sql, ['ids' => $ids], ['ids' => \Doctrine\DBAL\ArrayParameterType::INTEGER]);
             while ($r = $stmt->fetchAssociative()) {
                 $uid = (int)$r['uid'];
                 if (!isset($appMap[$uid])) $appMap[$uid] = [];
