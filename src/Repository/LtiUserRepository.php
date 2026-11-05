@@ -300,11 +300,9 @@ class LtiUserRepository extends EntityRepository
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
             ->andWhere('luc.interface= :interface')
-            ->setParameters(array(
-                'consumer' => $consumer,
-                'connectionDate' => "$connectionDate%",
-                'interface' => $data->interface
-            ))
+            ->setParameter('consumer', $consumer)
+            ->setParameter('connectionDate', "$connectionDate%")
+            ->setParameter('interface', $data->interface)
             ->groupBy('luc.user')
             ->getQuery()
             ->getResult();
@@ -373,11 +371,9 @@ class LtiUserRepository extends EntityRepository
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
             ->andWhere('luc.interface= :interface')
-            ->setParameters(array(
-                'consumer' => $consumer,
-                'connectionDate' => "$connectionDate%",
-                'interface' => $data->interface
-            ))
+            ->setParameter('consumer', $consumer)
+            ->setParameter('connectionDate', "$connectionDate%")
+            ->setParameter('interface', $data->interface)
             ->groupBy('luc.user')
             ->getQuery()
             ->getResult();
