@@ -2,18 +2,12 @@
 
 namespace User\Repository;
 
-use App\Entity\UserConnectionHistory;
 use Doctrine\ORM\EntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
 use User\Entity\Regular;
+use User\Entity\UserConnectionHistory;
 
 class UserConnectionHistoryRepository extends EntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
-    {
-        parent::__construct($registry, UserConnectionHistory::class);
-    }
-
     public function findRecentConnections(int $userId, int $limit = 10): array
     {
         return $this->createQueryBuilder('u')
