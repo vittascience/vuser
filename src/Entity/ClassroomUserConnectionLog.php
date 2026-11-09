@@ -31,7 +31,7 @@ class ClassroomUserConnectionLog  {
     #[ORM\Column(name: 'gar_id', type: 'string', length: 255, nullable: true)]
     private $garId;
 
-     #[ORM\Column(name: 'connection_date', type: 'datetime', options: ['default' => 'CURRENT_TIMESTAMP'])]
+     #[ORM\Column(name: 'connection_date', type: 'datetime', options: ['default' => new \Doctrine\DBAL\Schema\DefaultExpression\CurrentTimestamp()])]
     private $connectionDate;
 
     /**

@@ -36,7 +36,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('IDENTITY(luc.user)')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=1')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -56,7 +56,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('lu')
             ->from(LtiUser::class, 'lu')
-            ->leftJoin(User::class, 'u', 'WITH', 'lu.user=u.id')
+            ->leftJoin(User::class, 'u', 'ON', 'lu.user=u.id')
             ->andWhere('lu.isTeacher=1')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('u.insertDate LIKE :insertDate')
@@ -81,7 +81,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('luc')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=1')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -105,7 +105,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent, COUNT(luc) AS connectionsNumber')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=1')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -145,7 +145,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('IDENTITY(luc.user)')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=0')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -165,7 +165,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('lu')
             ->from(LtiUser::class, 'lu')
-            ->leftJoin(User::class, 'u', 'WITH', 'lu.user=u.id')
+            ->leftJoin(User::class, 'u', 'ON', 'lu.user=u.id')
             ->andWhere('lu.isTeacher=0')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('u.insertDate LIKE :insertDate')
@@ -190,7 +190,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('luc')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=0')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -214,7 +214,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent, COUNT(luc) AS connectionsNumber')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=0')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -236,7 +236,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('luc')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
             ->setParameter('consumer', $consumer)
@@ -273,7 +273,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('luc.interface')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'lu.user=luc.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'lu.user=luc.user')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
             ->setParameter('consumer', $consumer)
@@ -295,7 +295,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('IDENTITY(luc.user)')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'lu.user=luc.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'lu.user=luc.user')
             ->andWhere('lu.isTeacher=1')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -319,7 +319,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('luc')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=1')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -341,7 +341,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent, COUNT(luc) AS connectionsNumber')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=1')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -366,7 +366,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('IDENTITY(luc.user)')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'lu.user=luc.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'lu.user=luc.user')
             ->andWhere('lu.isTeacher=0')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -389,7 +389,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $results = $queryBuilder->select('luc')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=0')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')
@@ -411,7 +411,7 @@ class LtiUserRepository extends EntityRepository
         $queryBuilder = $this->getEntityManager()->createQueryBuilder();
         $result = $queryBuilder->select('SUM(luc.connectionDuration) AS timeSpent, COUNT(luc) AS connectionsNumber')
             ->from(LtiUserConnection::class, 'luc')
-            ->leftJoin(LtiUser::class, 'lu', 'WITH', 'luc.user=lu.user')
+            ->leftJoin(LtiUser::class, 'lu', 'ON', 'luc.user=lu.user')
             ->andWhere('lu.isTeacher=0')
             ->andWhere('lu.ltiConsumer= :consumer')
             ->andWhere('luc.connectionDate LIKE :connectionDate')

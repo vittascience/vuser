@@ -58,7 +58,7 @@ class SamlUserConnection
     /**
      * Date de la connexion courante (si tu veux garder un champ brut comme dans ta version)
      */
-    #[ORM\Column(name: 'connection_date', type: 'datetime', options: ['default' => 'CURRENT_TIMESTAMP'])]
+    #[ORM\Column(name: 'connection_date', type: 'datetime', options: ['default' => new \Doctrine\DBAL\Schema\DefaultExpression\CurrentTimestamp()])]
     private $connectionDate;
 
     public function __construct(User $user, \DateTime $when = null)

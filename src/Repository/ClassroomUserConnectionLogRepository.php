@@ -17,13 +17,13 @@ class ClassroomUserConnectionLogRepository extends EntityRepository
 
         $results =  $queryBuilder->select(' u.id AS userId, cu.garId,MAX(cucl.connectionDate) AS lastConnection, cu.isTeacher')
             ->from(ClassroomUser::class, 'cu')
-            ->leftJoin(ClassroomUserConnectionLog::class, 'cucl', 'WITH', 'cu.garId=cucl.garId')
-            ->join(User::class,'u','WITH','u.id=cu.id')
+            ->leftJoin(ClassroomUserConnectionLog::class, 'cucl', 'ON', 'cu.garId=cucl.garId')
+            ->join(User::class,'u','ON','u.id=cu.id')
             ->andWhere('cu.garId IS NOT NULL')
             ->groupBy('cucl.garId')
             ->having("lastConnection IS NULL")
             ->orHaving("lastConnection < '$augustFifteenthFormated'")
-            ->orderBy('lastConnection','DESC')
+            ->orderBy('lastConnection',\SortDirection::Descending)
             ->getQuery()
             ->getResult(); 
         

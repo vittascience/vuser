@@ -18,7 +18,7 @@ class LtiUserConnection{
     #[ORM\ManyToOne(targetEntity: \User\Entity\User::class)]
     private $user;
 
-    #[ORM\Column(name: 'connection_date', type: 'datetime', options: ['default' => 'CURRENT_TIMESTAMP'])]
+    #[ORM\Column(name: 'connection_date', type: 'datetime', options: ['default' => new \Doctrine\DBAL\Schema\DefaultExpression\CurrentTimestamp()])]
     private $connectionDate;
 
     #[ORM\Column(name: 'connection_duration', type: 'integer')]
