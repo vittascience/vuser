@@ -14,7 +14,7 @@ class UserPremium
 {
     #[ORM\JoinColumn(name: 'id_user', referencedColumnName: 'id', onDelete: 'CASCADE')]
     #[ORM\Id]
-    #[ORM\ManyToOne(targetEntity: \User\Entity\User::class)]
+    #[ORM\OneToOne(targetEntity: \User\Entity\User::class)]
     private $user;
     /**
      * @var \DateTime
