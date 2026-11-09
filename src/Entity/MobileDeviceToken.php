@@ -5,67 +5,65 @@ namespace User\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use User\Entity\User;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\MobileDeviceTokenRepository")
- * @ORM\Table(name="mobile_device_tokens")
- */
+#[ORM\Table(name: 'mobile_device_tokens')]
+#[ORM\Entity(repositoryClass: \User\Repository\MobileDeviceTokenRepository::class)]
 class MobileDeviceToken
 {
     /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="id", type="integer")
      * @var int
      */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(name: 'id', type: 'integer')]
     private $id;
 
     /**
-     * @ORM\ManyToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="user_ref", referencedColumnName="id", onDelete="CASCADE")
      * @var User
      */
+    #[ORM\JoinColumn(name: 'user_ref', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\ManyToOne(targetEntity: \User\Entity\User::class)]
     private $userRef;
 
     /**
-     * @ORM\Column(name="token", type="string", length=255, nullable=false)
      * @var string
      */
+    #[ORM\Column(name: 'token', type: 'string', length: 255, nullable: false)]
     private $token;
 
     /**
-     * @ORM\Column(name="device_id", type="string", length=64, nullable=false)
      * @var string
      */
+    #[ORM\Column(name: 'device_id', type: 'string', length: 64, nullable: false)]
     private $deviceId;
 
     /**
-     * @ORM\Column(name="device_name", type="string", length=150, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'device_name', type: 'string', length: 150, nullable: true)]
     private $deviceName;
 
     /**
-     * @ORM\Column(name="platform", type="string", length=50, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'platform', type: 'string', length: 50, nullable: true)]
     private $platform;
 
     /**
-     * @ORM\Column(name="date_inserted", type="datetime", nullable=false)
      * @var \DateTime
      */
+    #[ORM\Column(name: 'date_inserted', type: 'datetime', nullable: false)]
     private $dateInserted;
 
     /**
-     * @ORM\Column(name="last_used_at", type="datetime", nullable=true)
      * @var \DateTime
      */
+    #[ORM\Column(name: 'last_used_at', type: 'datetime', nullable: true)]
     private $lastUsedAt;
 
     /**
-     * @ORM\Column(name="revoked_at", type="datetime", nullable=true)
      * @var \DateTime
      */
+    #[ORM\Column(name: 'revoked_at', type: 'datetime', nullable: true)]
     private $revokedAt;
 
 

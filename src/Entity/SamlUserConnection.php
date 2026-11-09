@@ -5,70 +5,60 @@ namespace User\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use User\Entity\User;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\SamlUserConnectionRepository")
- * @ORM\Table(
- *     name="user_saml_user_connections",
- *     uniqueConstraints={
- *         @ORM\UniqueConstraint(name="uniq_user_school_year", columns={"user_id","academic_year"})
- *     }
- * )
- */
+#[ORM\Table(name: 'user_saml_user_connections')]
+#[ORM\UniqueConstraint(name: 'uniq_user_school_year', columns: ['user_id', 'academic_year'])]
+#[ORM\Entity(repositoryClass: \User\Repository\SamlUserConnectionRepository::class)]
 class SamlUserConnection
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="id", type="integer")
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(name: 'id', type: 'integer')]
     private $id;
 
-    /**
-     * @ORM\ManyToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="user_id", referencedColumnName="id", nullable=false, onDelete="CASCADE")
-     */
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\ManyToOne(targetEntity: \User\Entity\User::class)]
     private $user;
 
     /**
      * Année scolaire au format "YYYY-YYYY", ex: "2025-2026"
-     * @ORM\Column(name="academic_year", type="string", length=9)
      */
+    #[ORM\Column(name: 'academic_year', type: 'string', length: 9)]
     private $academicYear;
 
     /**
      * Début de période (inclus) — utile pour les filtres
-     * @ORM\Column(name="period_start", type="date")
      */
+    #[ORM\Column(name: 'period_start', type: 'date')]
     private $periodStart;
 
     /**
      * Fin de période (inclus) — utile pour les filtres
-     * @ORM\Column(name="period_end", type="date")
      */
+    #[ORM\Column(name: 'period_end', type: 'date')]
     private $periodEnd;
 
     /**
      * Nombre total de connexions dans la période
-     * @ORM\Column(name="connections_count", type="integer", options={"default": 0})
      */
+    #[ORM\Column(name: 'connections_count', type: 'integer', options: ['default' => 0])]
     private $connectionsCount = 0;
 
     /**
      * Première connexion de la période
-     * @ORM\Column(name="first_connection_at", type="datetime", nullable=false)
      */
+    #[ORM\Column(name: 'first_connection_at', type: 'datetime', nullable: false)]
     private $firstConnectionAt;
 
     /**
      * Dernière connexion de la période
-     * @ORM\Column(name="last_connection_at", type="datetime", nullable=false)
      */
+    #[ORM\Column(name: 'last_connection_at', type: 'datetime', nullable: false)]
     private $lastConnectionAt;
 
     /**
      * Date de la connexion courante (si tu veux garder un champ brut comme dans ta version)
-     * @ORM\Column(name="connection_date", type="datetime", options={"default": "CURRENT_TIMESTAMP"})
      */
+    #[ORM\Column(name: 'connection_date', type: 'datetime', options: ['default' => 'CURRENT_TIMESTAMP'])]
     private $connectionDate;
 
     public function __construct(User $user, \DateTime $when = null)

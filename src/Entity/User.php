@@ -7,82 +7,75 @@ use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use Utils\ImageManager;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\UserRepository")
- * @ORM\Table(name="users")
- */
-
+#[ORM\Table(name: 'users')]
+#[ORM\Entity(repositoryClass: \User\Repository\UserRepository::class)]
 class User
 {
     // REG_FIRSTNAME: Only letters and digits and length of string is between 1 and 100
     const REG_NAME = "/^[a-zA-ZáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ]{1}[\w\sáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ'&@\-_.()]{0,98}[\wáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ)]{0,1}$/";
     const REG_UNIQID_13 = "/^[a-f0-9]{13}$/";
 
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="id",type="integer")
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(name: 'id', type: 'integer')]
     private $id;
 
-    /**
-     * @ORM\OneToMany(targetEntity="Learn\Entity\Favorite", mappedBy="user")
-     */
+    #[ORM\OneToMany(targetEntity: \Learn\Entity\Favorite::class, mappedBy: 'user')]
     private $favorite;
 
 
-    /** 
-     * @ORM\Column(name="firstname", type="string", length=100, nullable=false)
+    /**
      * @var string
      */
+    #[ORM\Column(name: 'firstname', type: 'string', length: 100, nullable: false)]
     private $firstname;
 
 
-    /** 
-     * @ORM\Column(name="pseudo", type="string", length=100, nullable=true)
+    /**
      * @var string
      */
+    #[ORM\Column(name: 'pseudo', type: 'string', length: 100, nullable: true)]
     private $pseudo;
 
 
     /**
-     * @ORM\Column(name="surname", type="string", length=100, nullable=false)
      * @var string
      */
+    #[ORM\Column(name: 'surname', type: 'string', length: 100, nullable: false)]
     private $surname;
 
 
     /**
-     * @ORM\Column(name="password", type="string", length=255, nullable=false)
      * @var string
      */
+    #[ORM\Column(name: 'password', type: 'string', length: 255, nullable: false)]
     private $password;
 
 
     /**
-     * @ORM\Column(name="insert_date", type="datetime", columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
      * @var \DateTime
      */
+    #[ORM\Column(name: 'insert_date', type: 'datetime', columnDefinition: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')]
     private $insertDate;
 
 
     /**
-     * @ORM\Column(name="update_date", type="datetime", columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
      * @var \DateTime
      */
+    #[ORM\Column(name: 'update_date', type: 'datetime', columnDefinition: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')]
     private $updateDate;
 
 
     /**
-     * @ORM\Column(name="picture", type="string", length=250, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'picture', type: 'string', length: 250, nullable: true)]
     private $picture = NULL;
 
      /**
-     * @ORM\Column(name="totp_secret", type="string", length=250, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'totp_secret', type: 'string', length: 250, nullable: true)]
     private $totp_secret = NULL;
 
 
