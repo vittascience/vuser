@@ -20,7 +20,7 @@ class Regular
      */
     #[ORM\JoinColumn(name: 'id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     #[ORM\Id]
-    #[ORM\ManyToOne(targetEntity: \User\Entity\User::class)]
+    #[ORM\OneToOne(targetEntity: \User\Entity\User::class)]
     private $user;
 
     #[ORM\Column(name: 'bio', type: 'string', length: 2000, nullable: true)]
