@@ -5,38 +5,26 @@ namespace User\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\LtiUserConnectionRepository")
- * @ORM\Table(name="user_lti_user_connections")
- */
+#[ORM\Table(name: 'user_lti_user_connections')]
+#[ORM\Entity(repositoryClass: \User\Repository\LtiUserConnectionRepository::class)]
 class LtiUserConnection{
     
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="id", type="integer")
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(name: 'id', type: 'integer')]
     private $id; 
 
-    /**
-     * @ORM\ManyToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="user_id", referencedColumnName="id", onDelete="CASCADE",nullable=false)
-     */
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE', nullable: false)]
+    #[ORM\ManyToOne(targetEntity: \User\Entity\User::class)]
     private $user;
 
-    /**
-     * @ORM\Column(name="connection_date", type="datetime",options={"default": "CURRENT_TIMESTAMP"})
-     */
+    #[ORM\Column(name: 'connection_date', type: 'datetime', options: ['default' => new \Doctrine\DBAL\Schema\DefaultExpression\CurrentTimestamp()])]
     private $connectionDate;
 
-    /**
-     * @ORM\Column(name="connection_duration", type="integer")
-     */
+    #[ORM\Column(name: 'connection_duration', type: 'integer')]
     private $connectionDuration;
 
-    /**
-     * @ORM\Column(name="interface", type="string",length=255, nullable=true)
-     */
+    #[ORM\Column(name: 'interface', type: 'string', length: 255, nullable: true)]
     private $interface;
 
 

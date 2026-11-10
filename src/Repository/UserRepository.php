@@ -32,7 +32,7 @@ class UserRepository extends EntityRepository
             ->createQueryBuilder()
             ->select("r.email, u.firstname, u.surname")
             ->from(User::class, 'u')
-            ->innerJoin(Regular::class, 'r', Join::WITH, 'u.id = r.user')
+            ->innerJoin(Regular::class, 'r', Join::ON, 'u.id = r.user')
             ->where('r.newsletter = 1')
             ->getQuery();
         return $query->getResult();
@@ -42,7 +42,7 @@ class UserRepository extends EntityRepository
     public function getUsersFromSSO(string $ssoId)
     {
         return $this->createQueryBuilder('u')
-            ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
+            ->innerJoin(Regular::class, 'r', Join::ON, 'r.user = u')
             ->where('r.fromSso like :ssoId')
             ->setParameter('ssoId', '%' . $ssoId . '%')
             ->getQuery()
@@ -62,14 +62,14 @@ class UserRepository extends EntityRepository
             ->addSelect('uch.ip AS ip')
             ->addSelect('(CASE WHEN UPPER(r.fromSso) LIKE :student THEN 1 ELSE 0 END) AS isStudentFlag')
             ->addSelect('(CASE WHEN UPPER(r.fromSso) LIKE :other THEN 1 ELSE 0 END) AS isOtherFlag')
-            ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
+            ->innerJoin(Regular::class, 'r', Join::ON, 'r.user = u')
             ->andWhere('r.fromSso LIKE :sso')
-            ->leftJoin(UserConnectionHistory::class, 'uch', Join::WITH, 'uch.userId = u.id')
+            ->leftJoin(UserConnectionHistory::class, 'uch', Join::ON, 'uch.userId = u.id')
             ->setParameter('sso', '%SAML%')
             ->setParameter('student', '%STUDENT%')
             ->setParameter('other', '%OTHER%')
-            ->orderBy('u.id', 'ASC')
-            ->addOrderBy('uch.timestamp', 'DESC');
+            ->orderBy('u.id', \SortDirection::Ascending)
+            ->addOrderBy('uch.timestamp', \SortDirection::Descending);
 
         if ($from) {
             $qb->andWhere('uch.timestamp >= :from')->setParameter('from', $from);
@@ -174,11 +174,11 @@ class UserRepository extends EntityRepository
         $total = (int) $this->createQueryBuilder('u')->select('COUNT(u.id)')->getQuery()->getSingleScalarResult();
 
         $qb = $this->createQueryBuilder('u')
-            ->innerJoin(Regular::class, 'r', Join::WITH, 'r.user = u')
-            ->leftJoin(Teacher::class,  't', Join::WITH, 't.user = u')
-            ->leftJoin(UserPremium::class, 'up', Join::WITH, 'up.user = u AND (up.dateEnd IS NULL OR up.dateEnd > :now)')
-            ->leftJoin(UsersRestrictions::class, 'ur', Join::WITH, 'ur.user = u AND ur.dateEnd IS NOT NULL AND ur.dateEnd > :now')
-            ->leftJoin(UsersLinkGroups::class, 'ulg', Join::WITH, 'ulg.user = u')
+            ->innerJoin(Regular::class, 'r', Join::ON, 'r.user = u')
+            ->leftJoin(Teacher::class,  't', Join::ON, 't.user = u')
+            ->leftJoin(UserPremium::class, 'up', Join::ON, 'up.user = u AND (up.dateEnd IS NULL OR up.dateEnd > :now)')
+            ->leftJoin(UsersRestrictions::class, 'ur', Join::ON, 'ur.user = u AND ur.dateEnd IS NOT NULL AND ur.dateEnd > :now')
+            ->leftJoin(UsersLinkGroups::class, 'ulg', Join::ON, 'ulg.user = u')
             ->leftJoin('ulg.group', 'g')
             ->select("
             u.id         AS id,
@@ -366,12 +366,12 @@ class UserRepository extends EntityRepository
 
         foreach ($orders as $o) {
             $f = $o['field'] ?? 'id';
-            $d = (isset($o['dir']) && strtolower($o['dir']) === 'desc') ? 'DESC' : 'ASC';
+            $d = (isset($o['dir']) && strtolower($o['dir']) === 'desc') ? \SortDirection::Descending : \SortDirection::Ascending;
             $expr = $orderable[$f] ?? 'u.id';
             $qb->addOrderBy($expr, $d);
         }
         if (!array_key_exists('id', array_column($orders, 'field', 'field'))) {
-            $qb->addOrderBy('u.id', 'ASC');
+            $qb->addOrderBy('u.id', \SortDirection::Ascending);
         }
 
         $rows = $qb->setFirstResult($offset)->setMaxResults($perPage)->getQuery()->getArrayResult();
@@ -394,7 +394,7 @@ class UserRepository extends EntityRepository
             INNER JOIN classroom_applications app ON app.id = ula.application_id
             WHERE ula.user_id IN (:ids)
         ";
-            $stmt = $conn->executeQuery($sql, ['ids' => $ids], ['ids' => \Doctrine\DBAL\Connection::PARAM_INT_ARRAY]);
+            $stmt = $conn->executeQuery($sql, ['ids' => $ids], ['ids' => \Doctrine\DBAL\ArrayParameterType::INTEGER]);
             while ($r = $stmt->fetchAssociative()) {
                 $uid = (int)$r['uid'];
                 if (!isset($appMap[$uid])) $appMap[$uid] = [];

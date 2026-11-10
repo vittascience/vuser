@@ -6,41 +6,39 @@ use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use User\Entity\User;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\UserRepository")
- * @ORM\Table(name="user_teachers")
- */
+#[ORM\Table(name: 'user_teachers')]
+#[ORM\Entity(repositoryClass: \User\Repository\UserRepository::class)]
 class Teacher
 {
     /**
-     * @ORM\Id
-     * @ORM\ManyToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="id", referencedColumnName="id", onDelete="CASCADE")
      * @var User
      */
+    #[ORM\JoinColumn(name: 'id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\Id]
+    #[ORM\OneToOne(targetEntity: \User\Entity\User::class)]
     private $user;
 
 
     /**
-     * @ORM\Column(name="subject", type="integer", length=3, nullable=true)
      * the correspondance table is in /resources
      * @var integer
      */
+    #[ORM\Column(name: 'subject', type: 'integer', length: 3, nullable: true)]
     private $subject;
 
 
     /**
-     * @ORM\Column(name="school", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'school', type: 'string', length: 255, nullable: true)]
     private $school;
 
 
     /**
-     * @ORM\Column(name="grade", type="integer", length=3, nullable=true)
      * * the correspondance table is in /resources
      * @var integer
      */
+    #[ORM\Column(name: 'grade', type: 'integer', length: 3, nullable: true)]
     private $grade;
 
     public function __construct(User $user, $subject = 1, $school = "Collège", $grade = 1)

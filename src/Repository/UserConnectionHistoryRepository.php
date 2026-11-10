@@ -2,24 +2,18 @@
 
 namespace User\Repository;
 
-use App\Entity\UserConnectionHistory;
 use Doctrine\ORM\EntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
 use User\Entity\Regular;
+use User\Entity\UserConnectionHistory;
 
 class UserConnectionHistoryRepository extends EntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
-    {
-        parent::__construct($registry, UserConnectionHistory::class);
-    }
-
     public function findRecentConnections(int $userId, int $limit = 10): array
     {
         return $this->createQueryBuilder('u')
             ->where('u.userId = :userId')
             ->setParameter('userId', $userId)
-            ->orderBy('u.timestamp', 'DESC')
+            ->orderBy('u.timestamp', \SortDirection::Descending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
@@ -37,7 +31,7 @@ class UserConnectionHistoryRepository extends EntityRepository
         return $this->createQueryBuilder('c')
             ->where('c.userId = :userId')
             ->setParameter('userId', $userId)
-            ->orderBy('c.timestamp', 'DESC')
+            ->orderBy('c.timestamp', \SortDirection::Descending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
@@ -53,10 +47,10 @@ class UserConnectionHistoryRepository extends EntityRepository
     public function findConnectionsBySso(string $ssoName, int $limit = 50): array
     {
         return $this->createQueryBuilder('c')
-            ->join(Regular::class, 'r', 'WITH', 'r.user = c.userId')
+            ->join(Regular::class, 'r', 'ON', 'r.user = c.userId')
             ->where('r.fromSso = :sso')
             ->setParameter('sso', $ssoName)
-            ->orderBy('c.timestamp', 'DESC')
+            ->orderBy('c.timestamp', \SortDirection::Descending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
@@ -74,7 +68,7 @@ class UserConnectionHistoryRepository extends EntityRepository
     {
         return (int) $this->createQueryBuilder('c')
             ->select('COUNT(c.id)')
-            ->join(Regular::class, 'r', 'WITH', 'r.user = c.userId')
+            ->join(Regular::class, 'r', 'ON', 'r.user = c.userId')
             ->where('r.fromSso = :sso')
             ->andWhere('c.timestamp BETWEEN :from AND :to')
             ->setParameter('sso', $ssoName)
@@ -97,7 +91,7 @@ class UserConnectionHistoryRepository extends EntityRepository
             ->select('DISTINCT c.device')
             ->where('c.userId = :userId')
             ->setParameter('userId', $userId)
-            ->orderBy('c.timestamp', 'DESC')
+            ->orderBy('c.timestamp', \SortDirection::Descending)
             ->setMaxResults($limit)
             ->getQuery()
             ->getScalarResult();
@@ -119,7 +113,7 @@ class UserConnectionHistoryRepository extends EntityRepository
             ->andWhere('c.country = :country')
             ->setParameter('userId', $userId)
             ->setParameter('country', $country)
-            ->orderBy('c.timestamp', 'DESC')
+            ->orderBy('c.timestamp', \SortDirection::Descending)
             ->getQuery()
             ->getResult();
     }
@@ -135,7 +129,7 @@ class UserConnectionHistoryRepository extends EntityRepository
         return $this->createQueryBuilder('c')
             ->where('c.ip = :ip')
             ->setParameter('ip', $ip)
-            ->orderBy('c.timestamp', 'DESC')
+            ->orderBy('c.timestamp', \SortDirection::Descending)
             ->getQuery()
             ->getResult();
     }

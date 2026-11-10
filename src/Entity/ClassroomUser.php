@@ -6,59 +6,57 @@ use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use User\Entity\User;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\ClassroomUserRepository")
- * @ORM\Table(name="user_classroom_users")
- */
+#[ORM\Table(name: 'user_classroom_users')]
+#[ORM\Entity(repositoryClass: \User\Repository\ClassroomUserRepository::class)]
 class ClassroomUser implements \JsonSerializable, \Utils\JsonDeserializer
 {
     /**
-     * @ORM\Id
-     * @ORM\ManyToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="user", referencedColumnName="id", onDelete="CASCADE")
      * @var User
      */
+    #[ORM\JoinColumn(name: 'user', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\Id]
+    #[ORM\OneToOne(targetEntity: \User\Entity\User::class)]
     private $id = null;
 
     /**
-     * @ORM\Column(name="gar_id", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'gar_id', type: 'string', length: 255, nullable: true)]
     private $garId;
 
     /**
-     * @ORM\Column(name="canope_id", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'canope_id', type: 'string', length: 255, nullable: true)]
     private $canopeId;
     
     /**
-     * @ORM\Column(name="school_id", type="string", length=8, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'school_id', type: 'string', length: 8, nullable: true)]
     private $schoolId;
     /**
-     * @ORM\Column(name="is_teacher", type="boolean", nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'is_teacher', type: 'boolean', nullable: true)]
     private $isTeacher = false;
     /**
-     * @ORM\Column(name="mail_teacher", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'mail_teacher', type: 'string', length: 255, nullable: true)]
     private $mailTeacher;
 
     /**
-     * @ORM\Column(name="saml_id", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'saml_id', type: 'string', length: 255, nullable: true)]
     private $samlId;
 
     /**
      * GAR restriction code (E_MS4 for students, P_MS4 for teachers/staff), used to gate IAG access.
-     * @ORM\Column(name="gar_ms4", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'gar_ms4', type: 'string', length: 255, nullable: true)]
     private $garMs4;
 
     public function __construct(User $user, $garId = NULL, $schoolId = NULL, $isTeacher = false, $mailTeacher = NULL, $samlId = NULL)

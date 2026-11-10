@@ -4,31 +4,30 @@ namespace User\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\UserConnectionHistoryRepository")
- * @ORM\Table(name="user_connection_history", indexes={
- *     @ORM\Index(name="user_idx", columns={"user_id"}),
- *     @ORM\Index(name="timestamp_idx", columns={"timestamp"})
- * })
- */
+#[ORM\Table(name: 'user_connection_history')]
+#[ORM\Index(name: 'user_idx', columns: ['user_id'])]
+#[ORM\Index(name: 'timestamp_idx', columns: ['timestamp'])]
+#[ORM\Entity(repositoryClass: \User\Repository\UserConnectionHistoryRepository::class)]
 class UserConnectionHistory
 {
-    /** @ORM\Id @ORM\GeneratedValue @ORM\Column(type="integer") */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'integer')]
     private int $id;
 
-    /** @ORM\Column(name="user_id", type="integer") */
+    #[ORM\Column(name: 'user_id', type: 'integer')]
     private int $userId;
 
-    /** @ORM\Column(type="datetime") */
+    #[ORM\Column(type: 'datetime')]
     private \DateTime $timestamp;
 
-    /** @ORM\Column(type="string", length=255, nullable=true) */
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $device = null;
 
-    /** @ORM\Column(type="string", length=2, nullable=true) */
+    #[ORM\Column(type: 'string', length: 2, nullable: true)]
     private ?string $country = null;
 
-    /** @ORM\Column(type="string", length=55, nullable=true) */
+    #[ORM\Column(type: 'string', length: 55, nullable: true)]
     private ?string $ip = null;
 
     // Getters and setters (optionally typed for IDE support)

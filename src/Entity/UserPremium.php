@@ -8,27 +8,23 @@ use Utils\Exceptions\EntityDataIntegrityException;
 use Utils\Exceptions\EntityOperatorException;
 use Utils\MetaDataMatcher;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\UserRepository")
- * @ORM\Table(name="user_premium" )
- */
+#[ORM\Table(name: 'user_premium')]
+#[ORM\Entity(repositoryClass: \User\Repository\UserRepository::class)]
 class UserPremium
 {
-    /**
-     * @ORM\Id
-     * @ORM\ManyToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="id_user", referencedColumnName="id", onDelete="CASCADE")
-     */
+    #[ORM\JoinColumn(name: 'id_user', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\Id]
+    #[ORM\OneToOne(targetEntity: \User\Entity\User::class)]
     private $user;
     /**
-     * @ORM\Column(name="date_begin", type="datetime", nullable=true)
      * @var \DateTime
      */
+    #[ORM\Column(name: 'date_begin', type: 'datetime', nullable: true)]
     private $dateBegin = null;
     /**
-     * @ORM\Column(name="date_end", type="datetime", nullable=true)
      * @var \DateTime
      */
+    #[ORM\Column(name: 'date_end', type: 'datetime', nullable: true)]
     private $dateEnd = null;
 
 

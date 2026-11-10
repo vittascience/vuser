@@ -7,10 +7,8 @@ use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use User\Entity\User;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\UserRepository")
- * @ORM\Table(name="user_regulars")
- */
+#[ORM\Table(name: 'user_regulars')]
+#[ORM\Entity(repositoryClass: \User\Repository\UserRepository::class)]
 class Regular
 {
 
@@ -18,105 +16,103 @@ class Regular
     const REG_BIO = "/^[a-zA-ZáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ]{1}[\w\sáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ'&@-_()]{0,1999}[\wáàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ)]{0,1}$/";
 
     /**
-     * @ORM\Id
-     * @ORM\ManyToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="id", referencedColumnName="id", onDelete="CASCADE")
      * @var User
      */
+    #[ORM\JoinColumn(name: 'id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\Id]
+    #[ORM\OneToOne(targetEntity: \User\Entity\User::class)]
     private $user;
 
-    /**
-     * @ORM\Column(name="bio", type="string", length=2000, nullable=true)
-     */
+    #[ORM\Column(name: 'bio', type: 'string', length: 2000, nullable: true)]
     private $bio;
 
 
-    /** 
-     * @ORM\Column(name="email", type="string", length=255, unique=true, nullable=false)
+    /**
      * @var string
      */
+    #[ORM\Column(name: 'email', type: 'string', length: 255, unique: true, nullable: false)]
     private $email;
 
 
     /**
-     * @ORM\Column(name="telephone", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'telephone', type: 'string', length: 255, nullable: true)]
     private $telephone = NULL;
 
 
-    /** 
-     * @ORM\Column(name="confirm_token", type="string", length=255, nullable=true)
+    /**
      * @var string
      */
+    #[ORM\Column(name: 'confirm_token', type: 'string', length: 255, nullable: true)]
     private $confirmToken = null;
 
 
     /**
-     * @ORM\Column(name="contact_flag", type="boolean",options={"default":true})
      * @var bool
      */
+    #[ORM\Column(name: 'contact_flag', type: 'boolean', options: ['default' => true])]
     private $contactFlag = false;
 
 
     /**
-     * @ORM\Column(name="newsletter", type="boolean",options={"default":true})
      * @var bool
      */
+    #[ORM\Column(name: 'newsletter', type: 'boolean', options: ['default' => true])]
     private $newsletter = false;
 
 
     /**
-     * @ORM\Column(name="mail_messages", type="boolean")
      * @var bool
      */
+    #[ORM\Column(name: 'mail_messages', type: 'boolean')]
     private $mailMessages = false;
 
 
     /**
-     * @ORM\Column(name="is_active", type="boolean",options={"default":false})
      * @var bool
      */
+    #[ORM\Column(name: 'is_active', type: 'boolean', options: ['default' => false])]
     private $active = false;
 
 
     /**
-     * @ORM\Column(name="recovery_token", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'recovery_token', type: 'string', length: 255, nullable: true)]
     private $recoveryToken = null;
 
 
     /**
-     * @ORM\Column(name="new_mail", type="string", length=1000, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'new_mail', type: 'string', length: 1000, nullable: true)]
     private $newMail = null;
 
 
     /**
-     * @ORM\Column(name="is_admin", type="boolean",options={"default":false})
      * @var bool
      */
+    #[ORM\Column(name: 'is_admin', type: 'boolean', options: ['default' => false])]
     private $isAdmin = null;
 
 
     /**
-     * @ORM\Column(name="private_flag", type="boolean")
      * @var bool
      */
+    #[ORM\Column(name: 'private_flag', type: 'boolean')]
     private $privateFlag = false;
 
     /**
-     * @ORM\Column(name="from_sso", type="string", nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'from_sso', type: 'string', nullable: true)]
     private $fromSso = null;
 
     /**
-     * @ORM\Column(name="roles", type="text", nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'roles', type: 'text', nullable: true)]
     private $roles = null;
 
     public function __construct(User $user, $email, $bio = NULL, $telephone = NULL, $privateFlag = false, $isAdmin = false, $newMail = null, $recoveryToken = null, $active = false, $mailMessages = false, $newsletter = false, $contactFlag = false, $confirmToken = null)

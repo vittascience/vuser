@@ -6,36 +6,32 @@ use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 use User\Entity\User;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\ClassroomUserConnectionLogRepository")
- * @ORM\Table(name="user_classroom_user_connection_logs")
- */
+#[ORM\Table(name: 'user_classroom_user_connection_logs')]
+#[ORM\Entity(repositoryClass: \User\Repository\ClassroomUserConnectionLogRepository::class)]
 class ClassroomUserConnectionLog  {
 
     /**
-     * @ORM\Id
-     * @ORM\GeneratedValue(strategy="AUTO")
-     * @ORM\Column(name="id", type="integer")
      * @var integer
      */
+    #[ORM\Id]
+    #[ORM\GeneratedValue(strategy: 'AUTO')]
+    #[ORM\Column(name: 'id', type: 'integer')]
     private $id;
 
     /**
-     * @ORM\OneToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="user_id", referencedColumnName="id", onDelete="CASCADE")
      * @var User
      */
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\OneToOne(targetEntity: \User\Entity\User::class)]
     private $user;
     
      /**
-     * @ORM\Column(name="gar_id", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'gar_id', type: 'string', length: 255, nullable: true)]
     private $garId;
 
-     /**
-     * @ORM\Column(name="connection_date", type="datetime",options={"default": "CURRENT_TIMESTAMP"})
-     */
+     #[ORM\Column(name: 'connection_date', type: 'datetime', options: ['default' => new \Doctrine\DBAL\Schema\DefaultExpression\CurrentTimestamp()])]
     private $connectionDate;
 
     /**

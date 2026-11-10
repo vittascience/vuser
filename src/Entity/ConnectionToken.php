@@ -5,49 +5,47 @@ namespace User\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use User\Entity\User;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\ConnectionTokenRepository")
- * @ORM\Table(name="connection_tokens")
- */
+#[ORM\Table(name: 'connection_tokens')]
+#[ORM\Entity(repositoryClass: \User\Repository\ConnectionTokenRepository::class)]
 class ConnectionToken 
 {
     /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="id", type="integer")
      * @var int
      */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(name: 'id', type: 'integer')]
     private $id;
 
     /**
-     * @ORM\ManyToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="user_ref", referencedColumnName="id", onDelete="CASCADE")
      * @var User
      */
+    #[ORM\JoinColumn(name: 'user_ref', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\ManyToOne(targetEntity: \User\Entity\User::class)]
     private $userRef;
 
     /**
-     * @ORM\Column(name="token", type="string", length=255, nullable=true)
      * @var string
      */
+    #[ORM\Column(name: 'token', type: 'string', length: 255, nullable: true)]
     private $token;
 
     /**
-     * @ORM\Column(name="last_time_active", type="datetime", nullable=true)
      * @var \DateTime
      */
+    #[ORM\Column(name: 'last_time_active', type: 'datetime', nullable: true)]
     private $lastTimeActive;
 
     /**
-     * @ORM\Column(name="date_inserted", type="datetime", nullable=true)
      * @var \DateTime
      */
+    #[ORM\Column(name: 'date_inserted', type: 'datetime', nullable: true)]
     private $dateInserted;
 
     /**
-     * @ORM\Column(name="is_expired", type="boolean", nullable=true)
      * @var bool
      */
+    #[ORM\Column(name: 'is_expired', type: 'boolean', nullable: true)]
     private $isExpired;
 
 

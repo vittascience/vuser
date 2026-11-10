@@ -6,52 +6,48 @@ use Lti13\Entity\LtiConsumer;
 use Doctrine\ORM\Mapping as ORM;
 use Utils\Exceptions\EntityDataIntegrityException;
 
-/**
- * @ORM\Entity(repositoryClass="User\Repository\LtiUserRepository")
- * @ORM\Table(name="user_lti_users")
- */
+#[ORM\Table(name: 'user_lti_users')]
+#[ORM\Entity(repositoryClass: \User\Repository\LtiUserRepository::class)]
 class LtiUser{
 
     /**
-     * @ORM\Id
-     * @ORM\GeneratedValue(strategy="AUTO")
-     * @ORM\Column(name="id", type="integer")
      * @var integer
      */
+    #[ORM\Id]
+    #[ORM\GeneratedValue(strategy: 'AUTO')]
+    #[ORM\Column(name: 'id', type: 'integer')]
     private $id;
 
     /**
-     * @ORM\OneToOne(targetEntity="User\Entity\User")
-     * @ORM\JoinColumn(name="user_id", referencedColumnName="id", onDelete="CASCADE")
      * @var User
      */
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\OneToOne(targetEntity: \User\Entity\User::class)]
     private $user;
 
     /**
-     * @ORM\ManyToOne(targetEntity="Lti13\Entity\LtiConsumer")
-     * @ORM\JoinColumn(name="consumer_id", referencedColumnName="id", onDelete="CASCADE")
      *
      * @var LtiConsumer
      */
+    #[ORM\JoinColumn(name: 'consumer_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\ManyToOne(targetEntity: \Lti13\Entity\LtiConsumer::class)]
     private $ltiConsumer;
 
     /**
-     * @ORM\Column(name="lti_user_id",type="string",length=255,  nullable=false)
      *
      * @var integer
      */
+    #[ORM\Column(name: 'lti_user_id', type: 'string', length: 255, nullable: false)]
     private $ltiUserId;
 
-    /**
-     * @ORM\Column(name="lti_course_id",type="string", length=255, nullable=true)
-     */
+    #[ORM\Column(name: 'lti_course_id', type: 'string', length: 255, nullable: true)]
     private $ltiCourseId;
 
     /**
-     * @ORM\Column(name="is_teacher", type="boolean", options={"default":false})
      *
      * @var bool
      */
+    #[ORM\Column(name: 'is_teacher', type: 'boolean', options: ['default' => false])]
     private $isTeacher;
 
     /**
