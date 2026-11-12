@@ -564,7 +564,7 @@ class ControllerUser extends Controller
                     );
 
                 // the token is saved in db, set session and redirect the student to its dashboard
-                $this->regenerateSessionId();
+                // no session id regeneration: phpCAS derived it from the validated ticket, the GAR logoutRequest finds the session by it
                 $_SESSION["id"] = $sessionUserId;
                 $_SESSION['token'] =  $connectionToken;
 
