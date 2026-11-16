@@ -3,6 +3,7 @@
 namespace User\Traits;
 
 use Classroom\Entity\Groups;
+use User\Entity\Regular;
 use User\Entity\UserPremium;
 use Classroom\Entity\Restrictions;
 use Classroom\Entity\UsersLinkGroups;
@@ -173,5 +174,49 @@ trait UtilsTrait {
         }
 
         return $restrictionsArray;
+    }
+
+    /**
+     * Mobile app access (premium-only app): a teacher needs their own premium, a student
+     * gets it from the first premium teacher of their classrooms.
+     * dateEnd: \DateTimeInterface, or null for a premium without end date.
+     */
+    public static function getMobileAppAccess($entityManager, $userId) {
+        if ($entityManager->getRepository(Regular::class)->find($userId)) {
+            return self::getOwnMobilePremium($entityManager, $userId) + ['role' => 'teacher'];
+        }
+
+        $studentLinks = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['user' => $userId, 'rights' => 0], ['classroom' => 'ASC']);
+        foreach ($studentLinks as $studentLink) {
+            $access = self::getClassroomMobileAccess($entityManager, $studentLink->getClassroom());
+            if ($access['premium']) return $access + ['role' => 'student'];
+        }
+        return ['premium' => false, 'dateEnd' => null, 'role' => 'student'];
+    }
+
+    public static function getClassroomMobileAccess($entityManager, $classroom) {
+        $teacherLinks = $entityManager->getRepository(ClassroomLinkUser::class)->findBy(['classroom' => $classroom, 'rights' => 2], ['user' => 'ASC']);
+        foreach ($teacherLinks as $teacherLink) {
+            $access = self::getOwnMobilePremium($entityManager, $teacherLink->getUser()->getId());
+            if ($access['premium']) return $access;
+        }
+        return ['premium' => false, 'dateEnd' => null];
+    }
+
+    // Unlike getUserRestrictions(), a legacy user_premium row only counts within its dates
+    private static function getOwnMobilePremium($entityManager, $userId) {
+        $now = new \DateTimeImmutable('now');
+        $legacy = $entityManager->getRepository(UserPremium::class)->findOneBy(['user' => $userId]);
+        if ($legacy
+            && ($legacy->getDateBegin() === null || $legacy->getDateBegin() < $now)
+            && ($legacy->getDateEnd() === null || $legacy->getDateEnd() > $now)) {
+            return ['premium' => true, 'dateEnd' => $legacy->getDateEnd()];
+        }
+
+        $restrictions = self::getUserRestrictions($entityManager, $userId);
+        if (isset($restrictions['type']) && in_array($restrictions['type'], ['GroupPremium', 'PersonalPremium'], true)) {
+            return ['premium' => true, 'dateEnd' => $restrictions['dateEnd']];
+        }
+        return ['premium' => false, 'dateEnd' => null];
     }
 }
