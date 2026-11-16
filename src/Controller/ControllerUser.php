@@ -102,6 +102,7 @@ class ControllerUser extends Controller
                 $password = passwordGenerator();
                 $user->setPassword($password);
                 $this->entityManager->flush();
+                DeviceTokenManager::getSharedInstance()->revokeAllForUser($user->getId());
                 $pseudo = $user->getPseudo();
                 return ['mdp' => $password, 'pseudo' => $pseudo];
             },
@@ -178,6 +179,7 @@ class ControllerUser extends Controller
                     // update student password and save it in db
                     $student->setPassword($newPassword);
                     $this->entityManager->flush();
+                    DeviceTokenManager::getSharedInstance()->revokeAllForUser($student->getId());
 
                     return array(
                         "id" => $student->getId(),
@@ -319,6 +321,7 @@ class ControllerUser extends Controller
                 $this->entityManager->remove($studentClassroom);
 
                 // delete student records in users and other joined tables using the CASCADE feature
+                DeviceTokenManager::getSharedInstance()->revokeAllForUser($student->getId());
                 $pseudoToReturn = $student->getPseudo();
                 $this->entityManager->remove($student);
                 $this->entityManager->flush();
@@ -338,59 +341,10 @@ class ControllerUser extends Controller
                 $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
                 $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
 
-                // check for errors
-                if (empty($pseudo) || empty($password)) return false;
+                $auth = $this->authenticateClassroomStudent($pseudo, $password, $classroomLink);
+                if (!isset($auth['user'])) return false;
 
-                // student passwords are 4 digit PINs: same lockout as teacher logins, per classroom and pseudo
-                $attemptKey = "student:$classroomLink:" . mb_strtolower($pseudo);
-                if ($this->isLoginLocked($attemptKey)) return false;
-
-                // no errors found, retrieve the user in db
-                $user = $this->entityManager
-                    ->getRepository('User\Entity\User')
-                    ->findOneBy(array(
-                        "pseudo" => $pseudo,
-                        "password" => $password
-                    ));
-
-                // no user found, return false
-                if (!$user) {
-                    $this->saveFailedLoginAttempt($attemptKey);
-                    return false;
-                }
-
-                // retrieve the classroom by the link provided
-                $classroomExists = $this->entityManager
-                    ->getRepository('Classroom\Entity\Classroom')
-                    ->findOneBy(array("link" => $classroomLink));
-
-                // no classroom found, return an error
-                if (!$classroomExists) return false;
-
-                // check if the user belongs to the classroom
-                $userClassroomData = $this->entityManager
-                    ->getRepository('Classroom\Entity\ClassroomLinkUser')
-                    ->findOneBy(array(
-                        "user" => $user,
-                        "classroom" => $classroomExists,
-                        "rights" => 0
-                    ));
-
-                // no classroom data found, return an error
-                if (!$userClassroomData) {
-                    $this->saveFailedLoginAttempt($attemptKey);
-                    return false;
-                }
-                UserLoginAttemptDAO::getSharedInstance()->resetLoginAttemptsByEmail($attemptKey);
-
-                // set,save the token and connect the user
-                $token = bin2hex(random_bytes(32));
-                DatabaseManager::getSharedInstance()
-                    ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
-
-                $this->regenerateSessionId();
-                $_SESSION['token'] = $token;
-                $_SESSION["id"] = $user->getId();
+                $this->openStudentSession($auth['user']);
                 return true;
             },
             'get_gar_student_available_classrooms' => function () {
@@ -928,182 +882,16 @@ class ControllerUser extends Controller
                 $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
                 $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
 
-                // return an error when the pseudo is missing
-                if (empty($pseudo)) {
-                    return array(
-                        'isUsersAdded' => false,
-                        'errorType' => 'pseudoIsMissing'
-                    );
-                }
+                $created = $this->createClassroomStudent($classroomLink, $pseudo);
+                if (isset($created['error'])) return $created['error'];
 
-                // retrieve the classroom by its link
-                $classroom = $this->entityManager->getRepository('Classroom\Entity\Classroom')->findOneBy(array("link" => $classroomLink));
-
-                if (!$classroom) {
-                    return [
-                        "isUsersAdded" => false,
-                        "errorType" => "invalidLink"
-                    ];
-                }
-
-                // if the current classroom is Blocked by the teacher
-                if ($classroom->getIsBlocked() === true) {
-                    // disallow students to join
-                    return [
-                        "isUsersAdded" => false,
-                        "errorType" => "classroomBlocked"
-                    ];
-                }
-
-                $classroomTeacher = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                    ->findOneBy(array("classroom" => $classroom->getId(), "rights" => 2));
-
-                if (!$classroomTeacher) return ["isUsersAdded" => false, "errorType" => "teacherNotFound"];
-
-                $currentUserId = $classroomTeacher->getUser()->getId();
-
-                // get the statuses for the current classroom owner
-                $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
-                $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
-
-
-                // get demoStudent from .env file
-                $demoStudent = $this->manageDemoStudentPseudo();
-
-                // count all students across all classrooms of the teacher (single COUNT query, no entity hydration)
-                $nbApprenants = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')
-                    ->countStudentsForTeacher($currentUserId, $demoStudent);
-
-                $learnerNumberCheck = [
-                    "idUser" => $currentUserId,
-                    "isPremium" => $isPremium,
-                    "isAdmin" => $isAdmin,
-                    "learnerNumber" => $nbApprenants
-                ];
-
-                // set the $isAllowed () flag to true  if the current user is admin or premium
-
-                /**
-                 * Update Rémi COINTE
-                 * if the user is not admin =>
-                 * we check how many students he can have
-                 * if it has no apps = default number => in the folder "default-restrictions"
-                 * otherwise the restrictions is set by the user apps or the group's apps he has
-                 */
-                if (!$learnerNumberCheck["isAdmin"]) {
-                    //@Note : the isPremium check is not deleted to restrein the actual user with the isPremium method
-                    // the restrictions by application is not implemented to every user
-                    $addedLearnerNumber = 1;
-                    if ($learnerNumberCheck["isPremium"]) {
-                        // computer the total number of students registered +1 and return an error if > 50
-                        $totalLearnerCount = $learnerNumberCheck["learnerNumber"] + $addedLearnerNumber;
-                        // check if the 400 students limit is reached and return an error when it is reached
-                        if ($totalLearnerCount > 400) {
-                            return [
-                                "isUsersAdded" => false,
-                                "currentLearnerCount" => $learnerNumberCheck["learnerNumber"],
-                                "addedLearnerNumber" => $addedLearnerNumber
-                            ];
-                        }
-                    } else {
-                        // Groups and teacher limitation per application
-                        $limitationsReached = $this->entityManager->getRepository(Applications::class)->isStudentsLimitReachedForTeacher($currentUserId, $addedLearnerNumber);
-                        if (!$limitationsReached['canAdd']) {
-                            return [
-                                "isUsersAdded" => false,
-                                "currentLearnerCount" => $limitationsReached["teacherInfo"]["actualStudents"],
-                                "addedLearnerNumber" => $addedLearnerNumber,
-                                "message" => $limitationsReached['message']
-                            ];
-                        }
-                    }
-                }
-                /**
-                 * End of learner number limiting
-                 */
-
-                // check if the submitted pseudo is demoStudent
-
-                if (strtolower($pseudo) == strtolower($demoStudent)) {
-                    return [
-                        "isUsersAdded" => false,
-                        "errorType" => "reservedNickname",
-                        "currentNickname" => $demoStudent
-                    ];
-                }
-
-                $pseudoUsed = $this->entityManager->getRepository('User\Entity\User')->findBy(array('pseudo' => $pseudo));
-                foreach ($pseudoUsed as $p) {
-                    $pseudoUsedInClassroom = $this->entityManager->getRepository('Classroom\Entity\ClassroomLinkUser')->findOneBy(array('user' => $p, 'classroom' => $classroom));
-                    if ($pseudoUsedInClassroom) {
-                        return false;
-                    }
-                }
-
-
-                // related to users table in db
-                $password = passwordGenerator();
-                $user = new User();
-                $user->setFirstname("links-élève");
-                $user->setSurname("links-modèl");
-                $user->setPseudo($pseudo);
-                $user->setPassword($password);
-
-                $this->entityManager->beginTransaction();
-                try {
-                    $this->entityManager->persist($user);
-                    $this->entityManager->flush();
-
-                    // related to a new entry in user_classroom_users table in db
-                    $classroomUser = new ClassroomUser($user);
-                    $classroomUser->setGarId(null);
-                    $classroomUser->setSchoolId(null);
-                    $classroomUser->setIsTeacher(false);
-                    $classroomUser->setMailTeacher(NULL);
-                    // persist in doctrine memory and save it in db later
-                    $this->entityManager->persist($classroomUser);
-
-                    $linkteacherToGroup = new ClassroomLinkUser($user, $classroom);
-                    $linkteacherToGroup->setRights(0);
-                    $this->entityManager->persist($linkteacherToGroup);
-
-                    $this->entityManager->flush();
-                    $this->entityManager->commit();
-                } catch (ForeignKeyConstraintViolationException $e) {
-                    // classroom deleted by the teacher while the student was joining
-                    $this->entityManager->rollback();
-                    return [
-                        "isUsersAdded" => false,
-                        "errorType" => "invalidLink"
-                    ];
-                } catch (\Throwable $e) {
-                    $this->entityManager->rollback();
-                    throw $e;
-                }
-
-                // get retro attributed activities if any
-                $classroomRetroAttributedActivities = $this->entityManager
-                    ->getRepository(ActivityLinkClassroom::class)
-                    ->getRetroAttributedActivitiesByClassroom($classroom);
-
-                // some retro attributed activities found, add them to the student
-                if ($classroomRetroAttributedActivities) {
-                    $this->entityManager->getRepository(ActivityLinkUser::class)
-                        ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities, $user);
-                }
-
-                $user->classroomUser = $classroomUser;
-                $user->pin = $password;
+                $user = $created['user'];
+                $user->classroomUser = $created['classroomUser'];
+                $user->pin = $created['password'];
 
                 // set/save the token,user and pin in session
-                $token = bin2hex(random_bytes(32));
-                DatabaseManager::getSharedInstance()
-                    ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
-
-                $this->regenerateSessionId();
-                $_SESSION['token'] = $token;
-                $_SESSION["id"] = $user->getId();
-                $_SESSION["pin"] = $password;
+                $this->openStudentSession($user);
+                $_SESSION["pin"] = $created['password'];
                 return ["isUsersAdded" => true, "user" => $user];
             },
             'help_request_from_teacher' => function () {
@@ -1324,15 +1112,8 @@ class ControllerUser extends Controller
 
                     $response = ["success" => true];
 
-                    // Mobile app only: issues a separate, per-device long-lived
-                    // token (mobile_device_tokens — unrelated to connection_tokens
-                    // above) so the app can silently re-authenticate after the PHP
-                    // session dies, without invalidating any other device's token.
-                    if (!empty($_POST['device_id'])) {
-                        $deviceId = htmlspecialchars(strip_tags(trim($_POST['device_id'])));
-                        $deviceName = !empty($_POST['device_name']) ? htmlspecialchars(strip_tags(trim($_POST['device_name']))) : null;
-                        $response['deviceToken'] = DeviceTokenManager::getSharedInstance()->issueToken($reponseLogin[0], $deviceId, $deviceName);
-                    }
+                    $deviceToken = $this->issueDeviceTokenFromRequest($reponseLogin[0]);
+                    if ($deviceToken !== null) $response['deviceToken'] = $deviceToken;
 
                     return $response;
                 } else {
@@ -1380,6 +1161,53 @@ class ControllerUser extends Controller
 
                 $res = DeviceTokenManager::getSharedInstance()->revokeToken($userId, $deviceToken);
                 return ["success" => $res !== false];
+            },
+            'student_login' => function () {
+                // Mobile app counterpart of get_one_by_pseudo_and_password: explicit errors, app access check, device token
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
+                $password = !empty($_POST['password']) ? htmlspecialchars(strip_tags(trim($_POST['password']))) : '';
+                $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
+
+                $auth = $this->authenticateClassroomStudent($pseudo, $password, $classroomLink);
+                if (!isset($auth['user'])) return ["success" => false, "errorType" => $auth['errorType']];
+
+                $user = $auth['user'];
+                $access = self::getMobileAppAccess($this->entityManager, $user->getId());
+                if (!$access['premium']) return ["success" => false, "errorType" => "premiumRequired"];
+
+                $this->openStudentSession($user);
+                return ["success" => true, "deviceToken" => $this->issueDeviceTokenFromRequest($user->getId())];
+            },
+            'student_register' => function () {
+                // Mobile app counterpart of linkSystem: the classroom teacher must give access to the app before any account is created
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') return ["error" => "Method not Allowed"];
+
+                $pseudo = !empty($_POST['pseudo']) ? htmlspecialchars(strip_tags(trim($_POST['pseudo']))) : '';
+                $classroomLink = !empty($_POST['classroomLink']) ? htmlspecialchars(strip_tags(trim($_POST['classroomLink']))) : '';
+
+                if (empty($pseudo)) return ["success" => false, "errorType" => "pseudoIsMissing"];
+
+                $classroom = $this->entityManager->getRepository(Classroom::class)->findOneBy(["link" => $classroomLink]);
+                if (!$classroom) return ["success" => false, "errorType" => "invalidLink"];
+
+                $access = self::getClassroomMobileAccess($this->entityManager, $classroom);
+                if (!$access['premium']) return ["success" => false, "errorType" => "premiumRequired"];
+
+                $created = $this->createClassroomStudent($classroomLink, $pseudo);
+                if (isset($created['error'])) {
+                    if ($created['error'] === false) return ["success" => false, "errorType" => "pseudoAlreadyUsed"];
+                    return ["success" => false, "errorType" => $created['error']['errorType'] ?? "studentLimitReached"];
+                }
+
+                $user = $created['user'];
+                $this->openStudentSession($user);
+                return [
+                    "success" => true,
+                    "pin" => $created['password'],
+                    "deviceToken" => $this->issueDeviceTokenFromRequest($user->getId())
+                ];
             },
             'register' => function () {
 
@@ -2659,6 +2487,215 @@ class ControllerUser extends Controller
         $attempt->registrationTime = time();
         $attempt->canNotLoginBefore = time() + $waitingTime;
         UserLoginAttemptDAO::getSharedInstance()->insert($attempt);
+    }
+
+    /**
+     * Pseudo + PIN login of a classroom student, shared by the site and the mobile app.
+     * Returns ['user' => User] or ['errorType' => ...].
+     */
+    private function authenticateClassroomStudent($pseudo, $password, $classroomLink)
+    {
+        if (empty($pseudo) || empty($password)) return ['errorType' => 'badInput'];
+
+        // student passwords are 4 digit PINs: same lockout as teacher logins, per classroom and pseudo
+        $attemptKey = "student:$classroomLink:" . mb_strtolower($pseudo);
+        if ($this->isLoginLocked($attemptKey)) return ['errorType' => 'tooManyAttempts'];
+
+        $user = $this->entityManager
+            ->getRepository(User::class)
+            ->findOneBy(array(
+                "pseudo" => $pseudo,
+                "password" => $password
+            ));
+        if (!$user) {
+            $this->saveFailedLoginAttempt($attemptKey);
+            return ['errorType' => 'invalidCredentials'];
+        }
+
+        $classroom = $this->entityManager
+            ->getRepository(Classroom::class)
+            ->findOneBy(array("link" => $classroomLink));
+        if (!$classroom) return ['errorType' => 'invalidLink'];
+
+        $userClassroomData = $this->entityManager
+            ->getRepository(ClassroomLinkUser::class)
+            ->findOneBy(array(
+                "user" => $user,
+                "classroom" => $classroom,
+                "rights" => 0
+            ));
+        if (!$userClassroomData) {
+            $this->saveFailedLoginAttempt($attemptKey);
+            return ['errorType' => 'invalidCredentials'];
+        }
+
+        UserLoginAttemptDAO::getSharedInstance()->resetLoginAttemptsByEmail($attemptKey);
+        return ['user' => $user];
+    }
+
+    private function openStudentSession($user)
+    {
+        $token = bin2hex(random_bytes(32));
+        DatabaseManager::getSharedInstance()
+            ->exec("INSERT INTO connection_tokens (token,user_ref) VALUES (?, ?)", [$token, $user->getId()]);
+
+        $this->regenerateSessionId();
+        $_SESSION['token'] = $token;
+        $_SESSION["id"] = $user->getId();
+    }
+
+    /**
+     * Creates a student in a classroom from its link (site "first connection" and mobile app).
+     * Returns ['user', 'classroomUser', 'password'], or ['error' => linkSystem's historical error response].
+     */
+    private function createClassroomStudent($classroomLink, $pseudo)
+    {
+        if (empty($pseudo)) {
+            return ['error' => array(
+                'isUsersAdded' => false,
+                'errorType' => 'pseudoIsMissing'
+            )];
+        }
+
+        $classroom = $this->entityManager->getRepository(Classroom::class)->findOneBy(array("link" => $classroomLink));
+        if (!$classroom) {
+            return ['error' => [
+                "isUsersAdded" => false,
+                "errorType" => "invalidLink"
+            ]];
+        }
+
+        // if the current classroom is Blocked by the teacher, disallow students to join
+        if ($classroom->getIsBlocked() === true) {
+            return ['error' => [
+                "isUsersAdded" => false,
+                "errorType" => "classroomBlocked"
+            ]];
+        }
+
+        $classroomTeacher = $this->entityManager->getRepository(ClassroomLinkUser::class)
+            ->findOneBy(array("classroom" => $classroom->getId(), "rights" => 2));
+
+        if (!$classroomTeacher) return ['error' => ["isUsersAdded" => false, "errorType" => "teacherNotFound"]];
+
+        $currentUserId = $classroomTeacher->getUser()->getId();
+
+        // get the statuses for the current classroom owner
+        $isPremium = RegularDAO::getSharedInstance()->isTester($currentUserId);
+        $isAdmin = RegularDAO::getSharedInstance()->isAdmin($currentUserId);
+
+        // get demoStudent from .env file
+        $demoStudent = $this->manageDemoStudentPseudo();
+
+        // count all students across all classrooms of the teacher (single COUNT query, no entity hydration)
+        $nbApprenants = $this->entityManager->getRepository(ClassroomLinkUser::class)
+            ->countStudentsForTeacher($currentUserId, $demoStudent);
+
+        /**
+         * Limiting learner number @THOMAS MODIF, admins unlimited @NASER MODIF
+         * Update Rémi COINTE: if the user is not admin, the students limit comes from the
+         * "default-restrictions" folder, or from the user/group apps when there are some
+         */
+        if (!$isAdmin) {
+            $addedLearnerNumber = 1;
+            if ($isPremium) {
+                // check if the 400 students limit is reached and return an error when it is reached
+                if ($nbApprenants + $addedLearnerNumber > 400) {
+                    return ['error' => [
+                        "isUsersAdded" => false,
+                        "currentLearnerCount" => $nbApprenants,
+                        "addedLearnerNumber" => $addedLearnerNumber
+                    ]];
+                }
+            } else {
+                // Groups and teacher limitation per application
+                $limitationsReached = $this->entityManager->getRepository(Applications::class)->isStudentsLimitReachedForTeacher($currentUserId, $addedLearnerNumber);
+                if (!$limitationsReached['canAdd']) {
+                    return ['error' => [
+                        "isUsersAdded" => false,
+                        "currentLearnerCount" => $limitationsReached["teacherInfo"]["actualStudents"],
+                        "addedLearnerNumber" => $addedLearnerNumber,
+                        "message" => $limitationsReached['message']
+                    ]];
+                }
+            }
+        }
+
+        if (strtolower($pseudo) == strtolower($demoStudent)) {
+            return ['error' => [
+                "isUsersAdded" => false,
+                "errorType" => "reservedNickname",
+                "currentNickname" => $demoStudent
+            ]];
+        }
+
+        $pseudoUsed = $this->entityManager->getRepository(User::class)->findBy(array('pseudo' => $pseudo));
+        foreach ($pseudoUsed as $p) {
+            $pseudoUsedInClassroom = $this->entityManager->getRepository(ClassroomLinkUser::class)->findOneBy(array('user' => $p, 'classroom' => $classroom));
+            if ($pseudoUsedInClassroom) {
+                return ['error' => false];
+            }
+        }
+
+        // related to users table in db
+        $password = passwordGenerator();
+        $user = new User();
+        $user->setFirstname("links-élève");
+        $user->setSurname("links-modèl");
+        $user->setPseudo($pseudo);
+        $user->setPassword($password);
+
+        $this->entityManager->beginTransaction();
+        try {
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+
+            // related to a new entry in user_classroom_users table in db
+            $classroomUser = new ClassroomUser($user);
+            $classroomUser->setGarId(null);
+            $classroomUser->setSchoolId(null);
+            $classroomUser->setIsTeacher(false);
+            $classroomUser->setMailTeacher(NULL);
+            $this->entityManager->persist($classroomUser);
+
+            $linkteacherToGroup = new ClassroomLinkUser($user, $classroom);
+            $linkteacherToGroup->setRights(0);
+            $this->entityManager->persist($linkteacherToGroup);
+
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+        } catch (ForeignKeyConstraintViolationException $e) {
+            // classroom deleted by the teacher while the student was joining
+            $this->entityManager->rollback();
+            return ['error' => [
+                "isUsersAdded" => false,
+                "errorType" => "invalidLink"
+            ]];
+        } catch (\Throwable $e) {
+            $this->entityManager->rollback();
+            throw $e;
+        }
+
+        // get retro attributed activities if any, and add them to the student
+        $classroomRetroAttributedActivities = $this->entityManager
+            ->getRepository(ActivityLinkClassroom::class)
+            ->getRetroAttributedActivitiesByClassroom($classroom);
+        if ($classroomRetroAttributedActivities) {
+            $this->entityManager->getRepository(ActivityLinkUser::class)
+                ->addRetroAttributedActivitiesToStudent($classroomRetroAttributedActivities, $user);
+        }
+
+        return ['user' => $user, 'classroomUser' => $classroomUser, 'password' => $password];
+    }
+
+    /** Mobile app only: per-device long-lived token (see DeviceTokenManager), null when no device_id was sent. */
+    private function issueDeviceTokenFromRequest($userId)
+    {
+        if (empty($_POST['device_id'])) return null;
+
+        $deviceId = mb_substr(strip_tags(trim($_POST['device_id'])), 0, 64);
+        $deviceName = !empty($_POST['device_name']) ? mb_substr(strip_tags(trim($_POST['device_name'])), 0, 150) : null;
+        return DeviceTokenManager::getSharedInstance()->issueToken($userId, $deviceId, $deviceName);
     }
 
     private function isAdminRequester()
