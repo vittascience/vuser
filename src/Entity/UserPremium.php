@@ -95,7 +95,7 @@ class UserPremium
         }
         return false;
     }
-    public function jsonSerialize()
+    public function jsonSerialize(): mixed
     {
         return [
             'dateEnd' => $this->getDateBegin(),

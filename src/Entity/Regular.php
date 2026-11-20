@@ -411,7 +411,7 @@ class Regular
         return in_array($roleName, $this->getRoles());
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): mixed
     {
         $array = [
             "bio" => $this->getBio(),
